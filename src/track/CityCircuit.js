@@ -41,6 +41,7 @@ export class CityCircuit {
     this.glowRailsMesh = null;
     this.boostPadsGroup = new THREE.Group();
     this.checkpointGatesGroup = new THREE.Group();
+    this.stuntRampsGroup = new THREE.Group();
     this.startFinishGantry = null;
 
     this.buildCircuitSpline();
@@ -48,6 +49,7 @@ export class CityCircuit {
     this.generateBarriersAndNeonRails();
     this.generateBoostPads();
     this.generateCheckpointGates();
+    this.generateStuntRamps();
     this.generateStartFinishArch();
   }
 
@@ -463,6 +465,54 @@ export class CityCircuit {
       gateGroup.add(curtain);
 
       this.checkpointGatesGroup.add(gateGroup);
+    });
+  }
+
+  generateStuntRamps() {
+    this.scene.add(this.stuntRampsGroup);
+
+    const rampLocations = [0.22, 0.44, 0.82];
+    const rampWidth = 16.0;
+    const rampLength = 9.0;
+    const rampHeight = 1.8;
+
+    rampLocations.forEach((u, idx) => {
+      const frame = this.getFrameAt(u);
+      const rampGroup = new THREE.Group();
+      rampGroup.position.copy(frame.pos).addScaledVector(frame.normal, 0.1);
+
+      const m = new THREE.Matrix4().makeBasis(frame.binormal, frame.normal, frame.tangent);
+      rampGroup.quaternion.setFromRotationMatrix(m);
+
+      const rampGeo = new THREE.BoxGeometry(rampWidth, rampHeight, rampLength);
+      rampGeo.translate(0, rampHeight * 0.5, rampLength * 0.5);
+      rampGeo.rotateX(-0.16);
+
+      const rampMat = new THREE.MeshStandardMaterial({
+        color: 0x121724,
+        metalness: 0.9,
+        roughness: 0.25,
+        emissive: new THREE.Color(0xFFB800),
+        emissiveIntensity: 0.4
+      });
+
+      const rampMesh = new THREE.Mesh(rampGeo, rampMat);
+      rampMesh.castShadow = true;
+      rampGroup.add(rampMesh);
+
+      const arrowGeo = new THREE.PlaneGeometry(rampWidth * 0.75, 1.2);
+      const arrowMat = new THREE.MeshBasicMaterial({
+        color: 0xFFB800,
+        side: THREE.DoubleSide
+      });
+      for (let k = 1; k <= 3; k++) {
+        const arrow = new THREE.Mesh(arrowGeo, arrowMat);
+        arrow.rotation.x = -Math.PI * 0.5 - 0.16;
+        arrow.position.set(0, 0.25 + k * 0.45, k * 2.4);
+        rampGroup.add(arrow);
+      }
+
+      this.stuntRampsGroup.add(rampGroup);
     });
   }
 

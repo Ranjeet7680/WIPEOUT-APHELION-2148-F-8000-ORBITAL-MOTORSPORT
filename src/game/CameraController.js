@@ -12,7 +12,8 @@ export const CAMERA_MODES = {
   COCKPIT: 'COCKPIT',
   BUMPER: 'BUMPER',
   BROADCAST_DRONE: 'BROADCAST DRONE',
-  ORBIT: 'ORBIT'
+  ORBIT: 'ORBIT',
+  SLOW_MO_FINISH: 'SLOW MO FINISH'
 };
 
 export class CameraController {
@@ -241,6 +242,56 @@ export class CameraController {
         this.camera.lookAt(craftPos);
         this.camera.up.set(0, 1, 0);
         break;
+      }
+
+      case CAMERA_MODES.SLOW_MO_FINISH: {
+        // Dramatic side-angle tracking pass
+        this.targetCameraPos.copy(craftPos)
+          .addScaledVector(right, 7.5)
+          .addScaledVector(fwd, 1.2)
+          .addScaledVector(up, 1.6);
+
+        this.camera.position.lerp(this.targetCameraPos, delta * 12.0);
+        this.lookTarget.copy(craftPos).addScaledVector(fwd, 2.0).addScaledVector(up, 0.4);
+        this.camera.lookAt(this.lookTarget);
+        this.camera.up.set(0, 1, 0);
+        break;
+      }
+    }
+  }
+
+  updateRaceIntro(introProgress, circuit, rivals = [], playerVehicle = null) {
+    if (!circuit) return;
+
+    if (introProgress < 0.35) {
+      // 1. High-altitude aerial sweep over skyscrapers
+      const p = introProgress / 0.35;
+      const startPos = new THREE.Vector3(220, 290, 380);
+      const endPos = new THREE.Vector3(40, 180, 80);
+      this.camera.position.lerpVectors(startPos, endPos, p);
+      this.camera.lookAt(0, 150, 0);
+      this.camera.fov = 68;
+      this.camera.updateProjectionMatrix();
+    } else {
+      // 2. Low-angle starting grid sweep passing through racers 8 down to 1
+      const p = (introProgress - 0.35) / 0.65;
+      const allRacers = [
+        playerVehicle,
+        ...rivals.map(r => r.vehicle)
+      ].filter(Boolean);
+
+      const targetIdx = Math.min(
+        Math.floor((1.0 - p) * allRacers.length),
+        allRacers.length - 1
+      );
+      const racer = allRacers[targetIdx];
+
+      if (racer) {
+        const rPos = racer.group.position;
+        this.camera.position.set(rPos.x + 3.8, rPos.y + 1.2, rPos.z + 4.5);
+        this.camera.lookAt(rPos.x, rPos.y + 0.6, rPos.z);
+        this.camera.fov = 54;
+        this.camera.updateProjectionMatrix();
       }
     }
   }

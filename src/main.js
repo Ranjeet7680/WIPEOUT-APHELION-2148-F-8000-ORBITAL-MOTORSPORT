@@ -6,26 +6,33 @@ import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 
 import { CityCircuit } from './track/CityCircuit.js';
 import { NeoShinjukuWorld } from './world/NeoShinjukuWorld.js';
-import { NightriftVehicle } from './craft/NightriftVehicle.js';
+import { FuturisticVehicle, VEHICLE_CATALOG } from './craft/FuturisticVehicle.js';
 import { ArcadeRacingPhysics } from './physics/ArcadeRacingPhysics.js';
 import { TrafficSystem } from './traffic/TrafficSystem.js';
 import { RivalRacersSystem } from './ai/RivalRacersSystem.js';
 import { CameraController, CAMERA_MODES } from './game/CameraController.js';
 import { GameState, RACE_STATUS } from './game/GameState.js';
-import { ModernRaceHUD } from './ui/ModernRaceHUD.js';
+import { GarageLobbyScene } from './world/GarageLobbyScene.js';
+import { PodiumScene } from './world/PodiumScene.js';
+import { CinematicUI } from './ui/CinematicUI.js';
 import { HolographicMinimap } from './ui/HolographicMinimap.js';
 import { FullWorldMap } from './ui/FullWorldMap.js';
-import { GarageUI } from './ui/GarageUI.js';
 import { CyberpunkAudioEngine } from './audio/CyberpunkAudioEngine.js';
 
 // ============================================================================
 // NEO-SHINJUKU RIFT: HYPER CIRCUIT // AETHER-9
-// 2089 OPEN-WORLD & CIRCUIT ARCADE RACING SIMULATION
+// DEVELOPED BY RANJEET KUMAR
+// Complete 3D Arcade Racing Experience: Loading Screen -> 3D Lobby -> Car Select
+// -> Match Prep -> Race Intro -> Starting Grid -> 120Hz Stunts & Racing -> Podium -> Winning HQ
 // ============================================================================
 
 class GameManager {
   constructor() {
     this.container = document.getElementById('canvas-container');
+
+    // App state machine
+    // 'LOADING', 'LOBBY', 'CAR_SELECT', 'GARAGE', 'MATCH_PREP', 'RACE_INTRO', 'COUNTDOWN', 'RACING', 'PAUSED', 'FINISH', 'RESULTS', 'PODIUM', 'WINNING_LOBBY'
+    this.state = 'LOADING';
 
     // Three.js Core
     this.scene = null;
@@ -36,26 +43,36 @@ class GameManager {
 
     // Lighting
     this.sunLight = null;
-    this.playerUnderglow = null;
 
-    // Simulation Subsystems
+    // Subsystems
+    this.sound = null;
     this.circuit = null;
     this.world = null;
-    this.playerVehicle = null;
-    this.physics = null;
     this.traffic = null;
     this.rivals = null;
+    this.playerVehicle = null;
+    this.physics = null;
     this.cameraController = null;
-    this.sound = null;
     this.gameState = null;
 
-    // User Interface Systems
-    this.hud = null;
+    // 3D Presentation Environments
+    this.garageLobby = null;
+    this.podiumScene = null;
+
+    // UI Systems
+    this.ui = null;
     this.minimap = null;
     this.worldMap = null;
-    this.garage = null;
 
-    // Input state
+    // Timers & progression
+    this.loadingProgress = 0;
+    this.raceIntroTimer = 0;
+    this.finishTimer = 0;
+    this.winStreak = 3;
+    this.playerLevel = 7;
+    this.playerXP = 8450;
+
+    // Inputs
     this.keys = {};
     this.touchInputs = { throttle: 0, steer: 0, brake: 0, drift: false, boost: false };
 
@@ -67,13 +84,16 @@ class GameManager {
     this.setupScene();
     this.setupLighting();
     this.setupPostProcessing();
-    this.setupGameSubsystems();
+    this.setupSubsystems();
     this.setupUI();
     this.setupInputs();
 
     window.addEventListener('resize', () => this.onResize());
 
-    // Start simulation loop
+    // Begin cinematic loading flow
+    this.startLoadingFlow();
+
+    // Simulation loop
     this.animate();
   }
 
@@ -103,15 +123,12 @@ class GameManager {
   }
 
   setupLighting() {
-    // Cyberpunk ambient atmospheric light
     const ambient = new THREE.AmbientLight(0x223048, 2.2);
     this.scene.add(ambient);
 
-    // Cyan/indigo hemisphere skylight
     const hemiLight = new THREE.HemisphereLight(0x00F0FF, 0x141822, 1.5);
     this.scene.add(hemiLight);
 
-    // Main directional sunlight with soft shadows
     this.sunLight = new THREE.DirectionalLight(0xE0F0FF, 2.8);
     this.sunLight.position.set(350, 1600, 450);
     this.sunLight.target.position.set(0, 150, 0);
@@ -127,7 +144,6 @@ class GameManager {
     this.sunLight.shadow.camera.bottom = -700;
     this.scene.add(this.sunLight);
 
-    // Deep purple secondary rim light
     const rimLight = new THREE.DirectionalLight(0x7928CA, 1.8);
     rimLight.position.set(-500, 600, -400);
     this.scene.add(rimLight);
@@ -140,9 +156,9 @@ class GameManager {
 
     const bloomPass = new UnrealBloomPass(
       new THREE.Vector2(window.innerWidth, window.innerHeight),
-      0.85,  // strength
-      0.38,  // radius
-      0.72   // threshold
+      0.85,
+      0.38,
+      0.72
     );
     this.composer.addPass(bloomPass);
 
@@ -150,78 +166,89 @@ class GameManager {
     this.composer.addPass(outputPass);
   }
 
-  setupGameSubsystems() {
+  setupSubsystems() {
     // 1. Audio Engine
     this.sound = new CyberpunkAudioEngine();
 
-    // 2. 8-District Metropolis Circuit
-    this.circuit = new CityCircuit(this.scene);
+    // 2. 3D Environments
+    this.garageLobby = new GarageLobbyScene(this.scene);
+    this.podiumScene = new PodiumScene(this.scene);
 
-    // 3. Neo-Shinjuku Open-World Environment
+    // 3. Track Circuit & World Environment
+    this.circuit = new CityCircuit(this.scene);
     this.world = new NeoShinjukuWorld(this.scene, this.circuit);
 
-    // 4. Player Vehicle: F-8000 // NIGHTRIFT
-    this.playerVehicle = new NightriftVehicle(this.scene, true, 0x00F0FF);
+    // Hide track & world during initial garage lobby
+    this.setTrackVisible(false);
+    this.podiumScene.hide();
 
-    // Neon underglow attached to player vehicle
-    this.playerUnderglow = new THREE.PointLight(0x00F0FF, 3.5, 18);
-    this.playerUnderglow.position.set(0, -0.2, 0);
-    this.playerVehicle.group.add(this.playerUnderglow);
+    // 4. Hero Player Vehicle
+    this.playerVehicle = new FuturisticVehicle(this.scene, true, 'f8000');
+    // Mount initially on garage turntable
+    this.garageLobby.turntable.add(this.playerVehicle.group);
+    this.playerVehicle.group.position.set(0, 0.4, 0);
 
     // 5. Arcade Racing Physics (120Hz fixed sub-stepping)
     this.physics = new ArcadeRacingPhysics(this.circuit, this.sound);
+    this.physics.applyVehicleSpecs(this.playerVehicle.spec);
 
-    // 6. Civilian Traffic Fleet (Taxis, sedans, logistics vans, cargo haulers)
+    // 6. Civilian Traffic & 7 AI Rivals (8 racers total)
     this.traffic = new TrafficSystem(this.scene, this.circuit);
-
-    // 7. 8 Rival AI Racers + Boss The Vector
     this.rivals = new RivalRacersSystem(this.scene, this.circuit);
 
-    // 8. Dynamic Camera Controller
+    // 7. Dynamic Camera & Game State
     this.cameraController = new CameraController(this.camera, this.renderer.domElement);
-    this.cameraController.reset(this.physics.pos, this.physics.quat);
-
-    // 9. Game State Engine
     this.gameState = new GameState(this.sound);
-    this.gameState.totalRacers = 9; // Player + 8 Rivals
-    this.gameState.startCountdown();
+    this.gameState.totalRacers = 8;
   }
 
   setupUI() {
-    // Modern perimeter race HUD
-    this.hud = new ModernRaceHUD(this);
-
-    // Holographic radar minimap
+    this.ui = new CinematicUI(this);
     this.minimap = new HolographicMinimap('hud-minimap-canvas', this.circuit);
-
-    // Full interactive satellite world map (Key: 'M')
     this.worldMap = new FullWorldMap(this);
 
-    // Underground hangar tuning facility (Key: 'G')
-    this.garage = new GarageUI(this);
+    // Action listener connects physics stunt rewards to UI popups
+    this.physics.onAction = (name, points, combo) => {
+      this.ui.showActionPopup(name, points, combo);
+    };
   }
 
   setupInputs() {
     window.addEventListener('keydown', (e) => {
       this.keys[e.code] = true;
 
-      // Resume/init Web Audio on first user interaction
       if (this.sound) this.sound.resume();
 
-      // Camera toggle: C or V
       if (e.code === 'KeyC' || e.code === 'KeyV') {
-        this.cameraController.cycleMode();
+        if (this.state === 'RACING') {
+          this.cameraController.cycleMode();
+        }
       }
 
-      // Reset / Restart: R
-      if (e.code === 'KeyR') {
+      if (e.code === 'KeyR' && this.state === 'RACING') {
         this.restartRace();
       }
 
-      // Escape key handles modals
+      if (e.code === 'KeyM') {
+        if (this.worldMap) this.worldMap.toggle();
+      }
+
+      if (e.code === 'KeyG') {
+        if (this.state === 'LOBBY') {
+          this.ui.showScreen('GARAGE');
+        }
+      }
+
       if (e.code === 'Escape') {
-        if (this.worldMap && this.worldMap.isOpen) this.worldMap.close();
-        if (this.garage && this.garage.isOpen) this.garage.close();
+        if (this.state === 'RACING') {
+          this.togglePause();
+        } else if (this.state === 'PAUSED') {
+          this.togglePause();
+        } else if (this.state === 'RACE_INTRO') {
+          this.skipRaceIntro();
+        } else if (this.worldMap && this.worldMap.isOpen) {
+          this.worldMap.close();
+        }
       }
     });
 
@@ -229,23 +256,235 @@ class GameManager {
       this.keys[e.code] = false;
     });
 
-    // Pointer down resume audio
     window.addEventListener('pointerdown', () => {
       if (this.sound) this.sound.resume();
     });
   }
 
-  restartRace() {
+  startLoadingFlow() {
+    this.state = 'LOADING';
+    this.garageLobby.show();
+    this.garageLobby.setCameraAnglePreset('FRONT');
+
+    // 1. Show developer credit
+    this.ui.showDeveloperCredit(() => {
+      // 2. Progressive loading bar animation
+      let p = 0;
+      const loadInterval = setInterval(() => {
+        p += 5 + Math.random() * 8;
+        if (p >= 100) {
+          p = 100;
+          clearInterval(loadInterval);
+          this.ui.updateLoadingProgress(100, 'SYSTEM READY // WELCOME PILOT');
+
+          setTimeout(() => {
+            this.state = 'LOBBY';
+            this.ui.showScreen('LOBBY');
+            this.sound.setMusicState('LOBBY');
+          }, 600);
+        } else {
+          let statusText = 'INITIALIZING AETHER-9';
+          if (p > 25) statusText = 'COMPILING QUANTUM SHADERS';
+          if (p > 55) statusText = 'STARTING INDUCTION COILS';
+          if (p > 85) statusText = 'CONNECTING TO NEO-SHINJUKU GRID';
+          this.ui.updateLoadingProgress(p, statusText);
+        }
+      }, 70);
+    });
+  }
+
+  setPlayerVehicle(vehicleId, isPreview = false) {
+    const spec = VEHICLE_CATALOG.find(v => v.id === vehicleId) || VEHICLE_CATALOG[0];
+
+    // Detach old vehicle
+    if (this.playerVehicle && this.playerVehicle.group.parent) {
+      this.playerVehicle.group.parent.remove(this.playerVehicle.group);
+    }
+
+    // Create new vehicle
+    this.playerVehicle = new FuturisticVehicle(this.scene, true, spec);
+
+    // Reattach to appropriate location
+    if (this.state === 'RACING' || this.state === 'COUNTDOWN' || this.state === 'RACE_INTRO') {
+      this.scene.add(this.playerVehicle.group);
+    } else {
+      this.garageLobby.turntable.add(this.playerVehicle.group);
+      this.playerVehicle.group.position.set(0, 0.4, 0);
+    }
+
+    // Apply performance specs to physics
+    this.physics.applyVehicleSpecs(spec);
+  }
+
+  setTrackVisible(visible) {
+    if (this.circuit && this.circuit.trackMesh) this.circuit.trackMesh.visible = visible;
+    if (this.circuit && this.circuit.barrierMesh) this.circuit.barrierMesh.visible = visible;
+    if (this.circuit && this.circuit.glowRailsMesh) this.circuit.glowRailsMesh.visible = visible;
+    if (this.circuit && this.circuit.boostPadsGroup) this.circuit.boostPadsGroup.visible = visible;
+    if (this.circuit && this.circuit.checkpointGatesGroup) this.circuit.checkpointGatesGroup.visible = visible;
+    if (this.circuit && this.circuit.stuntRampsGroup) this.circuit.stuntRampsGroup.visible = visible;
+    if (this.circuit && this.circuit.startFinishGantry) this.circuit.startFinishGantry.visible = visible;
+    if (this.world && this.world.root) this.world.root.visible = visible;
+    if (this.traffic && this.traffic.group) this.traffic.group.visible = visible;
+    if (this.rivals && this.rivals.rivals) {
+      this.rivals.rivals.forEach(r => {
+        if (r.vehicle && r.vehicle.group) r.vehicle.group.visible = visible;
+      });
+    }
+  }
+
+  startMatchmaking() {
+    this.state = 'MATCH_PREP';
+    this.ui.showScreen('MATCH_PREP');
+
+    let p = 0;
+    const matchInterval = setInterval(() => {
+      p += 8 + Math.random() * 12;
+      this.ui.updateMatchPrep(p);
+
+      if (p >= 100) {
+        clearInterval(matchInterval);
+
+        setTimeout(() => {
+          this.beginRaceIntro();
+        }, 500);
+      }
+    }, 120);
+  }
+
+  beginRaceIntro() {
+    this.state = 'RACE_INTRO';
+    this.ui.showScreen('RACE_INTRO');
+    this.sound.setMusicState('INTRO');
+
+    // Switch environments: hide garage, show track & city
+    this.garageLobby.hide();
+    this.podiumScene.hide();
+    this.setTrackVisible(true);
+
+    // Place player vehicle on starting slot 1
+    if (this.playerVehicle.group.parent) {
+      this.playerVehicle.group.parent.remove(this.playerVehicle.group);
+    }
+    this.scene.add(this.playerVehicle.group);
+
     this.physics.resetToStart();
-    if (this.cameraController) {
-      this.cameraController.reset(this.physics.pos, this.physics.quat);
+    this.rivals.spawnRivalGrid();
+
+    this.raceIntroTimer = 0.0;
+  }
+
+  skipRaceIntro() {
+    if (this.state === 'RACE_INTRO') {
+      this.startCountdown();
     }
-    if (this.gameState) {
-      this.gameState.startCountdown();
+  }
+
+  startCountdown() {
+    this.state = 'COUNTDOWN';
+    this.ui.showScreen('RACING');
+    this.sound.setMusicState('COUNTDOWN');
+
+    this.physics.resetToStart();
+    this.cameraController.setMode(CAMERA_MODES.CHASE);
+    this.cameraController.reset(this.physics.pos, this.physics.quat);
+
+    this.gameState.startCountdown();
+  }
+
+  togglePause() {
+    if (this.state === 'RACING') {
+      this.state = 'PAUSED';
+      this.ui.showScreen('PAUSED');
+    } else if (this.state === 'PAUSED') {
+      this.state = 'RACING';
+      this.ui.showScreen('RACING');
     }
-    if (this.rivals) {
-      this.rivals.spawnRivalGrid();
+  }
+
+  restartRace() {
+    this.startCountdown();
+  }
+
+  triggerRaceFinish() {
+    this.state = 'FINISH';
+    this.sound.setMusicState('PODIUM');
+    this.sound.playVictorySting();
+    this.cameraController.setMode(CAMERA_MODES.SLOW_MO_FINISH);
+    this.finishTimer = 0.0;
+  }
+
+  showPodiumSequence() {
+    this.state = 'PODIUM';
+    this.ui.showScreen('PODIUM');
+    this.sound.setMusicState('PODIUM');
+
+    // Hide track, show 3D podium
+    this.setTrackVisible(false);
+    this.garageLobby.hide();
+    this.podiumScene.show();
+
+    // Compute standings
+    const standings = this.rivals.getStandings(this.physics.totalDistance, 'RANJEET');
+    this.ui.setupPodiumOverlay(standings);
+
+    // Retrieve crafts for 1st, 2nd, 3rd
+    const getCraftForRacer = (racerEntry) => {
+      if (!racerEntry) return null;
+      if (racerEntry.isPlayer) return this.playerVehicle;
+      return racerEntry.vehicle;
+    };
+
+    const firstCraft = getCraftForRacer(standings[0]);
+    const secondCraft = getCraftForRacer(standings[1]);
+    const thirdCraft = getCraftForRacer(standings[2]);
+
+    this.podiumScene.setupPodiumVehicles(firstCraft, secondCraft, thirdCraft);
+  }
+
+  showWinningLobby() {
+    this.state = 'WINNING_LOBBY';
+    this.podiumScene.hide();
+    this.garageLobby.show();
+    this.garageLobby.setCameraAnglePreset('FRONT');
+
+    // Mount player vehicle on victory platform
+    if (this.playerVehicle.group.parent) {
+      this.playerVehicle.group.parent.remove(this.playerVehicle.group);
     }
+    this.garageLobby.turntable.add(this.playerVehicle.group);
+    this.playerVehicle.group.position.set(0, 0.4, 0);
+
+    // Update player progression
+    this.winStreak++;
+    this.playerXP += 1250;
+    if (this.playerXP >= 12000) {
+      this.playerLevel = 8;
+      document.getElementById('level-up-toast').style.display = 'block';
+    }
+
+    this.ui.showWinningLobby(this.winStreak, this.playerLevel, 1250);
+  }
+
+  returnToLobby() {
+    this.state = 'LOBBY';
+    this.podiumScene.hide();
+    this.setTrackVisible(false);
+    this.garageLobby.show();
+    this.garageLobby.setCameraAnglePreset('FRONT');
+
+    if (this.playerVehicle.group.parent) {
+      this.playerVehicle.group.parent.remove(this.playerVehicle.group);
+    }
+    this.garageLobby.turntable.add(this.playerVehicle.group);
+    this.playerVehicle.group.position.set(0, 0.4, 0);
+
+    this.sound.setMusicState('LOBBY');
+  }
+
+  setTouch(action, val) {
+    this.sound.resume();
+    this.touchInputs[action] = val;
   }
 
   pollInputs() {
@@ -256,7 +495,6 @@ class GameManager {
     let boost = false;
     let energyBrake = false;
 
-    // 1. Keyboard
     if (this.keys['KeyW'] || this.keys['ArrowUp']) throttle = 1.0;
     if (this.keys['KeyS'] || this.keys['ArrowDown']) brake = 1.0;
     if (this.keys['KeyA'] || this.keys['ArrowLeft']) steer -= 1.0;
@@ -266,14 +504,14 @@ class GameManager {
     if (this.keys['Space']) boost = true;
     if (this.keys['KeyE']) energyBrake = true;
 
-    // 2. Touch Inputs
+    // Mobile touch
     if (this.touchInputs.throttle > 0) throttle = this.touchInputs.throttle;
     if (this.touchInputs.brake > 0) brake = this.touchInputs.brake;
     if (this.touchInputs.steer !== 0) steer = this.touchInputs.steer;
     if (this.touchInputs.drift) drift = true;
     if (this.touchInputs.boost) boost = true;
 
-    // 3. Gamepad API
+    // Gamepad
     const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
     if (gamepads && gamepads[0]) {
       const gp = gamepads[0];
@@ -295,95 +533,166 @@ class GameManager {
 
     const delta = Math.min(this.clock.getDelta(), 0.1);
 
-    // 1. Poll Player Inputs
-    const inputs = this.pollInputs();
-    const isRacing = this.gameState.status === RACE_STATUS.RACING;
-    const effectiveThrottle = isRacing ? inputs.throttle : 0.0;
+    // State Machine Dispatch
+    switch (this.state) {
+      case 'LOADING':
+      case 'LOBBY':
+      case 'CAR_SELECT':
+      case 'GARAGE':
+      case 'MATCH_PREP':
+      case 'WINNING_LOBBY': {
+        this.garageLobby.update(delta, this.camera, this.state === 'LOADING' || this.state === 'LOBBY');
+        if (this.playerVehicle) {
+          this.playerVehicle.updateKineticState(delta, 0, 0, 0, false, false, 0);
+        }
+        break;
+      }
 
-    this.physics.setInputs({
-      throttle: effectiveThrottle,
-      brake: inputs.brake,
-      steer: inputs.steer,
-      drift: inputs.drift,
-      boost: inputs.boost,
-      energyBrake: inputs.energyBrake
-    });
+      case 'RACE_INTRO': {
+        this.raceIntroTimer += delta;
+        const introProg = Math.min(this.raceIntroTimer / 7.5, 1.0);
+        this.cameraController.updateRaceIntro(introProg, this.circuit, this.rivals.rivals, this.playerVehicle);
 
-    // 2. Step 120Hz Fixed Physics
-    const renderAlpha = this.physics.update(delta);
-    const speedKmh = this.physics.getSpeedKmh();
+        // Update card
+        const racerIndex = Math.floor(introProg * 8);
+        this.ui.updateRaceIntroCard(racerIndex, 8);
 
-    // 3. Collision Handling (Traffic & Barriers)
-    const trafficCol = this.traffic.checkCollision(this.physics.pos, 2.4);
-    if (trafficCol.hit) {
-      this.physics.pos.addScaledVector(trafficCol.repelVector, 0.45);
-      this.physics.vel.multiplyScalar(0.92);
-      this.cameraController.addShake(0.35);
+        if (this.raceIntroTimer >= 7.5) {
+          this.startCountdown();
+        }
+        break;
+      }
+
+      case 'COUNTDOWN': {
+        const inputs = this.pollInputs();
+        this.physics.setInputs({ throttle: 0, brake: 0, steer: inputs.steer, drift: false, boost: false, energyBrake: false });
+        const renderAlpha = this.physics.update(delta);
+        const { pos: interpPos, quat: interpQuat } = this.physics.getInterpolatedTransform(renderAlpha);
+
+        this.playerVehicle.group.position.copy(interpPos);
+        this.playerVehicle.group.quaternion.copy(interpQuat);
+        this.playerVehicle.updateKineticState(delta, inputs.steer, 0, 0, false, false, 0);
+
+        this.cameraController.update(delta, interpPos, this.physics.vel, interpQuat, 0, false, false);
+
+        this.gameState.update(delta, this.physics.currentU, 0, this.rivals.rivals);
+        if (this.gameState.status === RACE_STATUS.RACING) {
+          this.state = 'RACING';
+          this.sound.setMusicState('RACING');
+        }
+        break;
+      }
+
+      case 'RACING': {
+        const inputs = this.pollInputs();
+        this.physics.setInputs(inputs);
+
+        const renderAlpha = this.physics.update(delta);
+        const speedKmh = this.physics.getSpeedKmh();
+
+        // Near miss & slipstream detection
+        this.physics.checkTrafficNearMiss(this.traffic.vehicles, this.physics.pos);
+        this.physics.checkSlipstream(this.rivals.rivals, this.physics.pos, this.physics.forward);
+
+        // Traffic collision check
+        const trafficCol = this.traffic.checkCollision(this.physics.pos, 2.4);
+        if (trafficCol.hit) {
+          this.physics.pos.addScaledVector(trafficCol.repelVector, 0.45);
+          this.physics.vel.multiplyScalar(0.92);
+          this.cameraController.addShake(0.35);
+        }
+
+        if (this.physics.isColliding) {
+          this.cameraController.addShake(this.physics.collisionImpulse);
+        }
+
+        // Interpolated transform
+        const { pos: interpPos, quat: interpQuat } = this.physics.getInterpolatedTransform(renderAlpha);
+        this.playerVehicle.group.position.copy(interpPos);
+        this.playerVehicle.group.quaternion.copy(interpQuat);
+
+        this.playerVehicle.updateKineticState(
+          delta,
+          inputs.steer,
+          inputs.throttle,
+          inputs.brake,
+          this.physics.isDrifting,
+          this.physics.isBoosting,
+          speedKmh,
+          this.physics.aerialState
+        );
+
+        // Update AI and Traffic
+        this.rivals.update(delta, interpPos, this.physics.currentU, this.physics.totalDistance, true);
+        this.traffic.update(delta, interpPos, speedKmh);
+
+        // Update environment & track
+        this.world.update(delta, interpPos);
+        this.circuit.update(delta);
+
+        // Game state (Laps, standings, times)
+        this.gameState.update(delta, this.physics.currentU, speedKmh, this.rivals.rivals);
+
+        // Final Lap check
+        if (this.gameState.currentLap === 3 && this.sound.musicState !== 'FINAL_LAP') {
+          this.sound.setMusicState('FINAL_LAP');
+        }
+
+        // Finish line check
+        if (this.gameState.status === RACE_STATUS.FINISHED) {
+          this.triggerRaceFinish();
+        }
+
+        // Audio
+        if (this.sound) {
+          this.sound.update(speedKmh, inputs.throttle, this.physics.isBoosting, this.physics.isDrifting, delta);
+        }
+
+        // Camera follow
+        this.cameraController.update(
+          delta,
+          interpPos,
+          this.physics.vel,
+          interpQuat,
+          speedKmh,
+          this.physics.isColliding,
+          this.physics.isBoosting
+        );
+
+        // Minimap & HUD
+        const currentFrame = this.circuit.getFrameAt(this.physics.currentU);
+        const currentDistrict = currentFrame ? currentFrame.district : null;
+
+        if (this.ui) {
+          this.ui.updateHUD(this.physics, this.gameState);
+        }
+
+        if (this.minimap) {
+          this.minimap.update(interpPos, interpQuat, this.physics.currentU, this.rivals.rivals, currentDistrict);
+        }
+        break;
+      }
+
+      case 'FINISH': {
+        this.finishTimer += delta;
+        const { pos: interpPos, quat: interpQuat } = this.physics.getInterpolatedTransform(1.0);
+        this.cameraController.update(delta, interpPos, this.physics.vel, interpQuat, 180, false, false);
+        this.playerVehicle.updateKineticState(delta, 0, 0.4, 0, false, false, 180);
+
+        if (this.finishTimer >= 2.6) {
+          this.state = 'RESULTS';
+          this.ui.showResults(this.physics, this.gameState);
+        }
+        break;
+      }
+
+      case 'PODIUM': {
+        this.podiumScene.update(delta, this.camera);
+        break;
+      }
     }
 
-    if (this.physics.isColliding) {
-      this.cameraController.addShake(this.physics.collisionImpulse);
-    }
-
-    // 4. Update Player Vehicle Transform & Kinetics
-    const { pos: interpPos, quat: interpQuat } = this.physics.getInterpolatedTransform(renderAlpha);
-    this.playerVehicle.group.position.copy(interpPos);
-    this.playerVehicle.group.quaternion.copy(interpQuat);
-
-    this.playerVehicle.updateKineticState(
-      delta,
-      inputs.steer,
-      effectiveThrottle,
-      inputs.brake,
-      this.physics.isDrifting,
-      this.physics.isBoosting,
-      speedKmh
-    );
-
-    // 5. Update AI Rival Racers
-    this.rivals.update(delta, interpPos, this.physics.currentU, this.physics.totalDistance, isRacing);
-
-    // 6. Update Autonomous Civilian Traffic
-    this.traffic.update(delta, interpPos, speedKmh);
-
-    // 7. Update Neo-Shinjuku Open-World Environment
-    this.world.update(delta, interpPos);
-
-    // 8. Update Track Spline Elements (Boost Pads & Gates)
-    this.circuit.update(delta);
-
-    // 9. Update Game State (Laps, Standings, Times)
-    this.gameState.update(delta, this.physics.currentU, speedKmh, this.rivals.rivals);
-
-    // 10. Synthesize Cyberpunk Audio
-    if (this.sound) {
-      this.sound.update(speedKmh, effectiveThrottle, this.physics.isBoosting, this.physics.isDrifting, delta);
-    }
-
-    // 11. Update Camera Tracking
-    this.cameraController.update(
-      delta,
-      interpPos,
-      this.physics.vel,
-      interpQuat,
-      speedKmh,
-      this.physics.isColliding,
-      this.physics.isBoosting
-    );
-
-    // 12. Determine Current District & Update HUD / Radar
-    const currentFrame = this.circuit.getFrameAt(this.physics.currentU);
-    const currentDistrict = currentFrame ? currentFrame.district : null;
-
-    if (this.hud) {
-      this.hud.update(this.physics, this.gameState, this.rivals, currentDistrict);
-    }
-
-    if (this.minimap) {
-      this.minimap.update(interpPos, interpQuat, this.physics.currentU, this.rivals.rivals, currentDistrict);
-    }
-
-    // 13. Render via Post-Processing Composer (Forward Bloom)
+    // Render via Post-Processing Composer (Bloom + ACES Tone Mapping)
     this.composer.render();
   }
 
@@ -399,7 +708,7 @@ class GameManager {
   }
 }
 
-// Initialize on DOM Ready
+// Instantiate on DOM load
 window.addEventListener('DOMContentLoaded', () => {
   window.game = new GameManager();
 });
