@@ -1,0 +1,23 @@
+{
+  "name": "wipeout-aphelion",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host --port 5173",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "onnxruntime-web": "^1.30.0",
+    "three": "^0.160.0"
+  },
+  "devDependencies": {
+    "vite": "^5.0.12"
+  },
+  "description": "",
+  "main": "index.js",
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
