@@ -19,11 +19,18 @@ import { HolographicMinimap } from './ui/HolographicMinimap.js';
 import { FullWorldMap } from './ui/FullWorldMap.js';
 import { CyberpunkAudioEngine } from './audio/CyberpunkAudioEngine.js';
 
+// New Architecture Subsystems
+import { saveManager } from './game/SaveManager.js';
+import { VFXSystem } from './effects/VFXSystem.js';
+import { VectorInstructor } from './tutorial/VectorInstructor.js';
+import { TutorialManager } from './tutorial/TutorialManager.js';
+import { FirstTimeCinematic } from './game/FirstTimeCinematic.js';
+
 // ============================================================================
 // NEO-SHINJUKU RIFT: HYPER CIRCUIT // AETHER-9
 // DEVELOPED BY RANJEET KUMAR
-// Complete 3D Arcade Racing Experience: Loading Screen -> 3D Lobby -> Car Select
-// -> Match Prep -> Race Intro -> Starting Grid -> 120Hz Stunts & Racing -> Podium -> Winning HQ
+// First-Time Player Detection -> First-Time Cinematic -> Aether Driver Academy
+// -> 3D Lobby HQ -> Car Select -> Match Prep -> Race Intro -> 120Hz Stunts & Racing -> Podium -> Winning HQ
 // ============================================================================
 
 class GameManager {
@@ -31,7 +38,7 @@ class GameManager {
     this.container = document.getElementById('canvas-container');
 
     // App state machine
-    // 'LOADING', 'LOBBY', 'CAR_SELECT', 'GARAGE', 'MATCH_PREP', 'RACE_INTRO', 'COUNTDOWN', 'RACING', 'PAUSED', 'FINISH', 'RESULTS', 'PODIUM', 'WINNING_LOBBY'
+    // 'LOADING', 'WELCOME_FIRST', 'CINEMATIC_INTRO', 'TUTORIAL', 'LOBBY', 'CAR_SELECT', 'GARAGE', 'MATCH_PREP', 'RACE_INTRO', 'COUNTDOWN', 'RACING', 'PAUSED', 'FINISH', 'RESULTS', 'PODIUM', 'WINNING_LOBBY'
     this.state = 'LOADING';
 
     // Three.js Core
@@ -64,13 +71,19 @@ class GameManager {
     this.minimap = null;
     this.worldMap = null;
 
+    // First-Time & Academy Systems
+    this.vfx = null;
+    this.vector = null;
+    this.tutorial = null;
+    this.cinematicIntro = null;
+
     // Timers & progression
     this.loadingProgress = 0;
     this.raceIntroTimer = 0;
     this.finishTimer = 0;
-    this.winStreak = 3;
-    this.playerLevel = 7;
-    this.playerXP = 8450;
+    this.winStreak = saveManager.data.player.winStreak || 3;
+    this.playerLevel = saveManager.data.player.level || 7;
+    this.playerXP = saveManager.data.player.xp || 8450;
 
     // Inputs
     this.keys = {};
@@ -200,6 +213,12 @@ class GameManager {
     this.cameraController = new CameraController(this.camera, this.renderer.domElement);
     this.gameState = new GameState(this.sound);
     this.gameState.totalRacers = 8;
+
+    // 8. VFX, Vector & Tutorial Managers
+    this.vfx = new VFXSystem(this.scene, this.camera);
+    this.vector = new VectorInstructor(this.sound);
+    this.tutorial = new TutorialManager(this, this.vector);
+    this.cinematicIntro = new FirstTimeCinematic(this);
   }
 
   setupUI() {
@@ -220,12 +239,12 @@ class GameManager {
       if (this.sound) this.sound.resume();
 
       if (e.code === 'KeyC' || e.code === 'KeyV') {
-        if (this.state === 'RACING') {
+        if (this.state === 'RACING' || this.state === 'TUTORIAL') {
           this.cameraController.cycleMode();
         }
       }
 
-      if (e.code === 'KeyR' && this.state === 'RACING') {
+      if (e.code === 'KeyR' && (this.state === 'RACING' || this.state === 'TUTORIAL')) {
         this.restartRace();
       }
 
@@ -240,12 +259,14 @@ class GameManager {
       }
 
       if (e.code === 'Escape') {
-        if (this.state === 'RACING') {
+        if (this.state === 'RACING' || this.state === 'TUTORIAL') {
           this.togglePause();
         } else if (this.state === 'PAUSED') {
           this.togglePause();
         } else if (this.state === 'RACE_INTRO') {
           this.skipRaceIntro();
+        } else if (this.state === 'CINEMATIC_INTRO') {
+          if (this.cinematicIntro) this.cinematicIntro.skip();
         } else if (this.worldMap && this.worldMap.isOpen) {
           this.worldMap.close();
         }
@@ -278,9 +299,17 @@ class GameManager {
           this.ui.updateLoadingProgress(100, 'SYSTEM READY // WELCOME PILOT');
 
           setTimeout(() => {
-            this.state = 'LOBBY';
-            this.ui.showScreen('LOBBY');
-            this.sound.setMusicState('LOBBY');
+            // First-time player detection!
+            if (saveManager.isFirstLaunch()) {
+              this.state = 'WELCOME_FIRST';
+              this.ui.showFirstTimeWelcome();
+              this.sound.setMusicState('LOBBY');
+            } else {
+              // Returning player: go straight to lobby
+              this.state = 'LOBBY';
+              this.ui.showScreen('LOBBY');
+              this.sound.setMusicState('LOBBY');
+            }
           }, 600);
         } else {
           let statusText = 'INITIALIZING AETHER-9';
@@ -291,6 +320,34 @@ class GameManager {
         }
       }, 70);
     });
+  }
+
+  startFirstTimeCinematicAndTutorial() {
+    this.state = 'CINEMATIC_INTRO';
+    this.cinematicIntro.start(() => {
+      this.launchTutorial(true, null);
+    });
+  }
+
+  launchTutorial(isFullCourse = true, moduleKey = null) {
+    this.state = 'TUTORIAL';
+    this.ui.showScreen('RACING');
+    this.sound.setMusicState('RACING');
+
+    this.garageLobby.hide();
+    this.podiumScene.hide();
+    this.setTrackVisible(true);
+
+    if (this.playerVehicle.group.parent) {
+      this.playerVehicle.group.parent.remove(this.playerVehicle.group);
+    }
+    this.scene.add(this.playerVehicle.group);
+
+    this.physics.resetToStart();
+    this.cameraController.setMode(CAMERA_MODES.CHASE);
+    this.cameraController.reset(this.physics.pos, this.physics.quat);
+
+    this.tutorial.startTutorial(isFullCourse, moduleKey);
   }
 
   setPlayerVehicle(vehicleId, isPreview = false) {
@@ -305,7 +362,7 @@ class GameManager {
     this.playerVehicle = new FuturisticVehicle(this.scene, true, spec);
 
     // Reattach to appropriate location
-    if (this.state === 'RACING' || this.state === 'COUNTDOWN' || this.state === 'RACE_INTRO') {
+    if (this.state === 'RACING' || this.state === 'COUNTDOWN' || this.state === 'RACE_INTRO' || this.state === 'TUTORIAL') {
       this.scene.add(this.playerVehicle.group);
     } else {
       this.garageLobby.turntable.add(this.playerVehicle.group);
@@ -393,17 +450,21 @@ class GameManager {
   }
 
   togglePause() {
-    if (this.state === 'RACING') {
+    if (this.state === 'RACING' || this.state === 'TUTORIAL') {
       this.state = 'PAUSED';
       this.ui.showScreen('PAUSED');
     } else if (this.state === 'PAUSED') {
-      this.state = 'RACING';
+      this.state = this.tutorial.isActive ? 'TUTORIAL' : 'RACING';
       this.ui.showScreen('RACING');
     }
   }
 
   restartRace() {
-    this.startCountdown();
+    if (this.tutorial.isActive) {
+      this.tutorial.startTutorial(!this.tutorial.isReplayingModule, this.tutorial.replayedModuleKey);
+    } else {
+      this.startCountdown();
+    }
   }
 
   triggerRaceFinish() {
@@ -412,6 +473,9 @@ class GameManager {
     this.sound.playVictorySting();
     this.cameraController.setMode(CAMERA_MODES.SLOW_MO_FINISH);
     this.finishTimer = 0.0;
+    if (this.vfx) {
+      this.vfx.spawnFinishCelebration(this.physics.pos);
+    }
   }
 
   showPodiumSequence() {
@@ -428,7 +492,6 @@ class GameManager {
     const standings = this.rivals.getStandings(this.physics.totalDistance, 'RANJEET');
     this.ui.setupPodiumOverlay(standings);
 
-    // Retrieve crafts for 1st, 2nd, 3rd
     const getCraftForRacer = (racerEntry) => {
       if (!racerEntry) return null;
       if (racerEntry.isPlayer) return this.playerVehicle;
@@ -458,10 +521,16 @@ class GameManager {
     // Update player progression
     this.winStreak++;
     this.playerXP += 1250;
+    saveManager.data.player.winStreak = this.winStreak;
+    saveManager.data.player.xp = this.playerXP;
+    saveManager.data.player.credits += 2500;
+
     if (this.playerXP >= 12000) {
       this.playerLevel = 8;
+      saveManager.data.player.level = 8;
       document.getElementById('level-up-toast').style.display = 'block';
     }
+    saveManager.save();
 
     this.ui.showWinningLobby(this.winStreak, this.playerLevel, 1250);
   }
@@ -472,6 +541,8 @@ class GameManager {
     this.setTrackVisible(false);
     this.garageLobby.show();
     this.garageLobby.setCameraAnglePreset('FRONT');
+    if (this.ui) this.ui.hideTutorialHUD();
+    if (this.vector) this.vector.hide();
 
     if (this.playerVehicle.group.parent) {
       this.playerVehicle.group.parent.remove(this.playerVehicle.group);
@@ -536,15 +607,23 @@ class GameManager {
     // State Machine Dispatch
     switch (this.state) {
       case 'LOADING':
+      case 'WELCOME_FIRST':
       case 'LOBBY':
       case 'CAR_SELECT':
       case 'GARAGE':
       case 'MATCH_PREP':
-      case 'WINNING_LOBBY': {
+      case 'WINNING_LOBBY':
+      case 'DRIVING_SCHOOL':
+      case 'SETTINGS': {
         this.garageLobby.update(delta, this.camera, this.state === 'LOADING' || this.state === 'LOBBY');
         if (this.playerVehicle) {
           this.playerVehicle.updateKineticState(delta, 0, 0, 0, false, false, 0);
         }
+        break;
+      }
+
+      case 'CINEMATIC_INTRO': {
+        this.cinematicIntro.update(delta);
         break;
       }
 
@@ -553,7 +632,6 @@ class GameManager {
         const introProg = Math.min(this.raceIntroTimer / 7.5, 1.0);
         this.cameraController.updateRaceIntro(introProg, this.circuit, this.rivals.rivals, this.playerVehicle);
 
-        // Update card
         const racerIndex = Math.floor(introProg * 8);
         this.ui.updateRaceIntroCard(racerIndex, 8);
 
@@ -583,6 +661,7 @@ class GameManager {
         break;
       }
 
+      case 'TUTORIAL':
       case 'RACING': {
         const inputs = this.pollInputs();
         this.physics.setInputs(inputs);
@@ -590,9 +669,16 @@ class GameManager {
         const renderAlpha = this.physics.update(delta);
         const speedKmh = this.physics.getSpeedKmh();
 
+        // Update Tutorial logic if in tutorial mode
+        if (this.state === 'TUTORIAL') {
+          this.tutorial.update(delta, this.keys, this.physics);
+        }
+
         // Near miss & slipstream detection
         this.physics.checkTrafficNearMiss(this.traffic.vehicles, this.physics.pos);
-        this.physics.checkSlipstream(this.rivals.rivals, this.physics.pos, this.physics.forward);
+        if (this.rivals && this.rivals.rivals.length > 0) {
+          this.physics.checkSlipstream(this.rivals.rivals, this.physics.pos, this.physics.forward);
+        }
 
         // Traffic collision check
         const trafficCol = this.traffic.checkCollision(this.physics.pos, 2.4);
@@ -600,10 +686,17 @@ class GameManager {
           this.physics.pos.addScaledVector(trafficCol.repelVector, 0.45);
           this.physics.vel.multiplyScalar(0.92);
           this.cameraController.addShake(0.35);
+          if (this.vfx) {
+            this.vfx.spawnCollisionSparks(this.physics.pos, trafficCol.repelVector, 1.2);
+          }
         }
 
         if (this.physics.isColliding) {
           this.cameraController.addShake(this.physics.collisionImpulse);
+          if (this.vfx && Math.random() < 0.3) {
+            const hitNorm = this.physics.pos.clone().sub(this.circuit.getFrameAt(this.physics.currentU).pos).normalize();
+            this.vfx.spawnCollisionSparks(this.physics.pos, hitNorm, this.physics.collisionImpulse);
+          }
         }
 
         // Interpolated transform
@@ -631,21 +724,40 @@ class GameManager {
         this.circuit.update(delta);
 
         // Game state (Laps, standings, times)
-        this.gameState.update(delta, this.physics.currentU, speedKmh, this.rivals.rivals);
+        if (this.state === 'RACING') {
+          this.gameState.update(delta, this.physics.currentU, speedKmh, this.rivals.rivals);
 
-        // Final Lap check
-        if (this.gameState.currentLap === 3 && this.sound.musicState !== 'FINAL_LAP') {
-          this.sound.setMusicState('FINAL_LAP');
-        }
+          // Final Lap check
+          if (this.gameState.currentLap === 3 && this.sound.musicState !== 'FINAL_LAP') {
+            this.sound.setMusicState('FINAL_LAP');
+          }
 
-        // Finish line check
-        if (this.gameState.status === RACE_STATUS.FINISHED) {
-          this.triggerRaceFinish();
+          // Finish line check
+          if (this.gameState.status === RACE_STATUS.FINISHED) {
+            this.triggerRaceFinish();
+          }
         }
 
         // Audio
         if (this.sound) {
           this.sound.update(speedKmh, inputs.throttle, this.physics.isBoosting, this.physics.isDrifting, delta);
+        }
+
+        // VFX System: Boost, Drift & Environment Particles
+        if (this.vfx) {
+          const rearL = interpPos.clone().add(new THREE.Vector3(-1.1, 0.4, -2.2).applyQuaternion(interpQuat));
+          const rearR = interpPos.clone().add(new THREE.Vector3(1.1, 0.4, -2.2).applyQuaternion(interpQuat));
+
+          if (this.physics.isBoosting) {
+            this.vfx.spawnBoostParticles(rearL, rearR, this.physics.forward, this.physics.boostTier === 'OVERDRIVE');
+          }
+
+          if (this.physics.isDrifting) {
+            const steerSign = Math.sign(inputs.steer || 1.0);
+            this.vfx.spawnDriftSparks(interpPos, new THREE.Vector3(-steerSign, 0, 0).applyQuaternion(interpQuat), this.physics.driftDuration > 1.2);
+          }
+
+          this.vfx.update(delta, interpPos, this.physics.vel, this.camera, this.physics.isBoosting, this.physics.isDrifting, speedKmh);
         }
 
         // Camera follow
@@ -678,6 +790,10 @@ class GameManager {
         const { pos: interpPos, quat: interpQuat } = this.physics.getInterpolatedTransform(1.0);
         this.cameraController.update(delta, interpPos, this.physics.vel, interpQuat, 180, false, false);
         this.playerVehicle.updateKineticState(delta, 0, 0.4, 0, false, false, 180);
+
+        if (this.vfx) {
+          this.vfx.update(delta, interpPos, this.physics.vel, this.camera, false, false, 120);
+        }
 
         if (this.finishTimer >= 2.6) {
           this.state = 'RESULTS';

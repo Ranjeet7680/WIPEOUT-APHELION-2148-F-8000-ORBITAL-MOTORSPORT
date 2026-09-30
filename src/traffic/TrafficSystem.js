@@ -141,4 +141,15 @@ export class TrafficSystem {
     }
     return { hit: false };
   }
+
+  spawnCivilianDroneCluster(targetU, count = 3) {
+    const laneOffsets = [-5.0, 0.0, 5.0];
+    for (let i = 0; i < Math.min(count, this.vehicles.length); i++) {
+      const v = this.vehicles[i];
+      v.u = (targetU + i * 0.012) % 1.0;
+      v.lane = laneOffsets[i % laneOffsets.length];
+      v.targetLane = v.lane;
+      v.speedKmh = 130.0;
+    }
+  }
 }

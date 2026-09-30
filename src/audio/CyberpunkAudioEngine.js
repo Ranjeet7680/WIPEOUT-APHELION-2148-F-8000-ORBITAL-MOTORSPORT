@@ -108,6 +108,21 @@ export class CyberpunkAudioEngine {
     return !this.isMuted;
   }
 
+  setMasterVolume(val) {
+    if (this.masterGain && this.ctx) {
+      const clamped = Math.max(0.0, Math.min(1.0, val));
+      this.masterGain.gain.setValueAtTime(clamped * 0.5, this.ctx.currentTime);
+    }
+  }
+
+  setSfxVolume(val) {
+    this.sfxVolume = Math.max(0.0, Math.min(1.0, val));
+  }
+
+  setMusicVolume(val) {
+    this.musicVolume = Math.max(0.0, Math.min(1.0, val));
+  }
+
   setMusicState(state) {
     this.musicState = state;
     if (state === 'FINAL_LAP') {

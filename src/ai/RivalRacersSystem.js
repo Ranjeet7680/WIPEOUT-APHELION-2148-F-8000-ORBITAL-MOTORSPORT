@@ -253,4 +253,71 @@ export class RivalRacersSystem {
     all.sort((a, b) => b.dist - a.dist);
     return all;
   }
+
+  despawnAll() {
+    this.rivals.forEach(r => {
+      if (r.vehicle && r.vehicle.group) {
+        this.scene.remove(r.vehicle.group);
+      }
+    });
+    this.rivals = [];
+  }
+
+  spawnSingleRival(id = 'kane', targetU = 0.05, speedKmh = 160.0) {
+    this.despawnAll();
+    const spec = RIVAL_ROSTER.find(r => r.id === id) || RIVAL_ROSTER[0];
+    const vehicle = new FuturisticVehicle(this.scene, false, spec.vehicleId);
+    vehicle.setCustomLivery(spec.color, spec.underglow, spec.underglow, 'aero', 'wing');
+
+    this.rivals.push({
+      spec,
+      name: spec.name,
+      vehicle,
+      gridSlot: 2,
+      u: targetU % 1.0,
+      lane: 0.0,
+      targetLane: 0.0,
+      speedKmh: speedKmh,
+      baseSpeedKmh: speedKmh,
+      currentLap: 1,
+      totalDistance: targetU * 5400.0,
+      boostTimer: 0.0,
+      steerInput: 0.0,
+      throttleInput: 1.0,
+      brakeInput: 0.0,
+      driftActive: false
+    });
+  }
+
+  spawnTutorialGrid(racerIds = ['kane', 'mira', 'zero'], speedKmh = 220.0) {
+    this.despawnAll();
+    racerIds.forEach((id, idx) => {
+      const spec = RIVAL_ROSTER.find(r => r.id === id) || RIVAL_ROSTER[idx];
+      const vehicle = new FuturisticVehicle(this.scene, false, spec.vehicleId);
+      vehicle.setCustomLivery(spec.color, spec.underglow, spec.underglow, 'aero', 'wing');
+
+      const gridSlot = idx + 2;
+      const initialU = (1.0 - gridSlot * 0.012) % 1.0;
+      const initialLane = (gridSlot % 2 === 0 ? 1 : -1) * 3.5;
+
+      this.rivals.push({
+        spec,
+        name: spec.name,
+        vehicle,
+        gridSlot,
+        u: initialU,
+        lane: initialLane,
+        targetLane: initialLane,
+        speedKmh: 0.0,
+        baseSpeedKmh: speedKmh,
+        currentLap: 1,
+        totalDistance: gridSlot * -35.0,
+        boostTimer: 0.0,
+        steerInput: 0.0,
+        throttleInput: 1.0,
+        brakeInput: 0.0,
+        driftActive: false
+      });
+    });
+  }
 }

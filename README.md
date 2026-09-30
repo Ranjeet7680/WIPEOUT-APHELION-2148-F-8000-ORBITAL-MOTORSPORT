@@ -24,11 +24,20 @@
 ## 🚀 Complete Game Flow & UX Progression
 
 ```
-GAME LAUNCH ──► 3D LOADING SCREEN ──► "DEVELOPED BY RANJEET KUMAR" ──► 3D UNDERGROUND RACING HQ
+FIRST EVER LAUNCH:
+3D LOADING ──► "DEVELOPED BY RANJEET KUMAR" ──► FIRST-TIME PLAYER WELCOME ──► FIRST-TIME CINEMATIC
+      │
+      ▼
+AETHER DRIVER ACADEMY (10 Interactive Steps + Vector AI Voice) ──► DRIVER CERTIFIED ──► 3D LOBBY HQ
+
+SUBSEQUENT LAUNCHES:
+3D LOADING ──► DEVELOPER CREDIT ──► 3D UNDERGROUND RACING HQ (Direct Access, Never Interrupted)
       │
       ├──► 3D VEHICLE SHOWCASE (Drag rotate, scroll zoom, camera angles)
       ├──► CAR SELECTION CAROUSEL (6 Original Machines & Animated Stats)
       ├──► LIVE CUSTOMIZATION (Livery paints, underglow, aero kits, spoilers)
+      ├──► DRIVING SCHOOL / TUTORIAL REPLAY (Practice any of the 10 academy modules)
+      ├──► SETTINGS (Vector Voice, Subtitles, SFX & Music Volume Sliders)
       ▼
 [ PLAY RACE ] ──► MATCHMAKING & TIPS ──► FLY-THROUGH CINEMATIC ──► STARTING GRID INSPECTION
       │
