@@ -99,8 +99,8 @@ export class CameraController {
     const right = new THREE.Vector3(1, 0, 0).applyQuaternion(craftQuat);
     const time = performance.now() * 0.001;
 
-    // Speed ratio 0..1 (top speed 1400 km/h)
-    const speedRatio = Math.min(speedKmh / 1400, 1.2);
+    // Speed ratio 0..1 (top speed 420 km/h)
+    const speedRatio = Math.min(speedKmh / 420.0, 1.2);
 
     // ------------------------------------------------------------------------
     // 0. ELIMINATION SEQUENCE CINEMATIC TRACKING OVERRIDE
@@ -110,7 +110,6 @@ export class CameraController {
       if (this.eliminationTimer <= 0) {
         this.isEliminationReplay = false;
       } else {
-        // Dramatic low-angle orbital spectator dolly tracking the wreck
         const angle = time * 1.5;
         this.camera.fov = THREE.MathUtils.lerp(this.camera.fov, 48.0, delta * 8.0);
         this.camera.updateProjectionMatrix();
@@ -124,25 +123,17 @@ export class CameraController {
     }
 
     // ------------------------------------------------------------------------
-    // 1. DYNAMIC FOV & FOCUS HUNTING
+    // 1. DYNAMIC FOV & HYPER-BOOST EXPANSION (75° at rest -> 95° top speed -> 105° boost)
     // ------------------------------------------------------------------------
-    if (this.mode === CAMERA_MODES.BROADCAST_DRONE) {
-      // Telephoto lens with momentary focus hunting oscillation
-      this.focusHuntPhase += delta * 14.0;
-      const focusBreath = Math.sin(this.focusHuntPhase) * 1.8;
-      const targetFov = this.broadcastFov + focusBreath;
-      this.camera.fov = THREE.MathUtils.lerp(this.camera.fov, targetFov, delta * 5.0);
-    } else {
-      const targetFov = this.baseFov + (this.maxFov - this.baseFov) * speedRatio + (isBoosting ? 8 : 0);
-      this.camera.fov = THREE.MathUtils.lerp(this.camera.fov, targetFov, delta * 6.0);
-    }
+    const targetFov = 75.0 + speedRatio * 20.0 + (isBoosting ? 12.0 : 0.0);
+    this.camera.fov = THREE.MathUtils.lerp(this.camera.fov, targetFov, delta * 8.0);
     this.camera.updateProjectionMatrix();
 
     // ------------------------------------------------------------------------
     // 2. CAMERA SHAKE COMPUTATION
     // ------------------------------------------------------------------------
     if (isScraping) this.addShake(0.08);
-    if (isBoosting) this.addShake(0.05);
+    if (isBoosting) this.addShake(0.04);
 
     let shakeOffset = new THREE.Vector3(0, 0, 0);
     if (this.shakeIntensity > 0.001) {
@@ -166,26 +157,26 @@ export class CameraController {
           velDir.normalize();
         }
 
-        // Dynamic chase distance: 8m at rest → 14m at full speed for better track visibility
-        const dynamicChaseDistance = THREE.MathUtils.lerp(8.0, 14.0, speedRatio);
-        const dynamicChaseHeight   = THREE.MathUtils.lerp(2.4, 3.5, speedRatio);
+        // Calibrated framing: Vehicle occupies 15-25% of viewport
+        const dynamicChaseDistance = THREE.MathUtils.lerp(6.8, 9.6, speedRatio) + (isBoosting ? 1.4 : 0);
+        const dynamicChaseHeight   = THREE.MathUtils.lerp(2.1, 2.7, speedRatio);
 
         this.targetCameraPos.copy(craftPos)
           .addScaledVector(velDir, -dynamicChaseDistance)
           .addScaledVector(up, dynamicChaseHeight);
 
-        // Snap immediately if uninitialized (prevents camera starting at 0,0,0 while track is at Y=850)
+        // Snap immediately if uninitialized
         if (this.currentCameraPos.lengthSq() < 1.0) {
           this.currentCameraPos.copy(this.targetCameraPos);
         }
 
-        const followSpeed = 14.0;
+        const followSpeed = 16.0;
         this.currentCameraPos.lerp(this.targetCameraPos, delta * followSpeed);
         this.camera.position.copy(this.currentCameraPos).add(shakeOffset);
 
-        // Look ahead further at higher speeds for better reaction time
-        const lookAheadDist = THREE.MathUtils.lerp(4.0, 12.0, speedRatio);
-        this.lookTarget.copy(craftPos).addScaledVector(fwd, lookAheadDist).addScaledVector(up, 0.4);
+        // Look target slightly ahead of vehicle with apex lead
+        const lookAheadDist = THREE.MathUtils.lerp(5.0, 10.0, speedRatio);
+        this.lookTarget.copy(craftPos).addScaledVector(fwd, lookAheadDist).addScaledVector(up, 0.5);
         this.camera.lookAt(this.lookTarget);
         this.camera.up.copy(up);
         break;
