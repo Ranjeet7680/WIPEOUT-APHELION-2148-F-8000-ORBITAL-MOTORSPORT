@@ -535,6 +535,44 @@ class GameManager {
     this.ui.showWinningLobby(this.winStreak, this.playerLevel, 1250);
   }
 
+  playTutorialCompletionCinematic() {
+    this.state = 'COMPLETION_CINEMATIC';
+    this.podiumScene.hide();
+    this.setTrackVisible(false);
+    this.garageLobby.show();
+    if (this.ui) this.ui.hideTutorialHUD();
+
+    // Mount player vehicle on turntable
+    if (this.playerVehicle.group.parent) {
+      this.playerVehicle.group.parent.remove(this.playerVehicle.group);
+    }
+    this.garageLobby.turntable.add(this.playerVehicle.group);
+    this.playerVehicle.group.position.set(0, 0.4, 0);
+
+    // Camera starts close and smoothly pulls back
+    this.garageLobby.cameraDistance = 4.5;
+    this.garageLobby.targetCameraDistance = 8.5;
+    this.garageLobby.cameraHeight = 1.6;
+    this.garageLobby.targetCameraHeight = 2.2;
+
+    this.ui.showFirstTimeCinematicOverlay();
+    this.ui.updateCinematicText('DRIVER CERTIFIED // RANJEET', 'AETHER-9 NETWORK ACCESS GRANTED');
+
+    if (this.vfx) {
+      this.vfx.spawnLevelUpVFX(new THREE.Vector3(0, 0.4, 0));
+    }
+
+    this.vector.speak(
+      'Welcome to Neo-Shinjuku. All district circuits are now open.',
+      'WELCOME TO NEO-SHINJUKU // NETWORK ACCESS GRANTED',
+      4200,
+      () => {
+        this.ui.hideFirstTimeCinematicOverlay();
+        this.returnToLobby();
+      }
+    );
+  }
+
   returnToLobby() {
     this.state = 'LOBBY';
     this.podiumScene.hide();
@@ -624,6 +662,14 @@ class GameManager {
 
       case 'CINEMATIC_INTRO': {
         this.cinematicIntro.update(delta);
+        break;
+      }
+
+      case 'COMPLETION_CINEMATIC': {
+        this.garageLobby.update(delta, this.camera, true);
+        if (this.playerVehicle) {
+          this.playerVehicle.updateKineticState(delta, 0, 0.2, 0, false, false, 0);
+        }
         break;
       }
 

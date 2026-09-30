@@ -160,6 +160,44 @@ export class GarageLobbyScene {
     const keyLight = new THREE.DirectionalLight(0xE0F0FF, 1.8);
     keyLight.position.set(0, 16, 8);
     this.group.add(keyLight);
+
+    // 7. Autonomous Mechanic Inspection Drones
+    this.drones = [];
+    for (let k = 0; k < 3; k++) {
+      const droneGroup = new THREE.Group();
+      const body = new THREE.Mesh(
+        new THREE.BoxGeometry(0.5, 0.2, 0.7),
+        new THREE.MeshStandardMaterial({ color: 0x121824, metalness: 0.9, roughness: 0.2 })
+      );
+      droneGroup.add(body);
+
+      const eye = new THREE.Mesh(
+        new THREE.SphereGeometry(0.1, 16, 16),
+        new THREE.MeshBasicMaterial({ color: 0x00F0FF })
+      );
+      eye.position.set(0, 0, 0.35);
+      droneGroup.add(eye);
+
+      // Downward scanning laser cone
+      const scanCone = new THREE.Mesh(
+        new THREE.ConeGeometry(0.7, 2.2, 16, 1, true),
+        new THREE.MeshBasicMaterial({
+          color: 0x00F0FF,
+          transparent: true,
+          opacity: 0.18,
+          side: THREE.DoubleSide,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false
+        })
+      );
+      scanCone.position.set(0, -1.1, 0.2);
+      droneGroup.add(scanCone);
+
+      const baseAngle = (k / 3) * Math.PI * 2;
+      droneGroup.position.set(Math.cos(baseAngle) * 4.2, 1.8 + k * 0.35, Math.sin(baseAngle) * 4.2);
+      this.group.add(droneGroup);
+      this.drones.push({ group: droneGroup, angle: baseAngle, baseH: 1.8 + k * 0.35, speed: 0.6 + k * 0.2 });
+    }
   }
 
   setupEventListeners() {
@@ -284,5 +322,16 @@ export class GarageLobbyScene {
     this.holoPanels.forEach((panel, idx) => {
       panel.position.y = 5.5 + Math.sin(time * 2.0 + idx) * 0.15;
     });
+
+    // Mechanic Drones orbit and inspection bob
+    if (this.drones) {
+      this.drones.forEach(d => {
+        d.angle += delta * d.speed;
+        d.group.position.x = Math.cos(d.angle) * 4.2;
+        d.group.position.z = Math.sin(d.angle) * 4.2;
+        d.group.position.y = d.baseH + Math.sin(time * 3.0 + d.angle) * 0.2;
+        d.group.lookAt(0, 0.6, 0);
+      });
+    }
   }
 }

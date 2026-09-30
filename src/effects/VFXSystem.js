@@ -390,6 +390,65 @@ export class VFXSystem {
     }
   }
 
+  spawnLevelUpVFX(pos) {
+    this.spawnLandingShockwave(pos, new THREE.Vector3(0, 1, 0), true);
+    for (let i = 0; i < 40; i++) {
+      const idx = this.findFreeColParticle();
+      if (idx === -1) break;
+      this.colPos[idx * 3] = pos.x + (Math.random() - 0.5) * 2;
+      this.colPos[idx * 3 + 1] = pos.y + 1;
+      this.colPos[idx * 3 + 2] = pos.z + (Math.random() - 0.5) * 2;
+      this.colVel[idx].set((Math.random() - 0.5) * 10, 12 + Math.random() * 10, (Math.random() - 0.5) * 10);
+      this.colLife[idx] = 1.2;
+      this.colColors[idx * 3] = 1.0;
+      this.colColors[idx * 3 + 1] = 0.84;
+      this.colColors[idx * 3 + 2] = 0.0; // Gold
+    }
+  }
+
+  spawnRewardVFX(pos) {
+    for (let i = 0; i < 30; i++) {
+      const idx = this.findFreeColParticle();
+      if (idx === -1) break;
+      this.colPos[idx * 3] = pos.x + (Math.random() - 0.5) * 4;
+      this.colPos[idx * 3 + 1] = pos.y + 0.5 + Math.random() * 2;
+      this.colPos[idx * 3 + 2] = pos.z + (Math.random() - 0.5) * 4;
+      this.colVel[idx].set((Math.random() - 0.5) * 6, 6 + Math.random() * 8, (Math.random() - 0.5) * 6);
+      this.colLife[idx] = 1.0;
+      this.colColors[idx * 3] = 0.0;
+      this.colColors[idx * 3 + 1] = 0.94;
+      this.colColors[idx * 3 + 2] = 1.0; // Cyan
+    }
+  }
+
+  spawnPodiumVFX(rank = 1, pos = new THREE.Vector3(0, 0, 0)) {
+    this.confettiActive = true;
+    this.confettiPoints.material.opacity = 1.0;
+    const color = rank === 1 ? new THREE.Color(0xFFD700) : (rank === 2 ? new THREE.Color(0xE0E8F5) : new THREE.Color(0xCD7F32));
+
+    for (let i = 0; i < 150; i++) {
+      this.confettiPos[i * 3] = pos.x + (Math.random() - 0.5) * 20;
+      this.confettiPos[i * 3 + 1] = pos.y + 4.0 + Math.random() * 10;
+      this.confettiPos[i * 3 + 2] = pos.z + (Math.random() - 0.5) * 20;
+      this.confettiVel[i].set((Math.random() - 0.5) * 14.0, 10.0 + Math.random() * 16.0, (Math.random() - 0.5) * 14.0);
+      this.confettiLife[i] = 1.2;
+      this.confettiColors[i * 3] = color.r;
+      this.confettiColors[i * 3 + 1] = color.g;
+      this.confettiColors[i * 3 + 2] = color.b;
+    }
+  }
+
+  triggerMenuTransition() {
+    const el = document.getElementById('cinematic-ui-root');
+    if (!el) return;
+    el.classList.remove('glitch-transition');
+    void el.offsetWidth;
+    el.classList.add('glitch-transition');
+    setTimeout(() => {
+      el.classList.remove('glitch-transition');
+    }, 400);
+  }
+
   // --------------------------------------------------------------------------
   // POOL FINDERS
   // --------------------------------------------------------------------------

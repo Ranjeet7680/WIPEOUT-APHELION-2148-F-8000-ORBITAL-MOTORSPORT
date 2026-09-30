@@ -861,8 +861,7 @@ export class CinematicUI {
 
     // 11. Certified modal button
     document.getElementById('btn-certified-lobby').addEventListener('click', () => {
-      this.showScreen('LOBBY');
-      this.game.returnToLobby();
+      this.game.playTutorialCompletionCinematic();
     });
 
     // 12. Driving school buttons
