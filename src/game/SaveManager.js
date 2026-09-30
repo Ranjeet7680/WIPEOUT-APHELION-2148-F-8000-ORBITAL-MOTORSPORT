@@ -35,6 +35,7 @@ const DEFAULT_SAVE_DATA = {
     subtitleEnabled: true,
     sfxVolume: 1.0,
     musicVolume: 0.85,
+    ghostEnabled: true,
     graphicsQuality: 'HIGH'
   },
   player: {

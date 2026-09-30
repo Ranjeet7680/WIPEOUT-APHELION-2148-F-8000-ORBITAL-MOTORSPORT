@@ -1,13 +1,15 @@
 import { VEHICLE_CATALOG } from '../craft/FuturisticVehicle.js';
 import { RIVAL_ROSTER } from '../ai/RivalRacersSystem.js';
 import { saveManager } from '../game/SaveManager.js';
+import { backendService } from '../backend/BackendService.js';
 
 // ============================================================================
 // CINEMATIC UI: 2089 ARCADE RACING PRESENTATION & UX FLOW
 // Developer Credit "DEVELOPED BY RANJEET KUMAR", 3D Loading Screen,
 // First-Time Player Welcome & Driving School Academy, 3D Interactive Lobby,
 // Car Selection Carousel, Live Customization, Match Prep, Race Intro,
-// High-tech HUD, Pause, Results, 3D Victory Podium, Winning Lobby & Settings
+// High-tech HUD, Pause, Results, 3D Victory Podium, Winning Lobby,
+// Global Cloud Leaderboard & Realtime Ghost Telemetry Replay
 // ============================================================================
 
 export class CinematicUI {
@@ -28,11 +30,30 @@ export class CinematicUI {
       'PRESS [E] FOR KINETIC ENERGY BRAKE BEFORE TIGHT HAIRPIN APEXES.'
     ];
 
+    // Safe DOM helpers
+    this.safeSetText = (id, text) => {
+      const el = document.getElementById(id) || this.container.querySelector('#' + id);
+      if (el) el.textContent = text;
+    };
+    this.safeSetHTML = (id, html) => {
+      const el = document.getElementById(id) || this.container.querySelector('#' + id);
+      if (el) el.innerHTML = html;
+    };
+    this.safeSetWidth = (id, width) => {
+      const el = document.getElementById(id) || this.container.querySelector('#' + id);
+      if (el) el.style.width = width;
+    };
+    this.safeBind = (id, event, handler) => {
+      const el = document.getElementById(id) || this.container.querySelector('#' + id);
+      if (el) el.addEventListener(event, handler);
+    };
+
     // Current state
     this.currentScreen = 'LOADING';
     this.selectedCarIndex = 0;
     this.tipIndex = 0;
     this.actionTimeout = null;
+    this.cachedLeaderboard = null;
 
     this.buildAllDOM();
     this.setupEventListeners();
@@ -119,8 +140,12 @@ export class CinematicUI {
           </div>
         </div>
 
-        <!-- Top Right: Currencies -->
+        <!-- Top Right: Currencies & Cloud Telemetry -->
         <div class="lobby-currencies">
+          <div class="currency-pill cloud" id="lobby-cloud-badge">
+            <span class="cloud-dot"></span>
+            <strong id="cloud-status-text">CLOUD: ONLINE 18ms</strong>
+          </div>
           <div class="currency-pill credits">
             <span class="c-symbol">Ȼ</span>
             <strong id="lobby-credits">45,200</strong>
@@ -143,7 +168,8 @@ export class CinematicUI {
           <button class="lobby-nav-btn" data-nav="tutorial"><span class="nav-num">04</span> TUTORIAL</button>
           <button class="lobby-nav-btn" data-nav="events"><span class="nav-num">05</span> EVENTS</button>
           <button class="lobby-nav-btn" data-nav="map"><span class="nav-num">06</span> MAP</button>
-          <button class="lobby-nav-btn" data-nav="settings"><span class="nav-num">07</span> SETTINGS</button>
+          <button class="lobby-nav-btn" data-nav="leaderboard"><span class="nav-num">07</span> RECORDS</button>
+          <button class="lobby-nav-btn" data-nav="settings"><span class="nav-num">08</span> SETTINGS</button>
         </div>
 
         <!-- Camera Angle Presets -->
@@ -330,11 +356,15 @@ export class CinematicUI {
           <strong class="rh-val" id="rh-pos">01<small>/08</small></strong>
         </div>
 
-        <!-- TOP-CENTER: LAP -->
+        <!-- TOP-CENTER: LAP & REAL-TIME GHOST DELTA -->
         <div class="rh-corner top-center">
           <div class="rh-label">LAP</div>
           <strong class="rh-val" id="rh-lap">01<small>/03</small></strong>
           <div class="rh-lap-time" id="rh-lap-time">00:00.000</div>
+          <div class="rh-ghost-delta" id="rh-ghost-delta" style="display: none;">
+            <span class="delta-tag">GHOST:</span>
+            <strong id="rh-ghost-delta-val" class="delta-ahead">-0.00s</strong>
+          </div>
         </div>
 
         <!-- TOP-RIGHT: SPEEDOMETER & PAUSE -->
@@ -509,6 +539,13 @@ export class CinematicUI {
             </div>
             <div class="setting-item">
               <div class="si-info">
+                <strong>HOLOGRAPHIC GHOST</strong>
+                <small>Race against world record time-attack telemetry</small>
+              </div>
+              <button class="btn-toggle active" id="btn-toggle-ghost">ON</button>
+            </div>
+            <div class="setting-item">
+              <div class="si-info">
                 <strong>REPLAY TUTORIAL</strong>
                 <small>Launch Driver Academy training modules</small>
               </div>
@@ -575,9 +612,11 @@ export class CinematicUI {
           </div>
 
           <div class="results-actions">
+            <button class="btn-action-primary glow" id="btn-results-upload">UPLOAD TO LEADERBOARD ☁</button>
             <button class="btn-action-primary" id="btn-results-podium">VIEW PODIUM ►</button>
             <button class="btn-action-secondary" id="btn-results-continue">CONTINUE</button>
           </div>
+          <div class="results-upload-status" id="res-upload-status" style="display:none;"></div>
         </div>
       </div>
 
@@ -658,6 +697,49 @@ export class CinematicUI {
           </div>
         </div>
       </div>
+
+      <!-- 18. GLOBAL LEADERBOARDS & WORLD RECORDS -->
+      <div id="screen-leaderboard" class="ui-screen" style="display: none; pointer-events: auto;">
+        <div class="leaderboard-window">
+          <div class="leaderboard-header">
+            <div class="lh-title-row">
+              <button class="btn-back" id="btn-leaderboard-close">◄ BACK TO HQ</button>
+              <h2>GLOBAL PILOT LEADERBOARD // AETHER-9</h2>
+              <div class="lh-relay-badge" id="lh-relay-status">
+                <span class="pulse-marker green"></span>
+                <span id="lh-relay-text">EDGE RELAY: TOKYO-01 // 16ms</span>
+              </div>
+            </div>
+            <div class="lh-filter-row">
+              <button class="lh-filter-btn active" data-filter="all">ALL PILOTS</button>
+              <button class="lh-filter-btn" data-filter="dev">DEV RECORD</button>
+              <button class="lh-filter-btn" data-filter="rivals">AI LEGENDS</button>
+              <div class="lh-ghost-toggle-wrap">
+                <span>RACE AGAINST GHOST:</span>
+                <button class="btn-toggle active" id="btn-toggle-ghost-lb">ON</button>
+              </div>
+            </div>
+          </div>
+          <div class="leaderboard-table-container">
+            <table class="leaderboard-table">
+              <thead>
+                <tr>
+                  <th>RANK</th>
+                  <th>PILOT CALLSIGN</th>
+                  <th>VEHICLE</th>
+                  <th>LAP TIME</th>
+                  <th>TOP SPEED</th>
+                  <th>DRIFT PTS</th>
+                  <th>STATUS</th>
+                </tr>
+              </thead>
+              <tbody id="leaderboard-rows-body">
+                <tr><td colspan="7" class="lb-loading">CONNECTING TO ORBITAL TELEMETRY RELAY...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     `;
   }
 
@@ -674,6 +756,8 @@ export class CinematicUI {
         if (nav === 'cars') this.showScreen('CAR_SELECT');
         if (nav === 'garage') this.showScreen('GARAGE');
         if (nav === 'tutorial') this.showDrivingSchoolModal();
+        if (nav === 'events') this.showLeaderboardModal();
+        if (nav === 'leaderboard') this.showLeaderboardModal();
         if (nav === 'settings') this.showSettingsModal();
         if (nav === 'map') {
           if (this.game.worldMap) this.game.worldMap.toggle();
@@ -681,8 +765,13 @@ export class CinematicUI {
       });
     });
 
+    const safeBind = (id, event, handler) => {
+      const el = document.getElementById(id) || this.container.querySelector(`#${id}`);
+      if (el) el.addEventListener(event, handler);
+    };
+
     // Lobby Play CTA
-    document.getElementById('btn-lobby-play').addEventListener('click', () => {
+    safeBind('btn-lobby-play', 'click', () => {
       if (this.game.sound) this.game.sound.playMenuClick();
       this.game.startMatchmaking();
     });
@@ -699,42 +788,42 @@ export class CinematicUI {
     });
 
     // 2. Car selection carousel
-    document.getElementById('btn-car-prev').addEventListener('click', () => {
+    safeBind('btn-car-prev', 'click', () => {
       this.selectedCarIndex = (this.selectedCarIndex - 1 + VEHICLE_CATALOG.length) % VEHICLE_CATALOG.length;
       this.updateCarSelectDetails();
       if (this.game.sound) this.game.sound.playMenuClick();
     });
 
-    document.getElementById('btn-car-next').addEventListener('click', () => {
+    safeBind('btn-car-next', 'click', () => {
       this.selectedCarIndex = (this.selectedCarIndex + 1) % VEHICLE_CATALOG.length;
       this.updateCarSelectDetails();
       if (this.game.sound) this.game.sound.playMenuClick();
     });
 
-    document.getElementById('btn-car-choose').addEventListener('click', () => {
+    safeBind('btn-car-choose', 'click', () => {
       const chosenSpec = VEHICLE_CATALOG[this.selectedCarIndex];
       this.game.setPlayerVehicle(chosenSpec.id);
       this.showScreen('LOBBY');
       if (this.game.sound) this.game.sound.playMenuClick();
     });
 
-    document.getElementById('btn-car-customize').addEventListener('click', () => {
+    safeBind('btn-car-customize', 'click', () => {
       this.showScreen('GARAGE');
       if (this.game.sound) this.game.sound.playMenuClick();
     });
 
-    document.getElementById('btn-car-back').addEventListener('click', () => {
+    safeBind('btn-car-back', 'click', () => {
       this.showScreen('LOBBY');
       if (this.game.sound) this.game.sound.playMenuClick();
     });
 
     // 3. Garage & Customization
-    document.getElementById('btn-garage-back').addEventListener('click', () => {
+    safeBind('btn-garage-back', 'click', () => {
       this.showScreen('LOBBY');
       if (this.game.sound) this.game.sound.playMenuClick();
     });
 
-    document.getElementById('btn-garage-done').addEventListener('click', () => {
+    safeBind('btn-garage-done', 'click', () => {
       this.showScreen('LOBBY');
       if (this.game.sound) this.game.sound.playMenuClick();
     });
@@ -786,12 +875,12 @@ export class CinematicUI {
     });
 
     // 4. First-time Welcome & Skip buttons
-    document.getElementById('btn-welcome-tutorial').addEventListener('click', () => {
+    safeBind('btn-welcome-tutorial', 'click', () => {
       if (this.game.sound) this.game.sound.playMenuClick();
       this.game.startFirstTimeCinematicAndTutorial();
     });
 
-    document.getElementById('btn-welcome-skip').addEventListener('click', () => {
+    safeBind('btn-welcome-skip', 'click', () => {
       if (this.game.sound) this.game.sound.playMenuClick();
       saveManager.skipTutorial();
       this.showScreen('LOBBY');
@@ -800,124 +889,208 @@ export class CinematicUI {
     });
 
     // 5. Cinematic Skip
-    document.getElementById('btn-skip-cinematic').addEventListener('click', () => {
+    safeBind('btn-skip-cinematic', 'click', () => {
       if (this.game.cinematicIntro) {
         this.game.cinematicIntro.skip();
       }
     });
 
     // 6. Skip race intro
-    document.getElementById('btn-skip-intro').addEventListener('click', () => {
+    safeBind('btn-skip-intro', 'click', () => {
       this.game.skipRaceIntro();
     });
 
     // 7. Pause in-game
-    document.getElementById('btn-pause-ingame').addEventListener('click', () => {
+    safeBind('btn-pause-ingame', 'click', () => {
       this.game.togglePause();
     });
 
-    document.getElementById('btn-pause-resume').addEventListener('click', () => {
+    safeBind('btn-pause-resume', 'click', () => {
       this.game.togglePause();
     });
 
-    document.getElementById('btn-pause-restart').addEventListener('click', () => {
+    safeBind('btn-pause-restart', 'click', () => {
       this.game.togglePause();
       this.game.restartRace();
     });
 
-    document.getElementById('btn-pause-quit').addEventListener('click', () => {
+    safeBind('btn-pause-quit', 'click', () => {
       this.game.togglePause();
       this.showScreen('LOBBY');
       this.game.returnToLobby();
     });
 
     // 8. Results modal buttons
-    document.getElementById('btn-results-podium').addEventListener('click', () => {
+    safeBind('btn-results-podium', 'click', () => {
       this.game.showPodiumSequence();
     });
 
-    document.getElementById('btn-results-continue').addEventListener('click', () => {
+    safeBind('btn-results-continue', 'click', () => {
       this.game.showWinningLobby();
     });
 
     // 9. Podium continue
-    document.getElementById('btn-podium-continue').addEventListener('click', () => {
+    safeBind('btn-podium-continue', 'click', () => {
       this.game.showWinningLobby();
     });
 
     // 10. Winning lobby buttons
-    document.getElementById('btn-win-next').addEventListener('click', () => {
+    safeBind('btn-win-next', 'click', () => {
       this.game.startMatchmaking();
     });
 
-    document.getElementById('btn-win-garage').addEventListener('click', () => {
+    safeBind('btn-win-garage', 'click', () => {
       this.showScreen('GARAGE');
     });
 
-    document.getElementById('btn-win-lobby').addEventListener('click', () => {
+    safeBind('btn-win-lobby', 'click', () => {
       this.showScreen('LOBBY');
       this.game.returnToLobby();
     });
 
     // 11. Certified modal button
-    document.getElementById('btn-certified-lobby').addEventListener('click', () => {
+    safeBind('btn-certified-lobby', 'click', () => {
       this.game.playTutorialCompletionCinematic();
     });
 
     // 12. Driving school buttons
-    document.getElementById('btn-ds-back').addEventListener('click', () => {
+    safeBind('btn-ds-back', 'click', () => {
       this.showScreen('LOBBY');
       if (this.game.sound) this.game.sound.playMenuClick();
     });
 
-    document.getElementById('btn-ds-play-full').addEventListener('click', () => {
+    safeBind('btn-ds-play-full', 'click', () => {
       if (this.game.sound) this.game.sound.playMenuClick();
       this.game.launchTutorial(true, null);
     });
 
     // 13. Settings Modal buttons
-    document.getElementById('btn-settings-close').addEventListener('click', () => {
+    safeBind('btn-settings-close', 'click', () => {
       this.showScreen('LOBBY');
       if (this.game.sound) this.game.sound.playMenuClick();
     });
 
-    const voiceBtn = document.getElementById('btn-toggle-voice');
-    voiceBtn.addEventListener('click', () => {
-      const current = saveManager.getSettings().voiceEnabled;
-      saveManager.updateSettings({ voiceEnabled: !current });
-      voiceBtn.textContent = !current ? 'ON' : 'OFF';
-      voiceBtn.className = `btn-toggle ${!current ? 'active' : ''}`;
-      if (this.game.sound) this.game.sound.playMenuClick();
-    });
+    const voiceBtn = document.getElementById('btn-toggle-voice') || this.container.querySelector('#btn-toggle-voice');
+    if (voiceBtn) {
+      voiceBtn.addEventListener('click', () => {
+        const current = saveManager.getSettings().voiceEnabled;
+        saveManager.updateSettings({ voiceEnabled: !current });
+        voiceBtn.textContent = !current ? 'ON' : 'OFF';
+        voiceBtn.className = `btn-toggle ${!current ? 'active' : ''}`;
+        if (this.game.sound) this.game.sound.playMenuClick();
+      });
+    }
 
-    const subBtn = document.getElementById('btn-toggle-subtitles');
-    subBtn.addEventListener('click', () => {
-      const current = saveManager.getSettings().subtitleEnabled;
-      saveManager.updateSettings({ subtitleEnabled: !current });
-      subBtn.textContent = !current ? 'ON' : 'OFF';
-      subBtn.className = `btn-toggle ${!current ? 'active' : ''}`;
-      if (this.game.sound) this.game.sound.playMenuClick();
-    });
+    const subBtn = document.getElementById('btn-toggle-subtitles') || this.container.querySelector('#btn-toggle-subtitles');
+    if (subBtn) {
+      subBtn.addEventListener('click', () => {
+        const current = saveManager.getSettings().subtitleEnabled;
+        saveManager.updateSettings({ subtitleEnabled: !current });
+        subBtn.textContent = !current ? 'ON' : 'OFF';
+        subBtn.className = `btn-toggle ${!current ? 'active' : ''}`;
+        if (this.game.sound) this.game.sound.playMenuClick();
+      });
+    }
 
-    document.getElementById('btn-settings-replay-tut').addEventListener('click', () => {
+    const toggleGhostFn = () => {
+      const current = saveManager.getSettings().ghostEnabled !== false;
+      const next = !current;
+      saveManager.updateSettings({ ghostEnabled: next });
+
+      const gBtn = document.getElementById('btn-toggle-ghost') || this.container.querySelector('#btn-toggle-ghost');
+      const gBtnLb = document.getElementById('btn-toggle-ghost-lb') || this.container.querySelector('#btn-toggle-ghost-lb');
+      if (gBtn) {
+        gBtn.textContent = next ? 'ON' : 'OFF';
+        gBtn.className = `btn-toggle ${next ? 'active' : ''}`;
+      }
+      if (gBtnLb) {
+        gBtnLb.textContent = next ? 'ON' : 'OFF';
+        gBtnLb.className = `btn-toggle ${next ? 'active' : ''}`;
+      }
+      if (this.game.ghostVehicle) {
+        this.game.ghostVehicle.enabled = next;
+      }
+      if (this.game.sound) this.game.sound.playMenuClick();
+    };
+
+    safeBind('btn-toggle-ghost', 'click', toggleGhostFn);
+    safeBind('btn-toggle-ghost-lb', 'click', toggleGhostFn);
+
+    safeBind('btn-settings-replay-tut', 'click', () => {
       if (this.game.sound) this.game.sound.playMenuClick();
       this.showDrivingSchoolModal();
     });
 
-    document.getElementById('slider-sfx').addEventListener('input', (e) => {
-      const val = e.target.value / 100;
-      saveManager.updateSettings({ sfxVolume: val });
-    });
+    const sfxSlider = document.getElementById('slider-sfx') || this.container.querySelector('#slider-sfx');
+    if (sfxSlider) {
+      sfxSlider.addEventListener('input', (e) => {
+        const val = e.target.value / 100;
+        saveManager.updateSettings({ sfxVolume: val });
+        if (this.game.sound) this.game.sound.setSfxVolume(val);
+      });
+    }
 
-    document.getElementById('slider-music').addEventListener('input', (e) => {
-      const val = e.target.value / 100;
-      saveManager.updateSettings({ musicVolume: val });
-    });
+    const musicSlider = document.getElementById('slider-music') || this.container.querySelector('#slider-music');
+    if (musicSlider) {
+      musicSlider.addEventListener('input', (e) => {
+        const val = e.target.value / 100;
+        saveManager.updateSettings({ musicVolume: val });
+        if (this.game.sound) this.game.sound.setMusicVolume(val);
+      });
+    }
 
-    document.getElementById('btn-reset-save').addEventListener('click', () => {
+    safeBind('btn-reset-save', 'click', () => {
       if (confirm('RESET ALL DRIVER SAVED DATA & PROGRESS?')) {
         saveManager.resetData();
         window.location.reload();
+      }
+    });
+
+    // 14. Leaderboard Modal Buttons & Filters
+    safeBind('btn-leaderboard-close', 'click', () => {
+      this.showScreen('LOBBY');
+      if (this.game.sound) this.game.sound.playMenuClick();
+    });
+
+    this.container.querySelectorAll('.lh-filter-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        this.container.querySelectorAll('.lh-filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        if (this.game.sound) this.game.sound.playMenuClick();
+        this.renderLeaderboardRows(btn.dataset.filter);
+      });
+    });
+
+    // 15. Race Results Upload Button
+    safeBind('btn-results-upload', 'click', async () => {
+      if (this.game.sound) this.game.sound.playMenuClick();
+      const statusEl = document.getElementById('res-upload-status');
+      if (statusEl) {
+        statusEl.style.display = 'block';
+        statusEl.textContent = 'TRANSMITTING TELEMETRY TO ORBITAL RELAY...';
+        statusEl.className = 'results-upload-status syncing';
+      }
+
+      const lapData = {
+        pilotName: saveManager.data.player.name || 'RANJEET',
+        vehicleId: this.game.playerVehicle ? this.game.playerVehicle.spec.id : 'f8000',
+        vehicleName: this.game.playerVehicle ? this.game.playerVehicle.spec.name : 'F-8000 // NIGHTRIFT',
+        lapTime: this.game.gameState.bestLapTime || this.game.gameState.currentLapTime || 52.4,
+        topSpeed: Math.floor(this.game.physics ? this.game.physics.maxSpeedKmh : 420),
+        driftScore: this.game.physics ? this.game.physics.totalDriftScore : 0,
+        stunts: this.game.physics ? this.game.physics.totalStunts : 0
+      };
+
+      const res = await backendService.submitLap(lapData);
+      if (statusEl) {
+        if (res.success) {
+          statusEl.textContent = `★ VERIFIED: RANK #${res.rank.toString().padStart(2, '0')} // +${res.rewards.credits}Ȼ +${res.rewards.xp}XP ★`;
+          statusEl.className = 'results-upload-status success';
+          if (this.game.sound) this.game.sound.playVictorySting();
+        } else {
+          statusEl.textContent = res.error || 'FAILED TO UPLOAD TELEMETRY';
+          statusEl.className = 'results-upload-status error';
+        }
       }
     });
 
@@ -961,7 +1134,8 @@ export class CinematicUI {
       'screen-pause',
       'screen-results',
       'screen-podium',
-      'screen-win-lobby'
+      'screen-win-lobby',
+      'screen-leaderboard'
     ];
 
     screens.forEach(id => {
@@ -985,7 +1159,8 @@ export class CinematicUI {
       'PAUSED': 'screen-pause',
       'RESULTS': 'screen-results',
       'PODIUM': 'screen-podium',
-      'WINNING_LOBBY': 'screen-win-lobby'
+      'WINNING_LOBBY': 'screen-win-lobby',
+      'LEADERBOARD': 'screen-leaderboard'
     };
 
     const targetId = targetMap[screenName];
@@ -996,6 +1171,10 @@ export class CinematicUI {
 
     if (screenName === 'CAR_SELECT') {
       this.updateCarSelectDetails();
+    }
+
+    if (screenName === 'LEADERBOARD') {
+      this.showLeaderboardModal();
     }
   }
 
@@ -1187,25 +1366,25 @@ export class CinematicUI {
     const spec = VEHICLE_CATALOG[this.selectedCarIndex];
     if (!spec) return;
 
-    document.getElementById('car-select-counter').textContent = `0${this.selectedCarIndex + 1} / 0${VEHICLE_CATALOG.length}`;
-    document.getElementById('car-spec-name').textContent = spec.name;
-    document.getElementById('car-spec-class').textContent = spec.classType;
-    document.getElementById('car-spec-desc').textContent = spec.description;
+    this.safeSetText('car-select-counter', `0${this.selectedCarIndex + 1} / 0${VEHICLE_CATALOG.length}`);
+    this.safeSetText('car-spec-name', spec.name);
+    this.safeSetText('car-spec-class', spec.classType);
+    this.safeSetText('car-spec-desc', spec.description);
 
-    document.getElementById('sb-spd').textContent = `${spec.maxSpeedKmh} KM/H`;
-    document.getElementById('sbf-spd').style.width = `${spec.stats.topSpeed}%`;
+    this.safeSetText('sb-spd', `${spec.maxSpeedKmh} KM/H`);
+    this.safeSetWidth('sbf-spd', `${spec.stats.topSpeed}%`);
 
-    document.getElementById('sb-acc').textContent = `${spec.stats.accel}%`;
-    document.getElementById('sbf-acc').style.width = `${spec.stats.accel}%`;
+    this.safeSetText('sb-acc', `${spec.stats.accel}%`);
+    this.safeSetWidth('sbf-acc', `${spec.stats.accel}%`);
 
-    document.getElementById('sb-hnd').textContent = `${spec.stats.handling}%`;
-    document.getElementById('sbf-hnd').style.width = `${spec.stats.handling}%`;
+    this.safeSetText('sb-hnd', `${spec.stats.handling}%`);
+    this.safeSetWidth('sbf-hnd', `${spec.stats.handling}%`);
 
-    document.getElementById('sb-brk').textContent = `${spec.stats.braking}%`;
-    document.getElementById('sbf-brk').style.width = `${spec.stats.braking}%`;
+    this.safeSetText('sb-brk', `${spec.stats.braking}%`);
+    this.safeSetWidth('sbf-brk', `${spec.stats.braking}%`);
 
-    document.getElementById('sb-bst').textContent = `${spec.stats.boost}%`;
-    document.getElementById('sbf-bst').style.width = `${spec.stats.boost}%`;
+    this.safeSetText('sb-bst', `${spec.stats.boost}%`);
+    this.safeSetWidth('sbf-bst', `${spec.stats.boost}%`);
 
     // Preview vehicle in 3D
     if (this.game) {
@@ -1214,10 +1393,9 @@ export class CinematicUI {
   }
 
   updateMatchPrep(progressPct) {
-    const fill = document.getElementById('match-progress-fill');
-    if (fill) fill.style.width = `${progressPct}%`;
+    this.safeSetWidth('match-progress-fill', `${progressPct}%`);
 
-    const tipEl = document.getElementById('match-tip-text');
+    const tipEl = document.getElementById('match-tip-text') || this.container.querySelector('#match-tip-text');
     if (tipEl && Math.random() < 0.05) {
       this.tipIndex = (this.tipIndex + 1) % this.proTips.length;
       tipEl.textContent = this.proTips[this.tipIndex];
@@ -1225,33 +1403,33 @@ export class CinematicUI {
   }
 
   updateRaceIntroCard(racerIndex, totalRacers = 8) {
-    const card = document.getElementById('intro-bot-card');
+    const card = document.getElementById('intro-bot-card') || this.container.querySelector('#intro-bot-card');
     if (!card) return;
 
     if (racerIndex === 0) {
-      document.getElementById('ibc-pos').textContent = `RACER 01 / 0${totalRacers}`;
-      document.getElementById('ibc-name').textContent = 'RANJEET';
-      document.getElementById('ibc-vehicle').textContent = this.game.playerVehicle.spec.name;
-      document.getElementById('ibc-style').textContent = 'PLAYER CONTROLLER';
+      this.safeSetText('ibc-pos', `RACER 01 / 0${totalRacers}`);
+      this.safeSetText('ibc-name', 'RANJEET');
+      this.safeSetText('ibc-vehicle', this.game.playerVehicle ? this.game.playerVehicle.spec.name : 'F-8000 // NIGHTRIFT');
+      this.safeSetText('ibc-style', 'PLAYER CONTROLLER');
     } else {
       const rivals = this.game.rivals ? this.game.rivals.rivals : [];
       const rival = rivals[racerIndex - 1];
       if (rival) {
-        document.getElementById('ibc-pos').textContent = `RACER 0${racerIndex + 1} / 0${totalRacers}`;
-        document.getElementById('ibc-name').textContent = rival.name;
-        document.getElementById('ibc-vehicle').textContent = rival.spec.vehicleName;
-        document.getElementById('ibc-style').textContent = rival.spec.style;
+        this.safeSetText('ibc-pos', `RACER 0${racerIndex + 1} / 0${totalRacers}`);
+        this.safeSetText('ibc-name', rival.name);
+        this.safeSetText('ibc-vehicle', rival.spec.vehicleName);
+        this.safeSetText('ibc-style', rival.spec.style);
       }
     }
   }
 
   showActionPopup(name, points, combo = 1) {
-    const banner = document.getElementById('rh-action-banner');
+    const banner = document.getElementById('rh-action-banner') || this.container.querySelector('#rh-action-banner');
     if (!banner) return;
 
-    document.getElementById('rh-action-tag').textContent = `+${name}`;
-    document.getElementById('rh-action-pts').textContent = points > 0 ? `+${points} PTS` : '';
-    document.getElementById('rh-action-combo').textContent = combo > 1 ? `x${combo} COMBO` : '';
+    this.safeSetText('rh-action-tag', `+${name}`);
+    this.safeSetText('rh-action-pts', points > 0 ? `+${points} PTS` : '');
+    this.safeSetText('rh-action-combo', combo > 1 ? `x${combo} COMBO` : '');
 
     banner.style.display = 'flex';
     banner.classList.remove('pulse-banner');
@@ -1268,64 +1446,151 @@ export class CinematicUI {
     if (!physics || !gameState) return;
 
     const speed = Math.floor(physics.getSpeedKmh());
-    const spdEl = document.getElementById('rh-speed');
-    if (spdEl) spdEl.textContent = speed.toString().padStart(3, '0');
+    this.safeSetText('rh-speed', speed.toString().padStart(3, '0'));
 
-    document.getElementById('rh-pos').innerHTML = `${gameState.currentPosition.toString().padStart(2, '0')}<small>/08</small>`;
-    document.getElementById('rh-lap').innerHTML = `${gameState.currentLap.toString().padStart(2, '0')}<small>/03</small>`;
-    document.getElementById('rh-lap-time').textContent = gameState.formatTime(gameState.currentLapTime);
+    this.safeSetHTML('rh-pos', `${gameState.currentPosition.toString().padStart(2, '0')}<small>/08</small>`);
+    this.safeSetHTML('rh-lap', `${gameState.currentLap.toString().padStart(2, '0')}<small>/03</small>`);
+    this.safeSetText('rh-lap-time', gameState.formatTime(gameState.currentLapTime));
 
     // Boost meter & tier
     const boostPct = Math.round(physics.boostCapacity * 100);
-    const boostFill = document.getElementById('rh-boost-fill');
-    const boostLabel = document.getElementById('rh-boost-pct');
-    const tierLabel = document.getElementById('rh-boost-tier-label');
-
+    const boostFill = document.getElementById('rh-boost-fill') || this.container.querySelector('#rh-boost-fill');
     if (boostFill) boostFill.style.height = `${boostPct}%`;
-    if (boostLabel) boostLabel.textContent = `${boostPct}%`;
-    if (tierLabel) tierLabel.textContent = physics.boostTier === 'OVERDRIVE' ? 'OVERDRIVE BOOST' : 'HYPER BOOST';
+
+    this.safeSetText('rh-boost-pct', `${boostPct}%`);
+    this.safeSetText('rh-boost-tier-label', physics.boostTier === 'OVERDRIVE' ? 'OVERDRIVE BOOST' : 'HYPER BOOST');
+  }
+
+  updateGhostDeltaHUD(timeDelta, isGhostAhead) {
+    const el = document.getElementById('rh-ghost-delta') || this.container.querySelector('#rh-ghost-delta');
+    const valEl = document.getElementById('rh-ghost-delta-val') || this.container.querySelector('#rh-ghost-delta-val');
+    if (!el || !valEl) return;
+
+    el.style.display = 'flex';
+    const sign = timeDelta >= 0 ? '+' : '';
+    valEl.textContent = `${sign}${timeDelta.toFixed(2)}s`;
+
+    if (timeDelta <= 0) {
+      valEl.className = 'delta-ahead'; // green/cyan (player leading)
+    } else {
+      valEl.className = 'delta-behind'; // orange/red (ghost leading)
+    }
   }
 
   showResults(physics, gameState) {
     this.showScreen('RESULTS');
 
     const pos = gameState.currentPosition;
-    document.getElementById('res-pos-num').textContent = pos.toString().padStart(2, '0');
-    document.getElementById('res-pos-word').textContent = pos === 1 ? '1ST PLACE // VICTORY' : `${pos}TH PLACE // COMPLETE`;
+    this.safeSetText('res-pos-num', pos.toString().padStart(2, '0'));
+    this.safeSetText('res-pos-word', pos === 1 ? '1ST PLACE // VICTORY' : `${pos}TH PLACE // COMPLETE`);
 
-    document.getElementById('res-total-time').textContent = gameState.formatTime(gameState.raceTime);
-    document.getElementById('res-best-lap').textContent = gameState.formatTime(gameState.bestLapTime);
-    document.getElementById('res-top-speed').textContent = `${Math.floor(physics.maxSpeedKmh)} KM/H`;
-    document.getElementById('res-stunts').textContent = physics.totalStunts.toString();
-    document.getElementById('res-drift').textContent = `${Math.floor(physics.totalDriftDistance)} M`;
-    document.getElementById('res-near-miss').textContent = physics.totalNearMisses.toString();
-    document.getElementById('res-score').textContent = `${physics.totalScore.toLocaleString()} PTS`;
+    this.safeSetText('res-total-time', gameState.formatTime(gameState.raceTime));
+    this.safeSetText('res-best-lap', gameState.formatTime(gameState.bestLapTime));
+    this.safeSetText('res-top-speed', `${Math.floor(physics.maxSpeedKmh)} KM/H`);
+    this.safeSetText('res-stunts', physics.totalStunts.toString());
+    this.safeSetText('res-drift', `${Math.floor(physics.totalDriftDistance)} M`);
+    this.safeSetText('res-near-miss', physics.totalNearMisses.toString());
+    this.safeSetText('res-score', `${physics.totalScore.toLocaleString()} PTS`);
+
+    const statusEl = document.getElementById('res-upload-status') || this.container.querySelector('#res-upload-status');
+    if (statusEl) statusEl.style.display = 'none';
   }
 
   setupPodiumOverlay(standings) {
     if (!standings || standings.length < 3) return;
-    document.getElementById('podium-1st-name').textContent = standings[0].name;
-    document.getElementById('podium-1st-team').textContent = standings[0].team;
+    this.safeSetText('podium-1st-name', standings[0].name);
+    this.safeSetText('podium-1st-team', standings[0].team);
 
-    document.getElementById('podium-2nd-name').textContent = standings[1].name;
-    document.getElementById('podium-2nd-team').textContent = standings[1].team;
+    this.safeSetText('podium-2nd-name', standings[1].name);
+    this.safeSetText('podium-2nd-team', standings[1].team);
 
-    document.getElementById('podium-3rd-name').textContent = standings[2].name;
-    document.getElementById('podium-3rd-team').textContent = standings[2].team;
+    this.safeSetText('podium-3rd-name', standings[2].name);
+    this.safeSetText('podium-3rd-team', standings[2].team);
   }
 
   showWinningLobby(streak = 3, level = 7, xpGained = 1250) {
     this.showScreen('WINNING_LOBBY');
-    document.getElementById('win-streak-badge').textContent = `WIN STREAK: 0${streak} WINS`;
-    document.getElementById('wxp-earned').textContent = `+${xpGained} XP`;
-    document.getElementById('wxp-level').textContent = `LEVEL 0${level}`;
+    this.safeSetText('win-streak-badge', `WIN STREAK: 0${streak} WINS`);
+    this.safeSetText('wxp-earned', `+${xpGained} XP`);
+    this.safeSetText('wxp-level', `LEVEL 0${level}`);
 
-    const fill = document.getElementById('wxp-fill');
+    const fill = document.getElementById('wxp-fill') || this.container.querySelector('#wxp-fill');
     if (fill) {
       fill.style.width = '30%';
       setTimeout(() => {
         fill.style.width = '85%';
       }, 300);
+    }
+  }
+
+  async showLeaderboardModal() {
+    this.showScreen('LEADERBOARD');
+    const tbody = document.getElementById('leaderboard-rows-body') || this.container.querySelector('#leaderboard-rows-body');
+    if (tbody) {
+      tbody.innerHTML = `<tr><td colspan="7" class="lb-loading"><span class="pulse-marker"></span> QUERYING ORBITAL TELEMETRY RELAY...</td></tr>`;
+    }
+
+    // Ping check
+    const status = await backendService.checkStatus();
+    this.updateCloudStatusBadge(status.online, status.ping);
+
+    const data = await backendService.getLeaderboard(50);
+    this.cachedLeaderboard = data;
+    this.renderLeaderboardRows('all');
+  }
+
+  renderLeaderboardRows(filter = 'all') {
+    const tbody = document.getElementById('leaderboard-rows-body') || this.container.querySelector('#leaderboard-rows-body');
+    if (!tbody || !this.cachedLeaderboard) return;
+
+    let entries = this.cachedLeaderboard.leaderboard || [];
+
+    if (filter === 'dev') {
+      entries = entries.filter(e => e.pilotName === 'RANJEET' || e.badge === 'DEV_RECORD');
+    } else if (filter === 'rivals') {
+      entries = entries.filter(e => e.badge === 'AI_LEGEND' || e.badge === 'PRO_PILOT');
+    }
+
+    if (entries.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="7" class="lb-empty">NO TELEMETRY MATCHING FILTER</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = entries.map((item, idx) => {
+      const isPlayer = item.pilotName === 'RANJEET';
+      const rankBadge = item.rank === 1 ? 'gold' : item.rank === 2 ? 'silver' : item.rank === 3 ? 'bronze' : '';
+      const tagText = item.badge === 'DEV_RECORD' ? '★ CREATOR' : item.badge === 'AI_LEGEND' ? 'AI BOSS' : 'VERIFIED';
+
+      return `
+        <tr class="${isPlayer ? 'player-row' : ''}">
+          <td class="col-rank"><span class="rank-pill ${rankBadge}">#0${item.rank}</span></td>
+          <td class="col-pilot">
+            <strong>${item.pilotName}</strong>
+            <small>${item.callsign || 'PILOT'}</small>
+          </td>
+          <td class="col-vehicle">${item.vehicleName || 'F-8000 // NIGHTRIFT'}</td>
+          <td class="col-time"><strong>${item.lapTimeFormatted}</strong></td>
+          <td class="col-spd">${item.topSpeed} KM/H</td>
+          <td class="col-drift">${(item.driftScore || 0).toLocaleString()} PTS</td>
+          <td class="col-badge"><span class="verified-tag ${item.badge}">${tagText}</span></td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  updateCloudStatusBadge(online, ping = 18) {
+    const textEl = document.getElementById('cloud-status-text') || this.container.querySelector('#cloud-status-text');
+    const badgeEl = document.getElementById('lobby-cloud-badge') || this.container.querySelector('#lobby-cloud-badge');
+    const relayText = document.getElementById('lh-relay-text') || this.container.querySelector('#lh-relay-text');
+
+    if (online) {
+      if (textEl) textEl.textContent = `CLOUD: ONLINE ${ping}ms`;
+      if (badgeEl) badgeEl.className = 'currency-pill cloud online';
+      if (relayText) relayText.textContent = `EDGE RELAY: TOKYO-01 // ${ping}ms`;
+    } else {
+      if (textEl) textEl.textContent = `CLOUD: OFFLINE LOCAL`;
+      if (badgeEl) badgeEl.className = 'currency-pill cloud offline';
+      if (relayText) relayText.textContent = `EDGE RELAY: OFFLINE // LOCAL STORAGE`;
     }
   }
 }

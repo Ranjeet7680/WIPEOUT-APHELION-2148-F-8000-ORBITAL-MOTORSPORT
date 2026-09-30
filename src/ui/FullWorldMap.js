@@ -15,9 +15,9 @@ export class FullWorldMap {
     this.container.id = 'full-world-map-modal';
     this.container.className = 'full-world-map-overlay';
     this.container.style.display = 'none';
+    document.body.appendChild(this.container);
 
     this.buildMapDOM();
-    document.body.appendChild(this.container);
 
     // Keyboard listener for 'M'
     window.addEventListener('keydown', (e) => {
@@ -76,8 +76,11 @@ export class FullWorldMap {
       </div>
     `;
 
-    document.getElementById('map-close-btn').addEventListener('click', () => this.close());
-    document.getElementById('btn-fast-travel').addEventListener('click', () => {
+    const closeBtn = document.getElementById('map-close-btn') || this.container.querySelector('#map-close-btn');
+    if (closeBtn) closeBtn.addEventListener('click', () => this.close());
+
+    const travelBtn = document.getElementById('btn-fast-travel') || this.container.querySelector('#btn-fast-travel');
+    if (travelBtn) travelBtn.addEventListener('click', () => {
       this.close();
       this.game.physics.resetToStart();
     });

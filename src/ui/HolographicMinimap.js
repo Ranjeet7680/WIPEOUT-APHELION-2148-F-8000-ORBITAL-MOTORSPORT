@@ -7,6 +7,7 @@ import * as THREE from 'three';
 
 export class HolographicMinimap {
   constructor(canvasId = 'hud-minimap-canvas', circuit = null) {
+    this.canvasId = canvasId;
     this.canvas = document.getElementById(canvasId);
     this.ctx = this.canvas ? this.canvas.getContext('2d') : null;
     this.circuit = circuit;
@@ -14,11 +15,22 @@ export class HolographicMinimap {
     this.scale = 0.12; // Radar zoom factor
   }
 
+  getCanvas() {
+    if (!this.canvas) {
+      this.canvas = document.getElementById(this.canvasId);
+      if (this.canvas) {
+        this.ctx = this.canvas.getContext('2d');
+      }
+    }
+    return this.canvas;
+  }
+
   setCircuit(circuit) {
     this.circuit = circuit;
   }
 
   update(playerPos, playerQuat, playerU, rivals = [], currentDistrict = null) {
+    if (!this.ctx && !this.getCanvas()) return;
     if (!this.ctx || !this.circuit || !playerPos) return;
 
     const ctx = this.ctx;

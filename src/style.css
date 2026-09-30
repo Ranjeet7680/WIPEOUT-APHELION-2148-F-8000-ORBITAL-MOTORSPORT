@@ -4210,5 +4210,290 @@ button {
   box-shadow: 0 0 12px #FF1E3C;
 }
 
+/* ==========================================================================
+   BACKEND & TELEMETRY UI STYLES (AETHER-9 CLOUD RELAY)
+   ========================================================================== */
+
+/* 1. Cloud Telemetry Status Pill */
+.currency-pill.cloud {
+  background: rgba(0, 240, 255, 0.08);
+  border: 1px solid rgba(0, 240, 255, 0.4);
+  color: #00F0FF;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  letter-spacing: 1px;
+}
+
+.currency-pill.cloud.online .cloud-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #00FF66;
+  box-shadow: 0 0 8px #00FF66;
+  animation: pulseLive 1.2s infinite alternate;
+}
+
+.currency-pill.cloud.offline .cloud-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #FFB800;
+  box-shadow: 0 0 8px #FFB800;
+}
+
+/* 2. Real-time Ghost Delta in Racing HUD */
+.rh-ghost-delta {
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  background: rgba(6, 10, 18, 0.85);
+  border: 1px solid rgba(0, 240, 255, 0.3);
+  padding: 2px 8px;
+  border-radius: 2px;
+}
+
+.rh-ghost-delta .delta-tag {
+  color: #7A8B9E;
+  font-size: 10px;
+  letter-spacing: 1px;
+}
+
+.rh-ghost-delta strong.delta-ahead {
+  color: #00FF66;
+  text-shadow: 0 0 8px rgba(0, 255, 102, 0.8);
+}
+
+.rh-ghost-delta strong.delta-behind {
+  color: #FF3366;
+  text-shadow: 0 0 8px rgba(255, 51, 102, 0.8);
+}
+
+/* 3. Global Leaderboard Modal Window */
+.leaderboard-window {
+  width: 900px;
+  max-width: 95vw;
+  max-height: 85vh;
+  background: rgba(8, 12, 20, 0.94);
+  border: 1px solid #00F0FF;
+  box-shadow: 0 0 40px rgba(0, 240, 255, 0.25), inset 0 0 20px rgba(0, 240, 255, 0.05);
+  display: flex;
+  flex-direction: column;
+  backdrop-filter: blur(12px);
+  position: relative;
+}
+
+.leaderboard-header {
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid rgba(0, 240, 255, 0.25);
+}
+
+.lh-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.lh-title-row h2 {
+  font-family: var(--font-title);
+  font-size: 20px;
+  letter-spacing: 2px;
+  color: #FFFFFF;
+  margin: 0;
+}
+
+.lh-relay-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: #00FF66;
+  background: rgba(0, 255, 102, 0.08);
+  border: 1px solid rgba(0, 255, 102, 0.3);
+  padding: 4px 10px;
+}
+
+.lh-filter-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.lh-filter-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #7A8B9E;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: bold;
+  padding: 6px 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.lh-filter-btn.active, .lh-filter-btn:hover {
+  background: rgba(0, 240, 255, 0.15);
+  border-color: #00F0FF;
+  color: #00F0FF;
+}
+
+.lh-ghost-toggle-wrap {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: #FFFFFF;
+}
+
+.leaderboard-table-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 24px 24px;
+}
+
+.leaderboard-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  text-align: left;
+}
+
+.leaderboard-table thead th {
+  padding: 10px 12px;
+  color: #7A8B9E;
+  border-bottom: 1px solid rgba(0, 240, 255, 0.2);
+  font-size: 10px;
+  letter-spacing: 1.5px;
+}
+
+.leaderboard-table tbody tr {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  transition: background 0.15s;
+}
+
+.leaderboard-table tbody tr:hover {
+  background: rgba(0, 240, 255, 0.06);
+}
+
+.leaderboard-table tbody tr.player-row {
+  background: rgba(0, 240, 255, 0.12);
+  border-left: 3px solid #00F0FF;
+}
+
+.leaderboard-table td {
+  padding: 12px;
+  color: #E2E8F0;
+}
+
+.col-rank .rank-pill {
+  display: inline-block;
+  padding: 2px 8px;
+  font-weight: bold;
+  font-size: 11px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.col-rank .rank-pill.gold {
+  color: #FFB800;
+  border-color: #FFB800;
+  box-shadow: 0 0 8px rgba(255, 184, 0, 0.4);
+}
+
+.col-rank .rank-pill.silver {
+  color: #C0D0E0;
+  border-color: #C0D0E0;
+}
+
+.col-rank .rank-pill.bronze {
+  color: #CD7F32;
+  border-color: #CD7F32;
+}
+
+.col-pilot strong {
+  display: block;
+  color: #FFFFFF;
+}
+
+.col-pilot small {
+  color: #7A8B9E;
+  font-size: 10px;
+}
+
+.col-time strong {
+  color: #00F0FF;
+}
+
+.verified-tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 9px;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+  border: 1px solid rgba(0, 240, 255, 0.3);
+  color: #00F0FF;
+}
+
+.verified-tag.DEV_RECORD {
+  background: rgba(255, 184, 0, 0.15);
+  border-color: #FFB800;
+  color: #FFB800;
+}
+
+.verified-tag.AI_LEGEND {
+  background: rgba(255, 30, 60, 0.15);
+  border-color: #FF1E3C;
+  color: #FF1E3C;
+}
+
+.lb-loading, .lb-empty {
+  text-align: center;
+  padding: 40px !important;
+  color: #7A8B9E;
+  font-size: 13px;
+  letter-spacing: 2px;
+}
+
+/* 4. Results Upload Telemetry Status Toast */
+.results-upload-status {
+  margin-top: 14px;
+  padding: 10px 16px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: bold;
+  text-align: center;
+  letter-spacing: 1px;
+  border-radius: 2px;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.results-upload-status.syncing {
+  background: rgba(0, 240, 255, 0.1);
+  border: 1px solid #00F0FF;
+  color: #00F0FF;
+}
+
+.results-upload-status.success {
+  background: rgba(0, 255, 102, 0.15);
+  border: 1px solid #00FF66;
+  color: #00FF66;
+  box-shadow: 0 0 15px rgba(0, 255, 102, 0.3);
+}
+
+.results-upload-status.error {
+  background: rgba(255, 30, 60, 0.15);
+  border: 1px solid #FF1E3C;
+  color: #FF1E3C;
+}
+
+
 
 

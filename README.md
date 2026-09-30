@@ -108,9 +108,31 @@ WINNING LOBBY (Champion Platform, Win Streak 03, Animated XP Level-Up, Rewards C
 
 ---
 
+## 🌐 Serverless Backend & Global Telemetry Architecture
+
+The game features an integrated serverless backend running on **Vercel Serverless Functions** (`/api`):
+
+- **Global Pilot Leaderboards (`/api/leaderboard`)**:
+  - Live ranking of top pilots on the `SECTOR 07 // AETHER SKYWAY` circuit.
+  - Submits and verifies relativistic lap times, top speed, drift scores, and stunts.
+  - Displays developer record by **RANJEET** ($00:48.214$), rival legends (Kane, Nyx, Zephyr), and player ranks.
+- **Holographic Ghost Telemetry Replay (`/api/ghost`)**:
+  - Streams 3D keyframe spline telemetry of the world record ghost craft.
+  - Renders a real-time translucent cyan wireframe ghost vehicle directly on the 3D track.
+  - In-race HUD displays real-time delta time relative to the record holder (`DELTA: -0.28s` / `+0.15s`).
+- **Driver Cloud Profile Sync (`/api/profile`)**:
+  - Automatically synchronizes pilot rank, level, XP, credits, tokens, and academy certifications across devices.
+- **Orbital Edge Relay Telemetry (`/api/status`)**:
+  - Real-time latency tracking and active grid telemetry.
+
+---
+
 ## 🛠️ Technology Stack
 - **Engine**: Three.js (r160) + Postprocessing EffectComposer (UnrealBloomPass & ACESFilmic Tone Mapping)
-- **Audio**: Web Audio API Procedural Synthesizers (Lobby ambient, racing electronic techno, stunt & landing SFX, victory fanfare)
+- **Physics**: 120Hz Sub-Stepping Deterministic Arcade Aerodynamic Physics Engine
+- **Backend**: Vercel Serverless Functions (Node.js ES modules in `/api`) + Vite dev proxy middleware
+- **Telemetry**: Keyframe-interpolated Holographic Ghost Vehicle (`HolographicGhostVehicle.js`)
+- **Audio**: Web Audio API Procedural Synthesizers (Lobby ambient, racing electronic techno, stunt & landing SFX, victory fanfare) + Web Speech API (Vector Neural Voice)
 - **Bundler**: Vite 5
 - **Host**: Vercel
 

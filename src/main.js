@@ -19,12 +19,13 @@ import { HolographicMinimap } from './ui/HolographicMinimap.js';
 import { FullWorldMap } from './ui/FullWorldMap.js';
 import { CyberpunkAudioEngine } from './audio/CyberpunkAudioEngine.js';
 
-// New Architecture Subsystems
 import { saveManager } from './game/SaveManager.js';
 import { VFXSystem } from './effects/VFXSystem.js';
 import { VectorInstructor } from './tutorial/VectorInstructor.js';
 import { TutorialManager } from './tutorial/TutorialManager.js';
 import { FirstTimeCinematic } from './game/FirstTimeCinematic.js';
+import { backendService } from './backend/BackendService.js';
+import { HolographicGhostVehicle } from './craft/HolographicGhostVehicle.js';
 
 // ============================================================================
 // NEO-SHINJUKU RIFT: HYPER CIRCUIT // AETHER-9
@@ -76,6 +77,7 @@ class GameManager {
     this.vector = null;
     this.tutorial = null;
     this.cinematicIntro = null;
+    this.ghostVehicle = null;
 
     // Timers & progression
     this.loadingProgress = 0;
@@ -219,6 +221,17 @@ class GameManager {
     this.vector = new VectorInstructor(this.sound);
     this.tutorial = new TutorialManager(this, this.vector);
     this.cinematicIntro = new FirstTimeCinematic(this);
+
+    // 9. Holographic Ghost Vehicle (Time-Attack Replay)
+    this.ghostVehicle = new HolographicGhostVehicle(this.scene, this.circuit);
+    this.ghostVehicle.enabled = saveManager.getSettings().ghostEnabled !== false;
+
+    // Load active ghost telemetry from backend
+    backendService.getGhostTelemetry().then(ghostData => {
+      if (ghostData && this.ghostVehicle) {
+        this.ghostVehicle.loadTelemetry(ghostData);
+      }
+    });
   }
 
   setupUI() {
@@ -579,8 +592,12 @@ class GameManager {
     this.setTrackVisible(false);
     this.garageLobby.show();
     this.garageLobby.setCameraAnglePreset('FRONT');
-    if (this.ui) this.ui.hideTutorialHUD();
+    if (this.ui) {
+      this.ui.hideTutorialHUD();
+      this.ui.showScreen('LOBBY');
+    }
     if (this.vector) this.vector.hide();
+    if (this.ghostVehicle) this.ghostVehicle.hide();
 
     if (this.playerVehicle.group.parent) {
       this.playerVehicle.group.parent.remove(this.playerVehicle.group);
@@ -821,6 +838,14 @@ class GameManager {
         const currentFrame = this.circuit.getFrameAt(this.physics.currentU);
         const currentDistrict = currentFrame ? currentFrame.district : null;
 
+        // Holographic Ghost Vehicle (Time-Attack Telemetry & Realtime Delta)
+        if (this.ghostVehicle && (this.state === 'RACING' || this.state === 'TUTORIAL')) {
+          const ghostRes = this.ghostVehicle.update(this.gameState.currentLapTime, this.physics.currentU);
+          if (ghostRes.active && this.ui) {
+            this.ui.updateGhostDeltaHUD(ghostRes.timeDelta, ghostRes.isGhostAhead);
+          }
+        }
+
         if (this.ui) {
           this.ui.updateHUD(this.physics, this.gameState);
         }
@@ -870,7 +895,11 @@ class GameManager {
   }
 }
 
-// Instantiate on DOM load
-window.addEventListener('DOMContentLoaded', () => {
+// Safe instantiation respecting already-loaded DOM states
+if (document.readyState === 'loading') {
+  window.addEventListener('DOMContentLoaded', () => {
+    window.game = new GameManager();
+  });
+} else {
   window.game = new GameManager();
-});
+}
