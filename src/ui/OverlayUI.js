@@ -22,7 +22,16 @@ export class OverlayUI {
       <!-- TOP DIEGETIC SYSTEM HEADER -->
       <header class="tdr-header">
         <div class="tdr-brand">
-          <span class="crosshair">+</span>
+          <svg class="header-svg-radar" viewBox="0 0 32 32" width="24" height="24">
+            <circle cx="16" cy="16" r="14" fill="none" stroke="#00F0FF" stroke-width="1.2" opacity="0.4" />
+            <circle cx="16" cy="16" r="8" fill="none" stroke="#00F0FF" stroke-width="1" stroke-dasharray="2,2" opacity="0.6" />
+            <line x1="16" y1="2" x2="16" y2="30" stroke="#00F0FF" stroke-width="0.8" opacity="0.4" />
+            <line x1="2" y1="16" x2="30" y2="16" stroke="#00F0FF" stroke-width="0.8" opacity="0.4" />
+            <circle cx="16" cy="16" r="2.5" fill="#00F0FF" />
+            <path d="M 16,16 L 30,16 A 14,14 0 0,0 26,6 Z" fill="#00F0FF" opacity="0.35">
+              <animateTransform attributeName="transform" type="rotate" from="0 16 16" to="360 16 16" dur="2.5s" repeatCount="indefinite" />
+            </path>
+          </svg>
           <span class="brand-title">WIPEOUT // APHELION</span>
           <span class="tag-league">F-8000 LEAGUE</span>
           <span class="tag-year">2148.09</span>

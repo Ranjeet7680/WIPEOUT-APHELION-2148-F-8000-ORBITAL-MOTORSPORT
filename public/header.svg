@@ -1,0 +1,322 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 340" width="100%" height="100%">
+  <defs>
+    <!-- Gradients -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#05070d" />
+      <stop offset="50%" stop-color="#090d18" />
+      <stop offset="100%" stop-color="#04060a" />
+    </linearGradient>
+
+    <linearGradient id="cyanGlow" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#00F0FF" stop-opacity="1" />
+      <stop offset="70%" stop-color="#7928CA" stop-opacity="0.8" />
+      <stop offset="100%" stop-color="#FF2A13" stop-opacity="1" />
+    </linearGradient>
+
+    <linearGradient id="thrustPlume" x1="0%" y1="50%" x2="100%" y2="50%">
+      <stop offset="0%" stop-color="#00F0FF" stop-opacity="0" />
+      <stop offset="40%" stop-color="#00F0FF" stop-opacity="0.8" />
+      <stop offset="80%" stop-color="#ffffff" stop-opacity="1" />
+      <stop offset="100%" stop-color="#00F0FF" stop-opacity="0" />
+    </linearGradient>
+
+    <linearGradient id="radarSweep" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00F0FF" stop-opacity="0.4" />
+      <stop offset="100%" stop-color="#00F0FF" stop-opacity="0" />
+    </linearGradient>
+
+    <!-- Filters -->
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="4" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+
+    <filter id="intenseGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="8" result="blur1" />
+      <feGaussianBlur stdDeviation="2" result="blur2" />
+      <feMerge>
+        <feMergeNode in="blur1" />
+        <feMergeNode in="blur2" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+
+    <style>
+      @keyframes pulseGlow {
+        0%, 100% { opacity: 0.85; filter: drop-shadow(0 0 4px #00F0FF); }
+        50% { opacity: 1; filter: drop-shadow(0 0 14px #00F0FF); }
+      }
+      @keyframes traceLine {
+        0% { stroke-dashoffset: 1200; }
+        100% { stroke-dashoffset: 0; }
+      }
+      @keyframes scanline {
+        0% { transform: translateY(-100%); }
+        100% { transform: translateY(340px); }
+      }
+      @keyframes radarSpin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      @keyframes craftFloat {
+        0%, 100% { transform: translateY(0px) rotate(0deg); }
+        50% { transform: translateY(-7px) rotate(-0.5deg); }
+      }
+      @keyframes afterburnerPulse {
+        0%, 100% { transform: scaleX(0.92); opacity: 0.75; }
+        50% { transform: scaleX(1.15); opacity: 1; }
+      }
+      @keyframes glitchText {
+        0%, 94%, 100% { transform: translate(0, 0); opacity: 1; }
+        95% { transform: translate(-2px, 1px); opacity: 0.85; }
+        96% { transform: translate(2px, -1px); opacity: 0.95; }
+        97% { transform: translate(0, 0); opacity: 1; }
+      }
+      @keyframes blinkCursor {
+        0%, 49% { opacity: 1; }
+        50%, 100% { opacity: 0; }
+      }
+      @keyframes eqBar1 { 0%, 100% { height: 6px; } 50% { height: 28px; } }
+      @keyframes eqBar2 { 0%, 100% { height: 26px; } 50% { height: 10px; } }
+      @keyframes eqBar3 { 0%, 100% { height: 14px; } 50% { height: 32px; } }
+      @keyframes eqBar4 { 0%, 100% { height: 30px; } 50% { height: 8px; } }
+      @keyframes eqBar5 { 0%, 100% { height: 18px; } 50% { height: 24px; } }
+
+      .anim-trace {
+        stroke-dasharray: 600;
+        animation: traceLine 4s cubic-bezier(0.4, 0, 0.2, 1) infinite alternate;
+      }
+      .anim-radar {
+        transform-origin: 1020px 170px;
+        animation: radarSpin 6s linear infinite;
+      }
+      .anim-craft {
+        animation: craftFloat 4s ease-in-out infinite;
+      }
+      .anim-burner {
+        transform-origin: 790px 170px;
+        animation: afterburnerPulse 0.12s ease-in-out infinite alternate;
+      }
+      .anim-title {
+        animation: glitchText 7s infinite;
+      }
+      .blink {
+        animation: blinkCursor 0.9s infinite;
+      }
+      .eq-1 { animation: eqBar1 0.45s ease-in-out infinite; }
+      .eq-2 { animation: eqBar2 0.38s ease-in-out infinite; }
+      .eq-3 { animation: eqBar3 0.52s ease-in-out infinite; }
+      .eq-4 { animation: eqBar4 0.41s ease-in-out infinite; }
+      .eq-5 { animation: eqBar5 0.48s ease-in-out infinite; }
+    </style>
+  </defs>
+
+  <!-- Background Base -->
+  <rect width="1200" height="340" fill="url(#bgGrad)" />
+
+  <!-- Grid Blueprint Pattern -->
+  <g stroke="#00F0FF" stroke-width="0.5" opacity="0.08">
+    <line x1="0" y1="40" x2="1200" y2="40" />
+    <line x1="0" y1="90" x2="1200" y2="90" />
+    <line x1="0" y1="140" x2="1200" y2="140" />
+    <line x1="0" y1="190" x2="1200" y2="190" />
+    <line x1="0" y1="240" x2="1200" y2="240" />
+    <line x1="0" y1="290" x2="1200" y2="290" />
+
+    <line x1="100" y1="0" x2="100" y2="340" />
+    <line x1="250" y1="0" x2="250" y2="340" />
+    <line x1="400" y1="0" x2="400" y2="340" />
+    <line x1="550" y1="0" x2="550" y2="340" />
+    <line x1="700" y1="0" x2="700" y2="340" />
+    <line x1="850" y1="0" x2="850" y2="340" />
+    <line x1="1000" y1="0" x2="1000" y2="340" />
+    <line x1="1150" y1="0" x2="1150" y2="340" />
+  </g>
+
+  <!-- Scanning Line Effect -->
+  <g opacity="0.15">
+    <rect x="0" y="0" width="1200" height="4" fill="#00F0FF">
+      <animate attributeName="y" values="-20;350" dur="4s" repeatCount="indefinite" />
+    </rect>
+  </g>
+
+  <!-- Outer Tech Border & Crop Markers -->
+  <rect x="18" y="18" width="1164" height="304" fill="none" stroke="#1d263b" stroke-width="1.5" />
+  
+  <!-- Corner Tech Reticles -->
+  <path d="M 18,36 L 18,18 L 36,18" fill="none" stroke="#00F0FF" stroke-width="3" />
+  <path d="M 1182,36 L 1182,18 L 1164,18" fill="none" stroke="#00F0FF" stroke-width="3" />
+  <path d="M 18,304 L 18,322 L 36,322" fill="none" stroke="#00F0FF" stroke-width="3" />
+  <path d="M 1182,304 L 1182,322 L 1164,322" fill="none" stroke="#00F0FF" stroke-width="3" />
+
+  <!-- Animated High-Speed Circuit Traces -->
+  <path d="M 24,70 L 160,70 L 210,120 L 520,120 L 550,90 L 860,90 L 910,140 L 1176,140" 
+        fill="none" stroke="#00F0FF" stroke-width="1.8" opacity="0.45" class="anim-trace" />
+  <path d="M 24,270 L 240,270 L 280,230 L 640,230 L 670,260 L 1176,260" 
+        fill="none" stroke="#FF2A13" stroke-width="1.8" opacity="0.4" class="anim-trace" style="animation-delay: -2s;" />
+
+  <!-- Radar Telemetry Widget (Right side) -->
+  <g transform="translate(1020, 170)">
+    <!-- Radar Rings -->
+    <circle r="75" fill="none" stroke="#1d2c42" stroke-width="1" />
+    <circle r="52" fill="none" stroke="#1d2c42" stroke-width="1" stroke-dasharray="3,3" />
+    <circle r="26" fill="none" stroke="#00F0FF" stroke-width="1" opacity="0.5" />
+    <circle r="3" fill="#00F0FF" />
+
+    <!-- Crosshairs -->
+    <line x1="-85" y1="0" x2="85" y2="0" stroke="#00F0FF" stroke-width="0.8" opacity="0.35" />
+    <line x1="0" y1="-85" x2="0" y2="85" stroke="#00F0FF" stroke-width="0.8" opacity="0.35" />
+
+    <!-- Degree Ticks -->
+    <circle r="80" fill="none" stroke="#00F0FF" stroke-width="1.5" stroke-dasharray="2, 18.9" opacity="0.5" />
+
+    <!-- Rotating Sweep Beam -->
+    <path d="M 0,0 L 72,0 A 72,72 0 0,0 50,-50 Z" fill="url(#radarSweep)" class="anim-radar" />
+
+    <!-- Blip targets -->
+    <circle cx="28" cy="-18" r="2.5" fill="#FFB800" filter="url(#glow)">
+      <animate attributeName="opacity" values="0.2;1;0.2" dur="2s" repeatCount="indefinite" />
+    </circle>
+    <circle cx="-35" cy="22" r="2.5" fill="#FF2A13" filter="url(#glow)">
+      <animate attributeName="opacity" values="1;0.3;1" dur="1.6s" repeatCount="indefinite" />
+    </circle>
+    <circle cx="12" cy="42" r="2" fill="#00F0FF" filter="url(#glow)">
+      <animate attributeName="opacity" values="0.4;1;0.4" dur="2.4s" repeatCount="indefinite" />
+    </circle>
+    
+    <text x="-65" y="98" fill="#8C99A8" font-family="'Courier New', monospace" font-size="9" letter-spacing="1">RADAR // 120Hz LOCK</text>
+  </g>
+
+  <!-- Anti-Gravity Craft Silhouette (Center-Right) -->
+  <g class="anim-craft" transform="translate(40, 0)">
+    <!-- Mach 1 Ion Trail / Kinetic Wake Waves -->
+    <ellipse cx="680" cy="170" rx="140" ry="14" fill="url(#thrustPlume)" opacity="0.5" />
+    <ellipse cx="660" cy="170" rx="100" ry="9" fill="url(#thrustPlume)" opacity="0.75" />
+    <ellipse cx="630" cy="170" rx="60" ry="5" fill="#ffffff" opacity="0.9" />
+
+    <!-- Exhaust shock diamond rings -->
+    <ellipse cx="720" cy="170" rx="8" ry="14" fill="none" stroke="#00F0FF" stroke-width="1.8" opacity="0.7" />
+    <ellipse cx="750" cy="170" rx="12" ry="20" fill="none" stroke="#7928CA" stroke-width="1.5" opacity="0.5" />
+    <ellipse cx="790" cy="170" rx="18" ry="28" fill="none" stroke="#00F0FF" stroke-width="1.2" opacity="0.3" class="anim-burner" />
+
+    <!-- Futuristic Anti-Gravity Interceptor Chassis (Vector Silhouette) -->
+    <!-- Main Hull Spine & Delta Wing -->
+    <path d="M 910,170 
+             L 865,152 
+             L 810,146 
+             L 775,124 
+             L 790,138 
+             L 750,144 
+             L 745,158 
+             L 730,162 
+             L 730,178 
+             L 745,182 
+             L 750,196 
+             L 790,202 
+             L 775,216 
+             L 810,194 
+             L 865,188 Z" 
+          fill="#0D1322" stroke="#00F0FF" stroke-width="2.2" filter="url(#glow)" />
+
+    <!-- Cockpit Dielectric Canopy -->
+    <polygon points="860,170 835,164 805,165 825,170 805,175 835,176" 
+             fill="#00F0FF" opacity="0.85" filter="url(#intenseGlow)" />
+
+    <!-- Wing Canard Accents & Airbrake Flaps -->
+    <line x1="775" y1="124" x2="810" y2="146" stroke="#FF2A13" stroke-width="2.5" />
+    <line x1="775" y1="216" x2="810" y2="194" stroke="#FF2A13" stroke-width="2.5" />
+    <line x1="745" y1="158" x2="730" y2="162" stroke="#FFB800" stroke-width="3" />
+    <line x1="745" y1="182" x2="730" y2="178" stroke="#FFB800" stroke-width="3" />
+
+    <!-- Magnetic Repulsor Ventral Emitters (Glowing Orbs) -->
+    <circle cx="845" cy="158" r="3.5" fill="#00F0FF" filter="url(#intenseGlow)" />
+    <circle cx="845" cy="182" r="3.5" fill="#00F0FF" filter="url(#intenseGlow)" />
+    <circle cx="780" cy="150" r="3" fill="#00F0FF" filter="url(#intenseGlow)" />
+    <circle cx="780" cy="190" r="3" fill="#00F0FF" filter="url(#intenseGlow)" />
+
+    <!-- Speed Lines Streaming off Nose -->
+    <line x1="915" y1="170" x2="990" y2="170" stroke="#ffffff" stroke-width="1.5" stroke-dasharray="10, 8" opacity="0.7">
+      <animate attributeName="stroke-dashoffset" values="0;-36" dur="0.3s" repeatCount="indefinite" />
+    </line>
+    <line x1="865" y1="148" x2="940" y2="148" stroke="#00F0FF" stroke-width="1" stroke-dasharray="8, 12" opacity="0.5">
+      <animate attributeName="stroke-dashoffset" values="0;-40" dur="0.25s" repeatCount="indefinite" />
+    </line>
+    <line x1="865" y1="192" x2="940" y2="192" stroke="#00F0FF" stroke-width="1" stroke-dasharray="8, 12" opacity="0.5">
+      <animate attributeName="stroke-dashoffset" values="0;-40" dur="0.25s" repeatCount="indefinite" />
+    </line>
+  </g>
+
+  <!-- Typography & tDR Aesthetic Brand Badges (Left side) -->
+  <g transform="translate(60, 50)">
+    <!-- Top Micro Tagline -->
+    <g font-family="'Courier New', monospace" font-size="11" letter-spacing="3" font-weight="bold">
+      <text x="0" y="24" fill="#00F0FF" filter="url(#glow)">+ THE DESIGNERS REPUBLIC / APHELION ACCORD</text>
+      <text x="430" y="24" fill="#FFB800">CLASS-A // 2148.09</text>
+    </g>
+
+    <!-- Main Title -->
+    <g class="anim-title" font-family="'Arial Black', 'Helvetica Neue', Impact, sans-serif" font-weight="900">
+      <text x="0" y="92" font-size="64" fill="url(#cyanGlow)" letter-spacing="4" filter="url(#glow)">
+        WIPEOUT
+      </text>
+      <text x="355" y="92" font-size="64" fill="#EAEFF5" letter-spacing="6">
+        //
+      </text>
+      <text x="430" y="92" font-size="64" fill="#EAEFF5" letter-spacing="5">
+        APHELION
+      </text>
+    </g>
+
+    <!-- Subtitle Bar -->
+    <rect x="0" y="112" width="580" height="24" fill="#00F0FF" opacity="0.12" />
+    <rect x="0" y="112" width="4" height="24" fill="#00F0FF" />
+    <text x="14" y="129" font-family="'Courier New', monospace" font-size="13" font-weight="bold" fill="#00F0FF" letter-spacing="2">
+      F-8000 ORBITAL MOTORSPORT // 1,650 KM/H 6-DOF SIMULATION
+    </text>
+
+    <!-- Feature Tags Row -->
+    <g transform="translate(0, 158)" font-family="'Courier New', monospace" font-size="10" font-weight="bold">
+      <!-- Tag 1 -->
+      <rect x="0" y="0" width="128" height="22" fill="#101826" stroke="#00F0FF" stroke-width="1" />
+      <text x="10" y="15" fill="#00F0FF">TRI-VECTOR PWR</text>
+
+      <!-- Tag 2 -->
+      <rect x="138" y="0" width="138" height="22" fill="#101826" stroke="#7928CA" stroke-width="1" />
+      <text x="148" y="15" fill="#C490FF">6-DOF VACUUM RIFT</text>
+
+      <!-- Tag 3 -->
+      <rect x="286" y="0" width="136" height="22" fill="#101826" stroke="#FF2A13" stroke-width="1" />
+      <text x="296" y="15" fill="#FF4E36">INDUCTION GRIND</text>
+
+      <!-- Tag 4 -->
+      <rect x="432" y="0" width="144" height="22" fill="#101826" stroke="#FFB800" stroke-width="1" />
+      <text x="442" y="15" fill="#FFB800">COBRA AIR-ANCHOR</text>
+    </g>
+
+    <!-- Circuit & Telemetry Status Footer -->
+    <g transform="translate(0, 206)" font-family="'Courier New', monospace" font-size="11" fill="#8C99A8">
+      <text x="0" y="14" letter-spacing="1">
+        CIRCUIT: <tspan fill="#00F0FF" font-weight="bold">NEO-SHINJUKU RIFT</tspan> | ELEVATION: <tspan fill="#FFB800">+850M ➔ -120M</tspan>
+      </text>
+      <text x="0" y="32" letter-spacing="1">
+        MRT PIPELINE: <tspan fill="#00F0FF">ACTIVE (4 TARGETS)</tspan> | SYSTEM STATUS: <tspan fill="#00FF66">NOMINAL</tspan>
+        <tspan fill="#00F0FF" class="blink">█</tspan>
+      </text>
+    </g>
+
+    <!-- Equalizer Audio Waveform Visualizer -->
+    <g transform="translate(500, 200)">
+      <rect x="0" y="0" width="5" height="12" fill="#00F0FF" class="eq-1" />
+      <rect x="8" y="0" width="5" height="22" fill="#00F0FF" class="eq-2" />
+      <rect x="16" y="0" width="5" height="15" fill="#7928CA" class="eq-3" />
+      <rect x="24" y="0" width="5" height="28" fill="#FF2A13" class="eq-4" />
+      <rect x="32" y="0" width="5" height="18" fill="#FFB800" class="eq-5" />
+      <rect x="40" y="0" width="5" height="10" fill="#00F0FF" class="eq-2" />
+      <rect x="48" y="0" width="5" height="24" fill="#00F0FF" class="eq-4" />
+      <text x="58" y="16" font-family="'Courier New', monospace" font-size="9" fill="#00F0FF" opacity="0.8">150 BPM</text>
+    </g>
+  </g>
+</svg>

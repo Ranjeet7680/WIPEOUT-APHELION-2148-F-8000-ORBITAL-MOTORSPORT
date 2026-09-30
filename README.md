@@ -1,11 +1,21 @@
 # WIPEOUT-APHELION-2148-F-8000-ORBITAL-MOTORSPORT
 
-[![Deploy with Vercel](https://vercel.com/button)](https://optimistic-carson-pink.vercel.app)
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-Vercel-00F0FF?style=for-the-badge&logo=vercel)](https://optimistic-carson-pink.vercel.app)
+<p align="center">
+  <a href="https://optimistic-carson-pink.vercel.app">
+    <img src="./public/header.svg" width="100%" alt="WIPEOUT: APHELION // 2148 F-8000 ORBITAL MOTORSPORT Animated Header" />
+  </a>
+</p>
+
+<p align="center">
+  <a href="https://optimistic-carson-pink.vercel.app"><img src="https://img.shields.io/badge/Live%20Demo-Vercel-00F0FF?style=for-the-badge&logo=vercel" alt="Live Demo" /></a>
+  <a href="https://github.com/Ranjeet7680/WIPEOUT-APHELION-2148-F-8000-ORBITAL-MOTORSPORT"><img src="https://img.shields.io/badge/Physics-120Hz%206--DOF-FFB800?style=for-the-badge" alt="Physics" /></a>
+  <a href="https://github.com/Ranjeet7680/WIPEOUT-APHELION-2148-F-8000-ORBITAL-MOTORSPORT"><img src="https://img.shields.io/badge/Rendering-WebGPU%20%2F%20MRT-FF2A13?style=for-the-badge" alt="Rendering" /></a>
+  <a href="https://github.com/Ranjeet7680/WIPEOUT-APHELION-2148-F-8000-ORBITAL-MOTORSPORT"><img src="https://img.shields.io/badge/AI-WebNN%20%2F%20ONNX-7928CA?style=for-the-badge" alt="AI Policy" /></a>
+</p>
 
 > **WIPEOUT: APHELION (2148 F-8000 ORBITAL MOTORSPORT)**  
 > Next-generation anti-gravity racing simulation fusing **The Designers Republic (tDR)** Y2K cyber-minimalist aesthetic, non-inertial 6-DOF flight dynamics, real-time kinetic energy distribution, and a benchmark-grade WebGPU / MRT Deferred rendering pipeline.  
-> 🌐 **Live Web Experience**: [optimistic-carson-pink.vercel.app](https://optimistic-carson-pink.vercel.app)
+> 🌐 **Play Instantly in Browser**: [optimistic-carson-pink.vercel.app](https://optimistic-carson-pink.vercel.app)
 
 ---
 
