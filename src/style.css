@@ -248,6 +248,13 @@ button {
   min-width: 220px;
 }
 
+.hud-box.bottom-right {
+  bottom: 24px;
+  right: 28px;
+  min-width: 220px;
+  border-right: 4px solid var(--color-cyan);
+}
+
 .hud-label {
   font-size: 11px;
   letter-spacing: 1.5px;
@@ -401,14 +408,16 @@ button {
 /* Core Mechanics Telemetry & Banners */
 .top-center-mechanics {
   position: absolute;
-  top: 65px;
+  bottom: 24px;
   left: 50%;
   transform: translateX(-50%);
   width: 380px;
-  background: rgba(11, 14, 20, 0.88);
-  border: 1px solid rgba(0, 240, 255, 0.4);
+  background: rgba(11, 14, 20, 0.92);
+  border: 1px solid rgba(0, 240, 255, 0.45);
   padding: 10px 14px;
   pointer-events: auto;
+  z-index: 50;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.7);
 }
 
 .power-buttons-row {

@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 
@@ -54,8 +55,8 @@ class GameManager {
     this.camera = null;
     this.renderer = null;
 
-    // Rendering Pipelines (MRT Deferred + Post-Processing Graph)
-    this.useDeferredMRT = true;
+    // Rendering Pipelines (Forward Composer with HDR Bloom + MRT Deferred fallback)
+    this.useDeferredMRT = false;
     this.deferredRenderer = null;
     this.composer = null;
     this.repulsorPass = null;
@@ -138,38 +139,59 @@ class GameManager {
   setupScene() {
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x06080F);
-    this.scene.fog = new THREE.FogExp2(0x06080F, 0.0007);
+    this.scene.fog = new THREE.FogExp2(0x06080F, 0.00035);
 
     this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.2, 8000);
     this.scene.add(this.camera);
     this.scene.userData.activeCamera = this.camera;
 
-    // Ambient Lighting
-    const ambient = new THREE.AmbientLight(0x182030, 1.2);
+    // Ambient & Skylight Lighting
+    const ambient = new THREE.AmbientLight(0x223048, 2.2);
     this.scene.add(ambient);
 
-    // Directional Sunlight (Casts shadows from megastructures)
-    const sunLight = new THREE.DirectionalLight(0xE0F0FF, 2.5);
-    sunLight.position.set(400, 800, 300);
+    const hemiLight = new THREE.HemisphereLight(0x00F0FF, 0x141822, 1.4);
+    this.scene.add(hemiLight);
+
+    // Directional Sunlight (Illuminates starting grid at Y=850m)
+    const sunLight = new THREE.DirectionalLight(0xE0F0FF, 2.8);
+    sunLight.position.set(300, 1600, 400);
+    sunLight.target.position.set(0, 850, 0);
+    this.scene.add(sunLight.target);
     sunLight.castShadow = true;
     sunLight.shadow.mapSize.width = 2048;
     sunLight.shadow.mapSize.height = 2048;
     sunLight.shadow.camera.near = 50;
-    sunLight.shadow.camera.far = 2500;
-    sunLight.shadow.camera.left = -500;
-    sunLight.shadow.camera.right = 500;
-    sunLight.shadow.camera.top = 500;
-    sunLight.shadow.camera.bottom = -500;
+    sunLight.shadow.camera.far = 3000;
+    sunLight.shadow.camera.left = -600;
+    sunLight.shadow.camera.right = 600;
+    sunLight.shadow.camera.top = 600;
+    sunLight.shadow.camera.bottom = -600;
     this.scene.add(sunLight);
 
     // Secondary colored rim light
-    const rimLight = new THREE.DirectionalLight(0x7928CA, 1.4);
-    rimLight.position.set(-500, -200, -400);
+    const rimLight = new THREE.DirectionalLight(0x7928CA, 1.6);
+    rimLight.position.set(-500, 600, -400);
     this.scene.add(rimLight);
   }
 
   setupPostProcessing() {
-    // 1. MRT DEFERRED RENDERER PIPELINE (4 Targets + Motion Vectors + Dual-Kawase Bloom + AgX + TAA)
+    // 1. FORWARD EFFECT COMPOSER WITH RENDER PASS & DUAL-STAGE BLOOM (Default Robust Pipeline)
+    this.composer = new EffectComposer(this.renderer);
+    const renderPass = new RenderPass(this.scene, this.camera);
+    this.composer.addPass(renderPass);
+
+    const bloomPass = new UnrealBloomPass(
+      new THREE.Vector2(window.innerWidth, window.innerHeight),
+      0.85,
+      0.35,
+      0.75
+    );
+    this.composer.addPass(bloomPass);
+
+    const outputPass = new OutputPass();
+    this.composer.addPass(outputPass);
+
+    // 2. MRT DEFERRED RENDERER PIPELINE (Experimental Alternative)
     this.deferredRenderer = new DeferredRenderer(
       this.renderer,
       this.scene,
@@ -177,27 +199,12 @@ class GameManager {
       window.innerWidth,
       window.innerHeight
     );
-
-    // 2. FORWARD EFFECT COMPOSER (Fallback / Comparative pipeline)
-    this.composer = new EffectComposer(this.renderer);
     this.repulsorPass = new RepulsorWavePass(
       this.scene,
       this.camera,
       window.innerWidth,
       window.innerHeight
     );
-    this.composer.addPass(this.repulsorPass);
-
-    const bloomPass = new UnrealBloomPass(
-      new THREE.Vector2(window.innerWidth, window.innerHeight),
-      1.15,
-      0.45,
-      0.82
-    );
-    this.composer.addPass(bloomPass);
-
-    const outputPass = new OutputPass();
-    this.composer.addPass(outputPass);
   }
 
   setupWebGPUPipeline() {
@@ -251,6 +258,7 @@ class GameManager {
 
     // 6. Camera Controller
     this.cameraController = new CameraController(this.camera, this.renderer.domElement);
+    this.cameraController.reset(this.physics.pos, this.physics.quat);
 
     // 7. Game State
     this.gameState = new GameState(this.sound);
@@ -391,7 +399,7 @@ class GameManager {
 
   toggleRenderMode() {
     this.useDeferredMRT = !this.useDeferredMRT;
-    return this.useDeferredMRT ? 'MRT DEFERRED' : 'FORWARD COMPOSER';
+    return this.useDeferredMRT ? 'MRT DEFERRED' : 'FORWARD BLOOM';
   }
 
   setTouchInput(name, val) {
@@ -425,6 +433,9 @@ class GameManager {
 
   restartRace() {
     this.physics.resetToStart();
+    if (this.cameraController) {
+      this.cameraController.reset(this.physics.pos, this.physics.quat);
+    }
     this.playerEliminated = false;
     this.gameState.startCountdown();
     this.aiRacers.forEach(ai => {

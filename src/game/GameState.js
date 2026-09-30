@@ -24,7 +24,7 @@ export class GameState {
     this.status = RACE_STATUS.COUNTDOWN;
 
     // Countdown timer (3.. 2.. 1.. GO!)
-    this.countdownTime = 3.5;
+    this.countdownTime = 3.0;
     this.countdownInt = 3;
 
     // Race progress
@@ -51,7 +51,8 @@ export class GameState {
 
   startCountdown() {
     this.status = RACE_STATUS.COUNTDOWN;
-    this.countdownTime = 3.5;
+    this.countdownTime = 3.0;
+    this.countdownInt = 3;
     this.raceTime = 0;
     this.currentLap = 1;
     this.lapStartTime = 0;

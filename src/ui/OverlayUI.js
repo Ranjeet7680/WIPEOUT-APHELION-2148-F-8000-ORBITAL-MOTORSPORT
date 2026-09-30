@@ -43,7 +43,7 @@ export class OverlayUI {
 
         <div class="tdr-controls-toolbar">
           <button class="tdr-btn" id="btn-terminal" title="Descent Vector Spatial Terminal">[ TERMINAL // DESCENT VECTOR ]</button>
-          <button class="tdr-btn" id="btn-pipeline" title="Toggle MRT Deferred / Forward (F)">PIPELINE: <span id="pipeline-name">MRT DEFERRED</span></button>
+          <button class="tdr-btn" id="btn-pipeline" title="Toggle Pipeline (F)">PIPELINE: <span id="pipeline-name">FORWARD BLOOM</span></button>
           <button class="tdr-btn" id="btn-camera" title="Cycle Camera (C)">CAM: <span id="cam-name">CHASE</span></button>
           <button class="tdr-btn" id="btn-audio" title="Toggle Sound (M)">AUDIO: <span id="audio-state">ON</span></button>
           <button class="tdr-btn" id="btn-menu" title="Menu / Settings (ESC)">SETTINGS</button>
@@ -83,8 +83,8 @@ export class OverlayUI {
             <span class="stat-value mono" id="hud-besttime">--:--.---</span>
           </div>
           <div class="hud-row" style="margin-top: 6px; border-top: 1px dashed rgba(0, 240, 255, 0.25); padding-top: 4px;">
-            <span class="stat-title">MRT G-BUFFER</span>
-            <span class="stat-value mono" style="font-size: 11px; color: var(--color-cyan);" id="hud-mrt-status">TARGET 0-3 // 144Hz</span>
+            <span class="stat-title">PIPELINE</span>
+            <span class="stat-value mono" style="font-size: 11px; color: var(--color-cyan);" id="hud-mrt-status">FORWARD // BLOOM</span>
           </div>
           <div class="hud-row">
             <span class="stat-title">Hi-Z SSR</span>

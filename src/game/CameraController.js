@@ -77,6 +77,22 @@ export class CameraController {
     this.eliminationTargetPos.copy(victimWorldPos);
   }
 
+  reset(craftPos, craftQuat) {
+    this.isEliminationReplay = false;
+    this.eliminationTimer = 0;
+    this.shakeIntensity = 0;
+    const fwd = new THREE.Vector3(0, 0, 1).applyQuaternion(craftQuat);
+    const up = new THREE.Vector3(0, 1, 0).applyQuaternion(craftQuat);
+    this.targetCameraPos.copy(craftPos)
+      .addScaledVector(fwd, -8.0)
+      .addScaledVector(up, 2.4);
+    this.currentCameraPos.copy(this.targetCameraPos);
+    this.camera.position.copy(this.targetCameraPos);
+    this.lookTarget.copy(craftPos).addScaledVector(fwd, 6.0).addScaledVector(up, 0.4);
+    this.camera.lookAt(this.lookTarget);
+    this.camera.up.copy(up);
+  }
+
   update(delta, craftPos, craftVel, craftQuat, speedKmh, isScraping, isBoosting) {
     const fwd = new THREE.Vector3(0, 0, 1).applyQuaternion(craftQuat);
     const up = new THREE.Vector3(0, 1, 0).applyQuaternion(craftQuat);
@@ -157,6 +173,11 @@ export class CameraController {
         this.targetCameraPos.copy(craftPos)
           .addScaledVector(velDir, -dynamicChaseDistance)
           .addScaledVector(up, dynamicChaseHeight);
+
+        // Snap immediately if uninitialized (prevents camera starting at 0,0,0 while track is at Y=850)
+        if (this.currentCameraPos.lengthSq() < 1.0) {
+          this.currentCameraPos.copy(this.targetCameraPos);
+        }
 
         const followSpeed = 14.0;
         this.currentCameraPos.lerp(this.targetCameraPos, delta * followSpeed);
