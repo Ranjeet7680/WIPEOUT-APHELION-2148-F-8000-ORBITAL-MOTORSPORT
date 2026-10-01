@@ -250,10 +250,26 @@ export class CyberpunkAudioEngine {
 
     if (state === 'LOBBY') {
       this.playLobbyTheme();
+      this.silenceContinuousSFX();
     } else {
       // Main lobby theme only: immediately stop when leaving lobby
       this.stopLobbyTheme();
+      if (state !== 'RACING' && state !== 'FINAL_LAP' && state !== 'TUTORIAL') {
+        this.silenceContinuousSFX();
+      }
     }
+  }
+
+  silenceContinuousSFX() {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    try {
+      if (this.engineGain) this.engineGain.gain.setTargetAtTime(0.0, t, 0.05);
+      if (this.engineGain2) this.engineGain2.gain.setTargetAtTime(0.0, t, 0.05);
+      if (this.boostGain) this.boostGain.gain.setTargetAtTime(0.0, t, 0.05);
+      if (this.driftGain) this.driftGain.gain.setTargetAtTime(0.0, t, 0.05);
+      if (this.windGain) this.windGain.gain.setTargetAtTime(0.0, t, 0.05);
+    } catch {}
   }
 
   update(speedKmh, throttle, isBoosting, isDrifting, delta) {

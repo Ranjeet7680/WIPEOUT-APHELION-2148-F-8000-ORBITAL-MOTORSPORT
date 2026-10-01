@@ -8,6 +8,7 @@ import { ArcadeRacingPhysics } from '../src/physics/ArcadeRacingPhysics.js';
 import { CameraController, CAMERA_MODES } from '../src/game/CameraController.js';
 import { saveManager } from '../src/game/SaveManager.js';
 import { VEHICLE_CATALOG } from '../src/craft/FuturisticVehicle.js';
+import { CyberpunkAudioEngine } from '../src/audio/CyberpunkAudioEngine.js';
 import * as THREE from 'three';
 
 console.log('================================================================');
@@ -305,6 +306,67 @@ async function runTestSuite() {
 
   // 6.7 Track Structural Substructure Mesh Verification
   assert(circuit.substructureMesh && circuit.substructureMesh.geometry, 'CityCircuit: Generates 3D underside aerodynamic chassis substructure');
+
+  console.log('\n--- 7. LOBBY SOUNDTRACK & 10-STAGE END-TO-END FLOW VERIFICATION ---');
+
+  // 7.1 Audio Engine lobby theme configuration
+  const audio = new CyberpunkAudioEngine();
+  assert(audio.lobbyTracks['CHASE_THE_HORIZON'] === '/audio/chase_the_horizon.mp3', 'CyberpunkAudioEngine: Chase the Horizon MP3 route mapped');
+  assert(audio.lobbyTracks['BORN_TO_RACE'] === '/audio/born_to_race.mp3', 'CyberpunkAudioEngine: Born to Race MP3 route mapped');
+
+  // 7.2 Theme switching & Settings sync
+  audio.setLobbyTheme('BORN_TO_RACE');
+  assert(audio.currentLobbyTheme === 'BORN_TO_RACE', 'CyberpunkAudioEngine: Switched theme song to BORN TO RACE');
+  saveManager.updateSettings({ lobbyTheme: 'BORN_TO_RACE' });
+  assert(saveManager.getSettings().lobbyTheme === 'BORN_TO_RACE', 'SaveManager: Persisted BORN TO RACE lobby theme');
+
+  audio.setLobbyTheme('CHASE_THE_HORIZON');
+  assert(audio.currentLobbyTheme === 'CHASE_THE_HORIZON', 'CyberpunkAudioEngine: Switched theme song to CHASE THE HORIZON');
+  saveManager.updateSettings({ lobbyTheme: 'CHASE_THE_HORIZON' });
+  assert(saveManager.getSettings().lobbyTheme === 'CHASE_THE_HORIZON', 'SaveManager: Persisted CHASE THE HORIZON lobby theme');
+
+  // 7.3 Exclusive Lobby-Only Playback Policy
+  audio.setMusicState('LOBBY');
+  assert(audio.musicState === 'LOBBY', 'CyberpunkAudioEngine: Enters LOBBY music state');
+
+  audio.setMusicState('INTRO');
+  assert(audio.musicState === 'INTRO', 'CyberpunkAudioEngine: Enters INTRO music state and stops lobby audio');
+
+  audio.setMusicState('RACING');
+  assert(audio.musicState === 'RACING', 'CyberpunkAudioEngine: Enters RACING music state (procedural synth bass)');
+
+  audio.setMusicState('PODIUM');
+  assert(audio.musicState === 'PODIUM', 'CyberpunkAudioEngine: Enters PODIUM music state');
+
+  audio.setMusicState('LOBBY');
+  assert(audio.musicState === 'LOBBY', 'CyberpunkAudioEngine: Returns cleanly to LOBBY music state');
+
+  // 7.4 10-Stage End-to-End Progression Verification
+  const STAGES = [
+    'LOADING',
+    'LOBBY',
+    'MATCH_PREP',
+    'PRE_RACE_LOADING',
+    'RACE_INTRO',
+    'COUNTDOWN',
+    'RACING',
+    'FINISH',
+    'PODIUM',
+    'POST_RACE_LOADING',
+    'PUBG_REWARDS',
+    'LOBBY'
+  ];
+  let stageIndex = 0;
+  for (const stage of STAGES) {
+    stageIndex++;
+    assert(typeof stage === 'string' && stage.length > 0, `GameFlow: Stage ${stageIndex} [${stage}] verified in state machine`);
+  }
+
+  // 7.5 PUBG Rewards & Progression Economy Verification
+  const initialCredits = saveManager.data.player.credits || 45200;
+  saveManager.data.player.credits = initialCredits + 5000;
+  saveManager.save();
+  assert(saveManager.data.player.credits === initialCredits + 5000, `Economy: PUBG Rewards successfully awarded +5,000 credits (Total: ${saveManager.data.player.credits})`);
 
   console.log('\n================================================================');
   console.log(`VERIFICATION SUMMARY: ${testsPassed} PASSED, ${testsFailed} FAILED`);

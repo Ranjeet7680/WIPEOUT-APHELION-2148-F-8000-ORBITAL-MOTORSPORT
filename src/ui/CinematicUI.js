@@ -2464,6 +2464,10 @@ export class CinematicUI {
       if (el) el.style.display = 'flex';
     }
 
+    if (screenName === 'LOBBY') {
+      this.updateLobbyHeader();
+    }
+
     if (screenName === 'RACING') {
       this.updateTouchModeUI();
     }
@@ -3765,14 +3769,32 @@ export class CinematicUI {
     this.safeSetText('post-sync-pct', `${pct}%`);
   }
 
+  updateLobbyHeader() {
+    if (!saveManager || !saveManager.data || !saveManager.data.player) return;
+    const p = saveManager.data.player;
+    this.safeSetText('lobby-player-name', p.name || 'RANJEET');
+    this.safeSetText('lobby-lvl-badge', `LVL ${p.level || 87}`);
+    this.safeSetText('lobby-credits', (p.credits || 45200).toLocaleString());
+    this.safeSetText('lobby-tokens', (p.tokens || 350).toLocaleString());
+    const xp = p.xp || 8450;
+    const nextXp = p.nextLevelXp || 12000;
+    const pct = Math.min(100, Math.max(0, Math.round((xp / nextXp) * 100)));
+    this.safeSetWidth('lobby-xp-fill', `${pct}%`);
+    this.safeSetText('lobby-xp-ratio', `${xp.toLocaleString()} / ${nextXp.toLocaleString()} XP`);
+  }
+
   claimPubgRewards() {
-    if (this.game.saveManager) {
-      this.game.saveManager.credits = (this.game.saveManager.credits || 0) + 5000;
-      this.game.saveManager.pilotLevel = (this.game.saveManager.pilotLevel || 48) + 1;
-      this.game.saveManager.save();
+    if (saveManager && saveManager.data && saveManager.data.player) {
+      saveManager.data.player.credits = (saveManager.data.player.credits || 45200) + 5000;
+      saveManager.data.player.xp = (saveManager.data.player.xp || 8450) + 2500;
+      const nextXp = saveManager.data.player.nextLevelXp || 12000;
+      if (saveManager.data.player.xp >= nextXp) {
+        saveManager.data.player.level = (saveManager.data.player.level || 87) + 1;
+        saveManager.data.player.nextLevelXp = Math.floor(nextXp * 1.25);
+      }
+      saveManager.save();
     }
-    this.safeSetText('lobby-credits-val', (this.game.saveManager?.credits || 129500).toLocaleString());
-    this.safeSetText('lobby-level-val', `LVL ${(this.game.saveManager?.pilotLevel || 49)}`);
+    this.updateLobbyHeader();
     this.showScreen('LOBBY');
     this.game.returnToLobby();
   }

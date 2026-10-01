@@ -83,8 +83,9 @@ class GameManager {
     this.loadingProgress = 0;
     this.raceIntroTimer = 0;
     this.finishTimer = 0;
+    this.saveManager = saveManager;
     this.winStreak = saveManager.data.player.winStreak || 3;
-    this.playerLevel = saveManager.data.player.level || 7;
+    this.playerLevel = saveManager.data.player.level || 87;
     this.playerXP = saveManager.data.player.xp || 8450;
 
     // Inputs
@@ -790,14 +791,23 @@ class GameManager {
     this.playerXP += 1250;
     saveManager.data.player.winStreak = this.winStreak;
     saveManager.data.player.xp = this.playerXP;
-    saveManager.data.player.credits += 2500;
+    saveManager.data.player.credits = (saveManager.data.player.credits || 45200) + 2500;
 
-    if (this.playerXP >= 12000) {
-      this.playerLevel = 8;
-      saveManager.data.player.level = 8;
-      document.getElementById('level-up-toast').style.display = 'block';
+    const nextXp = saveManager.data.player.nextLevelXp || 12000;
+    if (this.playerXP >= nextXp) {
+      this.playerLevel = (saveManager.data.player.level || 87) + 1;
+      saveManager.data.player.level = this.playerLevel;
+      saveManager.data.player.nextLevelXp = Math.floor(nextXp * 1.25);
+      const levelToast = document.getElementById('level-up-toast');
+      if (levelToast) {
+        levelToast.textContent = `★ LEVEL UP! LEVEL ${this.playerLevel} UNLOCKED ★`;
+        levelToast.style.display = 'block';
+      }
     }
     saveManager.save();
+    if (this.ui && this.ui.updateLobbyHeader) {
+      this.ui.updateLobbyHeader();
+    }
 
     this.ui.showWinningLobby(this.winStreak, this.playerLevel, 1250);
   }
