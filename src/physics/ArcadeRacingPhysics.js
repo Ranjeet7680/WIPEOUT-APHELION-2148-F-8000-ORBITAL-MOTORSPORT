@@ -3,8 +3,18 @@ import * as THREE from 'three';
 // ============================================================================
 // ENHANCED ARCADE RACING PHYSICS ENGINE (120Hz Fixed Sub-Stepping)
 // Dynamic Vehicle Specs, Stunt Ramps, Aerial Barrel Rolls, 360 Spins,
-// 3-Tier Hyper-Boost, Near Miss, Slipstream & Combo Scoring
+// 3-Tier Hyper-Boost & Overdrive, Airbrakes (Q/E), Lateral Momentum,
+// Near Miss, Slipstream, Boost Pad Debounce & Zero-Allocation Math
 // ============================================================================
+
+// Module-level static scratch objects for zero-allocation 120Hz math
+const _scratchVec1 = new THREE.Vector3();
+const _scratchVec2 = new THREE.Vector3();
+const _scratchQuat1 = new THREE.Quaternion();
+const _scratchMat1 = new THREE.Matrix4();
+const _interpPos = new THREE.Vector3();
+const _interpQuat = new THREE.Quaternion();
+const _interpTransform = { pos: _interpPos, quat: _interpQuat };
 
 export class ArcadeRacingPhysics {
   constructor(circuit, soundEngine = null) {
@@ -27,6 +37,7 @@ export class ArcadeRacingPhysics {
     // Track progression
     this.currentU = 0.0;
     this.lateralOffset = 0.0; // [-13m .. +13m]
+    this.lateralVelocity = 0.0; // Smooth 2nd order lateral momentum
     this.totalDistance = 0.0;
     this.currentLap = 1;
 
@@ -55,6 +66,10 @@ export class ArcadeRacingPhysics {
     this.boostDuration = 0.0;
     this.totalBoostUses = 0;
     this.perfectBoostWindow = false;
+
+    // Boost Pad Debounce tracking
+    this.lastTriggeredPadIndex = -1;
+    this.boostPadCooldown = 0.0;
 
     // Stunt System (Ramps, Barrel Roll, 360 Spin, Perfect Landing)
     this.stuntRamps = [0.22, 0.44, 0.82]; // Stunt ramp positions along 5.4km circuit
@@ -87,7 +102,9 @@ export class ArcadeRacingPhysics {
       brake: 0.0,
       drift: false,
       boost: false,
-      energyBrake: false
+      energyBrake: false,
+      airbrakeLeft: false,
+      airbrakeRight: false
     };
 
     // Collision telemetry
@@ -104,7 +121,7 @@ export class ArcadeRacingPhysics {
   applyVehicleSpecs(spec) {
     if (!spec) return;
     this.baseMaxSpeedKmh = spec.maxSpeedKmh ? spec.maxSpeedKmh * 0.9 : 380.0;
-    this.boostMaxSpeedKmh = spec.maxSpeedKmh ? spec.maxSpeedKmh * 1.05 : 440.0;
+    this.boostMaxSpeedKmh = spec.maxSpeedKmh ? spec.maxSpeedKmh * 1.06 : 445.0;
     this.maxSpeedKmh = this.boostMaxSpeedKmh;
     this.accelRate = spec.accelRate || 185.0;
     this.brakeRate = spec.brakingRate || 320.0;
@@ -117,12 +134,13 @@ export class ArcadeRacingPhysics {
     this.vel.set(0, 0, 0);
     this.prevPos.copy(this.pos);
 
-    const m = new THREE.Matrix4().makeBasis(startFrame.binormal, startFrame.normal, startFrame.tangent);
-    this.quat.setFromRotationMatrix(m);
+    _scratchMat1.makeBasis(startFrame.binormal, startFrame.normal, startFrame.tangent);
+    this.quat.setFromRotationMatrix(_scratchMat1);
     this.prevQuat.copy(this.quat);
 
     this.currentU = 0.0;
     this.lateralOffset = 0.0;
+    this.lateralVelocity = 0.0;
     this.totalDistance = 0.0;
     this.currentLap = 1;
     this.boostCapacity = 1.0;
@@ -138,6 +156,8 @@ export class ArcadeRacingPhysics {
     this.totalScore = 0;
     this.comboCount = 1;
     this.comboTimer = 0.0;
+    this.lastTriggeredPadIndex = -1;
+    this.boostPadCooldown = 0.0;
 
     this.aerialState = {
       inAir: false,
@@ -159,6 +179,8 @@ export class ArcadeRacingPhysics {
     this.inputs.drift = !!inputs.drift;
     this.inputs.boost = !!inputs.boost;
     this.inputs.energyBrake = !!inputs.energyBrake;
+    this.inputs.airbrakeLeft = !!inputs.airbrakeLeft;
+    this.inputs.airbrakeRight = !!inputs.airbrakeRight;
   }
 
   getSpeedKmh() {
@@ -190,6 +212,11 @@ export class ArcadeRacingPhysics {
       }
     }
 
+    // Boost pad cooldown decay
+    if (this.boostPadCooldown > 0) {
+      this.boostPadCooldown -= delta;
+    }
+
     while (this.accumulator >= this.fixedDelta) {
       this.prevPos.copy(this.pos);
       this.prevQuat.copy(this.quat);
@@ -204,28 +231,31 @@ export class ArcadeRacingPhysics {
     let speedKmh = this.getSpeedKmh();
 
     // ------------------------------------------------------------------------
-    // 1. 3-TIER HYPER-BOOST SYSTEM
+    // 1. 3-TIER HYPER-BOOST & OVERDRIVE SYSTEM
     // ------------------------------------------------------------------------
-    if (this.inputs.boost && this.boostCapacity > 0.04) {
+    if (this.inputs.boost && this.boostCapacity > 0.03) {
       if (!this.isBoosting) {
         this.isBoosting = true;
         this.totalBoostUses++;
 
-        // Perfect Boost timing check (if triggered when capacity is in sweet spot)
-        if (this.boostCapacity >= 0.65 && this.boostCapacity <= 0.85) {
+        // Perfect Boost timing check (sweet spot: 60% to 85% capacity)
+        if (this.boostCapacity >= 0.60 && this.boostCapacity <= 0.85) {
           this.boostTier = 'OVERDRIVE';
-          this.triggerAction('PERFECT BOOST // OVERDRIVE', 300);
+          this.triggerAction('PERFECT BOOST // OVERDRIVE', 350);
           this.comboCount++;
+          if (this.sound && this.sound.playOverdriveBurstSound) {
+            this.sound.playOverdriveBurstSound();
+          }
         } else {
           this.boostTier = 'NORMAL';
         }
       }
 
       this.boostDuration += dt;
-      const drainRate = this.boostTier === 'OVERDRIVE' ? 0.24 : 0.18;
+      const drainRate = this.boostTier === 'OVERDRIVE' ? 0.22 : 0.16;
       this.boostCapacity = Math.max(0.0, this.boostCapacity - dt * drainRate);
 
-      if (this.sound && Math.random() > 0.88) {
+      if (this.sound && Math.random() > 0.90) {
         this.sound.playBoostPadSound();
       }
     } else {
@@ -233,64 +263,71 @@ export class ArcadeRacingPhysics {
       this.boostTier = 'NORMAL';
       this.boostDuration = 0.0;
 
-      // Clean driving passive recharge
-      if (speedKmh > 200 && !this.isDrifting && !this.aerialState.inAir) {
-        this.boostCapacity = Math.min(1.0, this.boostCapacity + dt * 0.04);
+      // Clean driving passive recharge at high speeds
+      if (speedKmh > 220 && !this.isDrifting && !this.aerialState.inAir) {
+        this.boostCapacity = Math.min(1.0, this.boostCapacity + dt * 0.045);
       }
     }
 
     // ------------------------------------------------------------------------
-    // 2. DRIFT SYSTEM & RECHARGE
+    // 2. DRIFT SYSTEM & ACTIVE RECHARGE
     // ------------------------------------------------------------------------
-    if (this.inputs.drift && speedKmh > 80.0 && Math.abs(this.inputs.steer) > 0.12 && !this.aerialState.inAir) {
+    const wantsDrift = (this.inputs.drift || (this.inputs.airbrakeLeft && this.inputs.steer < -0.2) || (this.inputs.airbrakeRight && this.inputs.steer > 0.2));
+    if (wantsDrift && speedKmh > 80.0 && (Math.abs(this.inputs.steer) > 0.15 || this.inputs.airbrakeLeft || this.inputs.airbrakeRight) && !this.aerialState.inAir) {
       if (!this.isDrifting) {
         this.isDrifting = true;
-        this.driftDirection = Math.sign(this.inputs.steer);
+        this.driftDirection = this.inputs.steer !== 0 ? Math.sign(this.inputs.steer) : (this.inputs.airbrakeLeft ? -1 : 1);
       }
       this.driftDuration += dt;
       const driftDist = (speedKmh / 3.6) * dt;
       this.totalDriftDistance += driftDist;
-      this.totalDriftScore += Math.floor(speedKmh * dt * 2.2);
+      this.totalDriftScore += Math.floor(speedKmh * dt * 2.5);
 
-      // Drifting rapidly charges Hyper-Boost
-      this.boostCapacity = Math.min(1.0, this.boostCapacity + dt * 0.15);
-      this.driftAngle = THREE.MathUtils.lerp(this.driftAngle, this.driftDirection * 0.45, dt * 6.0);
+      // Drifting actively charges Hyper-Boost
+      this.boostCapacity = Math.min(1.0, this.boostCapacity + dt * 0.18);
+      this.driftAngle = THREE.MathUtils.lerp(this.driftAngle, this.driftDirection * 0.48, dt * 7.0);
 
       if (this.driftDuration > 1.2 && Math.random() < 0.02) {
         this.triggerAction('POWER DRIFT', 120);
       }
     } else {
       this.isDrifting = false;
-      this.driftAngle = THREE.MathUtils.lerp(this.driftAngle, 0.0, dt * 8.0);
+      this.driftAngle = THREE.MathUtils.lerp(this.driftAngle, 0.0, dt * 9.0);
       this.driftDuration = 0.0;
     }
 
     // ------------------------------------------------------------------------
-    // 3. ACCELERATION, BRAKING & SLIPSTREAM BOOST
+    // 3. ACCELERATION, BRAKING, AIRBRAKES & SLIPSTREAM
     // ------------------------------------------------------------------------
     let targetTopSpeed = this.isBoosting
-      ? (this.boostTier === 'OVERDRIVE' ? this.boostMaxSpeedKmh + 15 : this.boostMaxSpeedKmh)
+      ? (this.boostTier === 'OVERDRIVE' ? this.boostMaxSpeedKmh + 20.0 : this.boostMaxSpeedKmh)
       : this.baseMaxSpeedKmh;
 
     if (this.isSlipstreaming) {
-      targetTopSpeed += 30; // +15% slipstream speed bonus
+      targetTopSpeed += 30.0; // Slipstream top speed bonus
     }
 
-    if (this.inputs.energyBrake) {
+    // Dual Airbrakes or dedicated Energy Brake
+    const dualAirbrake = (this.inputs.airbrakeLeft && this.inputs.airbrakeRight);
+    if (this.inputs.energyBrake || dualAirbrake) {
       speedKmh = Math.max(0.0, speedKmh - this.brakeRate * 2.2 * dt);
+      if (this.sound && Math.random() > 0.92) {
+        this.sound.playAirbrakeSound();
+      }
     } else if (this.inputs.brake > 0.05) {
       speedKmh = Math.max(-50.0, speedKmh - this.brakeRate * this.inputs.brake * dt);
     } else if (this.inputs.throttle > 0.05) {
-      const accelMult = (this.isBoosting ? 2.4 : 1.0) * (this.isSlipstreaming ? 1.3 : 1.0);
+      const accelMult = (this.isBoosting ? 2.5 : 1.0) * (this.isSlipstreaming ? 1.3 : 1.0);
       speedKmh = Math.min(targetTopSpeed, speedKmh + this.accelRate * this.inputs.throttle * accelMult * dt);
     } else {
+      // Natural aerodynamic drag
       speedKmh = Math.max(0.0, speedKmh - speedKmh * this.dragCoeff * dt * 0.85);
     }
 
     // ------------------------------------------------------------------------
     // 4. STUNT RAMPS & AERIAL STUNT SIMULATION
     // ------------------------------------------------------------------------
-    const speedMs = speedKmh / 3.6;
+    let speedMs = speedKmh / 3.6;
     const trackLength = 5400.0;
     const deltaU = (speedMs * dt) / trackLength;
 
@@ -307,7 +344,7 @@ export class ArcadeRacingPhysics {
     this.stuntRamps.forEach(rampU => {
       if (Math.abs(this.currentU - rampU) < 0.006 && !this.aerialState.inAir && speedKmh > 140) {
         this.aerialState.inAir = true;
-        this.aerialState.verticalVel = 18.0 + (speedKmh / 420.0) * 12.0; // High aerial launch!
+        this.aerialState.verticalVel = 18.0 + (speedKmh / 420.0) * 12.0; // High launch
         this.aerialState.altitude = 0.5;
         this.aerialState.barrelRollAngle = 0;
         this.aerialState.spin360Angle = 0;
@@ -316,6 +353,7 @@ export class ArcadeRacingPhysics {
         this.aerialState.airTime = 0;
         this.triggerAction('RAMP LAUNCH', 200);
         this.comboCount++;
+        if (this.sound) this.sound.playStuntWhoosh();
       }
     });
 
@@ -325,7 +363,7 @@ export class ArcadeRacingPhysics {
       this.aerialState.verticalVel -= 28.0 * dt; // Gravity
       this.aerialState.altitude += this.aerialState.verticalVel * dt;
 
-      // Aerial Stunts: Barrel Roll on Steer
+      // Aerial Barrel Roll on Steer
       if (Math.abs(this.inputs.steer) > 0.3) {
         const rollDir = Math.sign(this.inputs.steer);
         this.aerialState.barrelRollProgress += dt * 6.5;
@@ -336,6 +374,7 @@ export class ArcadeRacingPhysics {
           this.triggerAction('BARREL ROLL', 350);
           this.boostCapacity = Math.min(1.0, this.boostCapacity + 0.35);
           this.comboCount++;
+          if (this.sound) this.sound.playStuntWhoosh();
         }
       }
 
@@ -349,6 +388,7 @@ export class ArcadeRacingPhysics {
           this.triggerAction('360 SPIN', 450);
           this.boostCapacity = Math.min(1.0, this.boostCapacity + 0.45);
           this.comboCount++;
+          if (this.sound) this.sound.playStuntWhoosh();
         }
       }
 
@@ -358,14 +398,15 @@ export class ArcadeRacingPhysics {
         this.aerialState.altitude = 0.0;
         this.aerialState.verticalVel = 0.0;
 
-        // Perfect landing if barrel roll is close to 360° multiple
+        // Perfect landing if barrel roll is close to multiple of 360°
         const rollError = Math.abs(this.aerialState.barrelRollAngle % (Math.PI * 2));
-        if (rollError < 0.6 || rollError > Math.PI * 2 - 0.6) {
+        if (rollError < 0.65 || rollError > Math.PI * 2 - 0.65) {
           this.triggerAction('PERFECT LANDING', 500);
           this.boostCapacity = Math.min(1.0, this.boostCapacity + 0.4);
           this.comboCount++;
+          if (this.sound) this.sound.playPerfectLanding();
         } else {
-          speedKmh = Math.max(160, speedKmh * 0.88); // Slight penalty for rough landing
+          speedKmh = Math.max(160, speedKmh * 0.88); // Rough landing penalty
         }
 
         this.aerialState.barrelRollAngle = 0;
@@ -374,11 +415,24 @@ export class ArcadeRacingPhysics {
     }
 
     // ------------------------------------------------------------------------
-    // 5. ROAD SPLINE TRACKING & LATERAL MOVEMENT
+    // 5. HOVERCRAFT LATERAL MOMENTUM & AIRBRAKE APEX CARVING
     // ------------------------------------------------------------------------
-    const steerResponse = (this.isDrifting ? 1.45 : 1.0) * (this.handlingRate / 90.0);
-    const lateralSpeed = this.inputs.steer * (16.0 + (speedKmh / 420.0) * 14.0) * steerResponse;
-    this.lateralOffset += lateralSpeed * dt;
+    let steerForce = this.inputs.steer;
+    if (this.inputs.airbrakeLeft) {
+      steerForce -= 0.55;
+    }
+    if (this.inputs.airbrakeRight) {
+      steerForce += 0.55;
+    }
+    steerForce = THREE.MathUtils.clamp(steerForce, -1.0, 1.0);
+
+    const steerResponse = (this.isDrifting ? 1.55 : 1.1) * (this.handlingRate / 90.0);
+    const targetLateralSpeed = steerForce * (18.0 + (speedKmh / 420.0) * 16.0) * steerResponse;
+
+    // Smooth lateral acceleration with drift inertia
+    const grip = this.isDrifting ? 0.45 : (this.gripFactor * 9.5);
+    this.lateralVelocity = THREE.MathUtils.lerp(this.lateralVelocity, targetLateralSpeed, Math.min(1.0, dt * grip));
+    this.lateralOffset += this.lateralVelocity * dt;
 
     // Track barrier bounds (+/- 12.2m)
     const halfWidth = this.circuit.roadWidth * 0.5 - 0.8;
@@ -387,65 +441,89 @@ export class ArcadeRacingPhysics {
 
     if (Math.abs(this.lateralOffset) > halfWidth) {
       this.lateralOffset = Math.sign(this.lateralOffset) * halfWidth;
+      // Rebound inward
+      this.lateralVelocity = -this.lateralVelocity * 0.35;
       this.isColliding = true;
-      this.collisionImpulse = speedKmh * 0.003;
-      speedKmh = Math.max(120.0, speedKmh * 0.94);
+      this.collisionImpulse = speedKmh * 0.0035;
+      speedKmh = Math.max(110.0, speedKmh * 0.93);
       this.sparkBurst = true;
     } else {
       this.sparkBurst = false;
     }
 
     // ------------------------------------------------------------------------
-    // 6. UPDATE 3D WORLD TRANSFORM ALONG ROAD SURFACE
+    // 6. BOOST PAD DETECTION (Debounced with instant velocity burst)
     // ------------------------------------------------------------------------
+    for (let pIdx = 0; pIdx < this.circuit.boostPads.length; pIdx++) {
+      const padU = this.circuit.boostPads[pIdx];
+      if (Math.abs(this.currentU - padU) < 0.006) {
+        if (this.lastTriggeredPadIndex !== pIdx && this.boostPadCooldown <= 0) {
+          this.lastTriggeredPadIndex = pIdx;
+          this.boostPadCooldown = 0.8; // Prevent re-trigger on same pad
+
+          speedKmh = Math.min(this.boostMaxSpeedKmh + 25.0, speedKmh + 80.0);
+          this.boostCapacity = Math.min(1.0, this.boostCapacity + 0.35);
+          this.triggerAction('BOOST PAD', 180);
+          this.comboCount++;
+
+          if (this.sound) this.sound.playBoostPadSound();
+        }
+        break;
+      }
+    }
+
+    // Clear triggered pad index once well past pad
+    if (this.lastTriggeredPadIndex !== -1) {
+      const padU = this.circuit.boostPads[this.lastTriggeredPadIndex];
+      if (Math.abs(this.currentU - padU) > 0.02) {
+        this.lastTriggeredPadIndex = -1;
+      }
+    }
+
+    // ------------------------------------------------------------------------
+    // 7. PERSIST VELOCITY & UPDATE 3D WORLD TRANSFORM
+    // ------------------------------------------------------------------------
+    speedMs = speedKmh / 3.6;
+
     const frame = this.circuit.getFrameAt(this.currentU);
-    const rideHeight = 0.7 + this.aerialState.altitude;
+    const rideHeight = 0.72 + this.aerialState.altitude;
 
     this.pos.copy(frame.pos)
       .addScaledVector(frame.binormal, this.lateralOffset)
       .addScaledVector(frame.normal, rideHeight);
 
-    const m = new THREE.Matrix4().makeBasis(frame.binormal, frame.normal, frame.tangent);
-    this.quat.setFromRotationMatrix(m);
+    _scratchMat1.makeBasis(frame.binormal, frame.normal, frame.tangent);
+    this.quat.setFromRotationMatrix(_scratchMat1);
 
     // Apply drift yaw rotation around local normal
     if (Math.abs(this.driftAngle) > 0.01) {
-      const driftQuat = new THREE.Quaternion().setFromAxisAngle(frame.normal, -this.driftAngle);
-      this.quat.multiply(driftQuat);
+      _scratchQuat1.setFromAxisAngle(frame.normal, -this.driftAngle);
+      this.quat.multiply(_scratchQuat1);
     }
 
     this.forward.set(0, 0, 1).applyQuaternion(this.quat);
     this.up.set(0, 1, 0).applyQuaternion(this.quat);
-    this.vel.copy(this.forward).multiplyScalar(speedMs);
 
-    // ------------------------------------------------------------------------
-    // 7. BOOST PAD DETECTION
-    // ------------------------------------------------------------------------
-    this.circuit.boostPads.forEach(padU => {
-      if (Math.abs(this.currentU - padU) < 0.007) {
-        speedKmh = Math.min(this.boostMaxSpeedKmh + 20, speedKmh + 65.0);
-        this.boostCapacity = Math.min(1.0, this.boostCapacity + 0.35);
-        this.triggerAction('BOOST PAD', 150);
-        if (this.sound) this.sound.playBoostPadSound();
-      }
-    });
+    // Ensure this.vel is completely accurate and persisted with all modified speeds
+    this.vel.copy(this.forward).multiplyScalar(speedMs);
   }
 
   checkTrafficNearMiss(trafficVehicles, playerPos) {
     const now = performance.now() * 0.001;
-    if (now - this.lastNearMissTime < 1.0) return;
+    if (now - this.lastNearMissTime < 0.9) return;
 
     for (let i = 0; i < trafficVehicles.length; i++) {
       const v = trafficVehicles[i];
       const dist = v.mesh.position.distanceTo(playerPos);
 
-      // Near miss threshold: 2.8m to 4.5m
-      if (dist > 2.8 && dist < 4.8) {
+      // Near miss threshold: 2.6m to 4.8m
+      if (dist > 2.6 && dist < 4.8) {
         this.totalNearMisses++;
         this.lastNearMissTime = now;
-        this.boostCapacity = Math.min(1.0, this.boostCapacity + 0.18);
+        this.boostCapacity = Math.min(1.0, this.boostCapacity + 0.20);
         this.triggerAction('NEAR MISS', 150);
         this.comboCount++;
+        if (this.sound) this.sound.playNearMiss();
         break;
       }
     }
@@ -457,13 +535,13 @@ export class ArcadeRacingPhysics {
       const ai = aiRacers[i];
       if (!ai.vehicle) continue;
       const aiPos = ai.vehicle.group.position;
-      const toAi = aiPos.clone().sub(playerPos);
-      const dist = toAi.length();
+      _scratchVec1.copy(aiPos).sub(playerPos);
+      const dist = _scratchVec1.length();
 
-      if (dist > 3.0 && dist < 18.0) {
-        toAi.normalize();
-        const dot = playerForward.dot(toAi);
-        if (dot > 0.82) {
+      if (dist > 3.0 && dist < 22.0) {
+        _scratchVec1.normalize();
+        const dot = playerForward.dot(_scratchVec1);
+        if (dot > 0.80) {
           drafting = true;
           break;
         }
@@ -479,8 +557,8 @@ export class ArcadeRacingPhysics {
   }
 
   getInterpolatedTransform(alpha) {
-    const p = new THREE.Vector3().lerpVectors(this.prevPos, this.pos, alpha);
-    const q = new THREE.Quaternion().slerpQuaternions(this.prevQuat, this.quat, alpha);
-    return { pos: p, quat: q };
+    _interpPos.lerpVectors(this.prevPos, this.pos, alpha);
+    _interpQuat.slerpQuaternions(this.prevQuat, this.quat, alpha);
+    return _interpTransform;
   }
 }

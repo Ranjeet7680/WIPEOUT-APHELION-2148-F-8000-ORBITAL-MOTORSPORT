@@ -81,7 +81,17 @@ export default defineConfig({
     host: true
   },
   build: {
-    target: 'esnext'
+    target: 'esnext',
+    chunkSizeWarningLimit: 1200,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules/three')) {
+            return 'three-vendor';
+          }
+        }
+      }
+    }
   },
   plugins: [apiDevPlugin()]
 });

@@ -199,79 +199,134 @@ export class CityCircuit {
     geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
     geo.setIndex(indices);
 
-    // Procedural Wet Asphalt Texture with glowing neon cyan induction centerlines & road markings
-    const canvas = document.createElement('canvas');
-    canvas.width = 1024;
-    canvas.height = 1024;
-    const ctx = canvas.getContext('2d');
+    let roadMat;
+    if (typeof document !== 'undefined') {
+      // Procedural Wet Asphalt Texture with glowing neon cyan induction centerlines & road markings
+      const canvas = document.createElement('canvas');
+      canvas.width = 1024;
+      canvas.height = 1024;
+      const ctx = canvas.getContext('2d');
 
-    // Dark wet asphalt base
-    ctx.fillStyle = '#080a0f';
-    ctx.fillRect(0, 0, 1024, 1024);
+      // Dark wet asphalt base
+      ctx.fillStyle = '#080a0f';
+      ctx.fillRect(0, 0, 1024, 1024);
 
-    // Asphalt aggregate grain & micro-noise
-    for (let p = 0; p < 8000; p++) {
-      const px = Math.random() * 1024;
-      const py = Math.random() * 1024;
-      const gray = Math.floor(18 + Math.random() * 22);
-      ctx.fillStyle = `rgb(${gray}, ${gray + 4}, ${gray + 10})`;
-      ctx.fillRect(px, py, 2, 2);
-    }
+      // Asphalt aggregate grain & micro-noise
+      for (let p = 0; p < 8000; p++) {
+        const px = Math.random() * 1024;
+        const py = Math.random() * 1024;
+        const gray = Math.floor(18 + Math.random() * 22);
+        ctx.fillStyle = `rgb(${gray}, ${gray + 4}, ${gray + 10})`;
+        ctx.fillRect(px, py, 2, 2);
+      }
 
-    // Outer neon guidance borders (Left Cyan, Right Amber/Red)
-    ctx.fillStyle = '#00F0FF';
-    ctx.fillRect(20, 0, 14, 1024);
-    ctx.fillStyle = '#FF2A13';
-    ctx.fillRect(990, 0, 14, 1024);
+      // Outer neon guidance borders (Left Cyan, Right Amber/Red)
+      ctx.fillStyle = '#00F0FF';
+      ctx.fillRect(20, 0, 14, 1024);
+      ctx.fillStyle = '#FF2A13';
+      ctx.fillRect(990, 0, 14, 1024);
 
-    // Dashed lane divider lines
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
-    ctx.lineWidth = 6;
-    ctx.setLineDash([40, 40]);
-    ctx.beginPath();
-    ctx.moveTo(310, 0); ctx.lineTo(310, 1024);
-    ctx.moveTo(714, 0); ctx.lineTo(714, 1024);
-    ctx.stroke();
-
-    // High-tech magnetic induction double-centerline (electric cyan with glow)
-    ctx.setLineDash([]);
-    ctx.strokeStyle = '#00F0FF';
-    ctx.lineWidth = 10;
-    ctx.beginPath();
-    ctx.moveTo(500, 0); ctx.lineTo(500, 1024);
-    ctx.moveTo(524, 0); ctx.lineTo(524, 1024);
-    ctx.stroke();
-
-    // Directional chevron speed markings
-    ctx.fillStyle = 'rgba(0, 240, 255, 0.25)';
-    for (let cy = 120; cy < 1024; cy += 256) {
+      // Dashed lane divider lines
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+      ctx.lineWidth = 6;
+      ctx.setLineDash([40, 40]);
       ctx.beginPath();
-      ctx.moveTo(512, cy - 30);
-      ctx.lineTo(460, cy + 30);
-      ctx.lineTo(480, cy + 30);
-      ctx.lineTo(512, cy);
-      ctx.lineTo(544, cy + 30);
-      ctx.lineTo(564, cy + 30);
-      ctx.closePath();
-      ctx.fill();
+      ctx.moveTo(310, 0); ctx.lineTo(310, 1024);
+      ctx.moveTo(714, 0); ctx.lineTo(714, 1024);
+      ctx.stroke();
+
+      // High-tech magnetic induction double-centerline (electric cyan with glow)
+      ctx.setLineDash([]);
+      ctx.strokeStyle = '#00F0FF';
+      ctx.lineWidth = 10;
+      ctx.beginPath();
+      ctx.moveTo(500, 0); ctx.lineTo(500, 1024);
+      ctx.moveTo(524, 0); ctx.lineTo(524, 1024);
+      ctx.stroke();
+
+      // Directional chevron speed markings
+      ctx.fillStyle = 'rgba(0, 240, 255, 0.25)';
+      for (let cy = 120; cy < 1024; cy += 256) {
+        ctx.beginPath();
+        ctx.moveTo(512, cy - 30);
+        ctx.lineTo(460, cy + 30);
+        ctx.lineTo(480, cy + 30);
+        ctx.lineTo(512, cy);
+        ctx.lineTo(544, cy + 30);
+        ctx.lineTo(564, cy + 30);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      const roadTexture = new THREE.CanvasTexture(canvas);
+      roadTexture.wrapS = THREE.RepeatWrapping;
+      roadTexture.wrapT = THREE.RepeatWrapping;
+      roadTexture.repeat.set(1, 60);
+
+      roadMat = new THREE.MeshStandardMaterial({
+        map: roadTexture,
+        roughness: 0.22,
+        metalness: 0.65,
+        emissive: new THREE.Color(0x020810),
+        emissiveIntensity: 0.5
+      });
+    } else {
+      roadMat = new THREE.MeshStandardMaterial({
+        color: 0x080a0f,
+        roughness: 0.22,
+        metalness: 0.65
+      });
     }
-
-    const roadTexture = new THREE.CanvasTexture(canvas);
-    roadTexture.wrapS = THREE.RepeatWrapping;
-    roadTexture.wrapT = THREE.RepeatWrapping;
-    roadTexture.repeat.set(1, 60);
-
-    const roadMat = new THREE.MeshStandardMaterial({
-      map: roadTexture,
-      roughness: 0.22, // Wet glossy road with high reflection
-      metalness: 0.65,
-      emissive: new THREE.Color(0x020810),
-      emissiveIntensity: 0.5
-    });
 
     this.trackMesh = new THREE.Mesh(geo, roadMat);
     this.trackMesh.receiveShadow = true;
     this.scene.add(this.trackMesh);
+
+    // Generate underside structural hull & aerodynamic girder spine
+    const subVerts = [];
+    const subIndices = [];
+    for (let i = 0; i <= this.segments; i++) {
+      const frame = this.samples[i];
+      const p = frame.pos;
+      const b = frame.binormal;
+      const n = frame.normal;
+
+      const sp0 = p.clone().addScaledVector(b, -halfW).addScaledVector(n, -0.4);
+      const sp1 = p.clone().addScaledVector(b, -halfW * 0.4).addScaledVector(n, -2.4);
+      const sp2 = p.clone().addScaledVector(b, halfW * 0.4).addScaledVector(n, -2.4);
+      const sp3 = p.clone().addScaledVector(b, halfW).addScaledVector(n, -0.4);
+
+      subVerts.push(
+        sp0.x, sp0.y, sp0.z,
+        sp1.x, sp1.y, sp1.z,
+        sp2.x, sp2.y, sp2.z,
+        sp3.x, sp3.y, sp3.z
+      );
+    }
+
+    for (let i = 0; i < this.segments; i++) {
+      const r1 = i * 4;
+      const r2 = (i + 1) * 4;
+      for (let s = 0; s < 3; s++) {
+        subIndices.push(r1 + s, r2 + s, r1 + s + 1);
+        subIndices.push(r1 + s + 1, r2 + s, r2 + s + 1);
+      }
+    }
+
+    const subGeo = new THREE.BufferGeometry();
+    subGeo.setAttribute('position', new THREE.Float32BufferAttribute(subVerts, 3));
+    subGeo.setIndex(subIndices);
+    subGeo.computeVertexNormals();
+
+    const subMat = new THREE.MeshStandardMaterial({
+      color: 0x0e1320,
+      metalness: 0.9,
+      roughness: 0.35,
+      side: THREE.DoubleSide
+    });
+    this.substructureMesh = new THREE.Mesh(subGeo, subMat);
+    this.substructureMesh.receiveShadow = true;
+    this.scene.add(this.substructureMesh);
   }
 
   generateBarriersAndNeonRails() {
@@ -327,9 +382,11 @@ export class CityCircuit {
     barrierGeo.computeVertexNormals();
 
     const barrierMat = new THREE.MeshStandardMaterial({
-      color: 0x141824,
-      metalness: 0.9,
-      roughness: 0.35,
+      color: 0x182030,
+      metalness: 0.85,
+      roughness: 0.28,
+      emissive: new THREE.Color(0x060c18),
+      emissiveIntensity: 0.35,
       side: THREE.DoubleSide
     });
 
@@ -372,34 +429,43 @@ export class CityCircuit {
     const padGeo = new THREE.PlaneGeometry(6.5, 9.0);
     padGeo.rotateX(-Math.PI * 0.5);
 
-    const canvas = document.createElement('canvas');
-    canvas.width = 256;
-    canvas.height = 256;
-    const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#06080F';
-    ctx.fillRect(0, 0, 256, 256);
+    let padMat;
+    if (typeof document !== 'undefined') {
+      const canvas = document.createElement('canvas');
+      canvas.width = 256;
+      canvas.height = 256;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#06080F';
+      ctx.fillRect(0, 0, 256, 256);
 
-    ctx.fillStyle = '#00F0FF';
-    // 3 Glowing boost chevrons
-    for (let y = 40; y <= 180; y += 70) {
-      ctx.beginPath();
-      ctx.moveTo(128, y - 35);
-      ctx.lineTo(30, y + 25);
-      ctx.lineTo(60, y + 25);
-      ctx.lineTo(128, y - 5);
-      ctx.lineTo(196, y + 25);
-      ctx.lineTo(226, y + 25);
-      ctx.closePath();
-      ctx.fill();
+      ctx.fillStyle = '#00F0FF';
+      // 3 Glowing boost chevrons
+      for (let y = 40; y <= 180; y += 70) {
+        ctx.beginPath();
+        ctx.moveTo(128, y - 35);
+        ctx.lineTo(30, y + 25);
+        ctx.lineTo(60, y + 25);
+        ctx.lineTo(128, y - 5);
+        ctx.lineTo(196, y + 25);
+        ctx.lineTo(226, y + 25);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      const padTex = new THREE.CanvasTexture(canvas);
+      padMat = new THREE.MeshBasicMaterial({
+        map: padTex,
+        transparent: true,
+        opacity: 0.95,
+        blending: THREE.AdditiveBlending
+      });
+    } else {
+      padMat = new THREE.MeshBasicMaterial({
+        color: 0x00F0FF,
+        transparent: true,
+        opacity: 0.95
+      });
     }
-
-    const padTex = new THREE.CanvasTexture(canvas);
-    const padMat = new THREE.MeshBasicMaterial({
-      map: padTex,
-      transparent: true,
-      opacity: 0.95,
-      blending: THREE.AdditiveBlending
-    });
 
     this.boostPads.forEach(u => {
       const frame = this.getFrameAt(u);
@@ -544,26 +610,31 @@ export class CityCircuit {
     gantry.add(bridge);
 
     // Large glowing START / FINISH digital sign
-    const signCanvas = document.createElement('canvas');
-    signCanvas.width = 1024;
-    signCanvas.height = 256;
-    const sctx = signCanvas.getContext('2d');
-    sctx.fillStyle = '#060912';
-    sctx.fillRect(0, 0, 1024, 256);
-    sctx.strokeStyle = '#00F0FF';
-    sctx.lineWidth = 12;
-    sctx.strokeRect(10, 10, 1004, 236);
-    sctx.fillStyle = '#FFFFFF';
-    sctx.font = 'bold 90px monospace';
-    sctx.textAlign = 'center';
-    sctx.fillText('◄◄  NEO-SHINJUKU START // FINISH  ►►', 512, 120);
-    sctx.fillStyle = '#00F0FF';
-    sctx.font = 'bold 50px monospace';
-    sctx.fillText('HYPER CIRCUIT // AETHER-9 // SECTOR 07', 512, 195);
+    let signMat;
+    if (typeof document !== 'undefined') {
+      const signCanvas = document.createElement('canvas');
+      signCanvas.width = 1024;
+      signCanvas.height = 256;
+      const sctx = signCanvas.getContext('2d');
+      sctx.fillStyle = '#060912';
+      sctx.fillRect(0, 0, 1024, 256);
+      sctx.strokeStyle = '#00F0FF';
+      sctx.lineWidth = 12;
+      sctx.strokeRect(10, 10, 1004, 236);
+      sctx.fillStyle = '#FFFFFF';
+      sctx.font = 'bold 90px monospace';
+      sctx.textAlign = 'center';
+      sctx.fillText('◄◄  NEO-SHINJUKU START // FINISH  ►►', 512, 120);
+      sctx.fillStyle = '#00F0FF';
+      sctx.font = 'bold 50px monospace';
+      sctx.fillText('HYPER CIRCUIT // AETHER-9 // SECTOR 07', 512, 195);
 
-    const signTex = new THREE.CanvasTexture(signCanvas);
+      const signTex = new THREE.CanvasTexture(signCanvas);
+      signMat = new THREE.MeshBasicMaterial({ map: signTex, side: THREE.DoubleSide });
+    } else {
+      signMat = new THREE.MeshBasicMaterial({ color: 0x00F0FF, side: THREE.DoubleSide });
+    }
     const signGeo = new THREE.PlaneGeometry(w - 2, 2.8);
-    const signMat = new THREE.MeshBasicMaterial({ map: signTex, side: THREE.DoubleSide });
     const signMesh = new THREE.Mesh(signGeo, signMat);
     signMesh.position.set(0, h + 1.25, 1.8);
     gantry.add(signMesh);

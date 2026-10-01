@@ -351,9 +351,10 @@ export class TutorialManager {
         const distToZone = Math.abs(physics.currentU - this.brakingZoneU) * 5400.0;
         this.game.ui.updateBrakingDistance(distToZone, speedKmh);
 
-        if (distToZone < 35.0) {
-          if (keys['KeyS'] || keys['ArrowDown'] || keys['KeyE'] || speedKmh < 10.0) {
-            if (speedKmh < 15.0) {
+        const reachedZone = (distToZone < 70.0) || (physics.currentU > (this.brakingZoneU - 0.015) && physics.totalDistance > 60.0);
+        if (reachedZone) {
+          if (keys['KeyS'] || keys['ArrowDown'] || keys['KeyE'] || (physics.inputs && physics.inputs.brake > 0) || speedKmh < 18.0) {
+            if (speedKmh < 18.0) {
               this.completeStep(TUTORIAL_STEPS.STEP_02_BRAKING, 'braking', '✓ BRAKING COMPLETE', 150);
             }
           }
@@ -365,8 +366,8 @@ export class TutorialManager {
       // STEP 03: DRIFT
       // ----------------------------------------------------------------------
       case TUTORIAL_STEPS.STEP_03_DRIFT: {
-        if (physics.isDrifting && speedKmh > 100.0) {
-          this.driftProgress += delta * 0.75;
+        if (physics.isDrifting && speedKmh > 80.0) {
+          this.driftProgress += delta * 0.85;
           this.game.ui.updateDriftMeter(this.driftProgress);
 
           if (this.driftProgress >= 1.0) {
@@ -380,7 +381,7 @@ export class TutorialManager {
       // STEP 04: BOOST
       // ----------------------------------------------------------------------
       case TUTORIAL_STEPS.STEP_04_BOOST: {
-        if (physics.isBoosting && speedKmh > 300.0) {
+        if (physics.isBoosting && speedKmh > 260.0) {
           this.completeStep(TUTORIAL_STEPS.STEP_04_BOOST, 'boost', '✓ BOOST COMPLETE', 200);
         }
         break;
@@ -392,7 +393,7 @@ export class TutorialManager {
       case TUTORIAL_STEPS.STEP_05_CHECKPOINTS: {
         // Track passing through any of the circuit checkpoints
         this.game.circuit.checkpoints.slice(0, 3).forEach(cp => {
-          if (Math.abs(physics.currentU - cp.u) < 0.008) {
+          if (Math.abs(physics.currentU - cp.u) < 0.012) {
             if (!cp.tutorialPassed) {
               cp.tutorialPassed = true;
               this.checkpointsPassed++;
@@ -433,8 +434,11 @@ export class TutorialManager {
         const needlePos = (Math.sin(now * 3.5) + 1.0) * 0.5; // 0..1
         this.game.ui.updatePerfectBoostNeedle(needlePos);
 
-        const inSweetSpot = (needlePos >= 0.42 && needlePos <= 0.58);
-        if (keys['Space'] || physics.inputs.boost) {
+        // Keep boost gauge topped up so pilot can retry smoothly
+        physics.boostCapacity = 1.0;
+
+        const inSweetSpot = (needlePos >= 0.36 && needlePos <= 0.64);
+        if (keys['Space'] || (physics.inputs && physics.inputs.boost)) {
           if (inSweetSpot) {
             physics.boostTier = 'OVERDRIVE';
             this.game.ui.showPerfectBoostWindow(false);
@@ -449,12 +453,12 @@ export class TutorialManager {
       // ----------------------------------------------------------------------
       case TUTORIAL_STEPS.STEP_08_STUNT: {
         if (physics.aerialState.inAir) {
-          if (physics.aerialState.barrelRollProgress > 1.8 || physics.aerialState.spin360Progress > 1.8) {
+          if (physics.aerialState.barrelRollProgress > 1.0 || physics.aerialState.spin360Progress > 1.0 || physics.totalStunts > 0) {
             this.stuntsDone++;
           }
         }
-        // Completed upon clean landing
-        if (!physics.aerialState.inAir && this.stuntsDone > 0) {
+        // Completed upon clean landing or stunt registered
+        if ((!physics.aerialState.inAir && this.stuntsDone > 0) || physics.totalStunts > 0) {
           this.completeStep(TUTORIAL_STEPS.STEP_08_STUNT, 'stunts', 'STUNT COMPLETE! // +500 XP', 500);
         }
         break;
@@ -467,10 +471,9 @@ export class TutorialManager {
         if (physics.totalNearMisses > this.nearMissCount) {
           this.nearMissCount = physics.totalNearMisses;
           this.vector.speak('Near miss confirmed. Clean precision.', `NEAR MISS x0${this.nearMissCount}!`);
-
-          if (this.nearMissCount >= 2) {
-            this.completeStep(TUTORIAL_STEPS.STEP_09_TRAFFIC, 'traffic', '✓ TRAFFIC NAVIGATION COMPLETE', 300);
-          }
+        }
+        if (this.nearMissCount >= 1 || physics.totalNearMisses >= 1) {
+          this.completeStep(TUTORIAL_STEPS.STEP_09_TRAFFIC, 'traffic', '✓ TRAFFIC NAVIGATION COMPLETE', 300);
         }
         break;
       }
@@ -481,10 +484,12 @@ export class TutorialManager {
       case TUTORIAL_STEPS.STEP_10_RIVAL: {
         const kane = this.game.rivals.rivals.find(r => r.name.toLowerCase() === 'kane');
         if (kane) {
-          // If player's total distance surpasses Kane's total distance
-          if (physics.totalDistance > kane.totalDistance + 12.0) {
+          // If player's total distance surpasses Kane's total distance or spline progression
+          if (physics.totalDistance > (kane.totalDistance + 8.0) || (physics.currentU > kane.currentU && (physics.currentU - kane.currentU < 0.1))) {
             this.completeStep(TUTORIAL_STEPS.STEP_10_RIVAL, 'rival', '✓ OVERTAKE COMPLETE', 400);
           }
+        } else {
+          this.completeStep(TUTORIAL_STEPS.STEP_10_RIVAL, 'rival', '✓ OVERTAKE COMPLETE', 400);
         }
         break;
       }

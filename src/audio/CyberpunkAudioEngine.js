@@ -10,8 +10,12 @@ export class CyberpunkAudioEngine {
     this.isMuted = false;
     this.isInitialized = false;
 
-    // Master Gain
+    // Master & Sub-bus Gains
     this.masterGain = null;
+    this.sfxGain = null;
+    this.musicGain = null;
+    this.sfxVolume = 1.0;
+    this.musicVolume = 0.85;
 
     // Continuous SFX nodes
     this.engineOsc = null;
@@ -44,6 +48,14 @@ export class CyberpunkAudioEngine {
       this.masterGain.gain.setValueAtTime(0.5, this.ctx.currentTime);
       this.masterGain.connect(this.ctx.destination);
 
+      this.sfxGain = this.ctx.createGain();
+      this.sfxGain.gain.setValueAtTime(this.sfxVolume, this.ctx.currentTime);
+      this.sfxGain.connect(this.masterGain);
+
+      this.musicGain = this.ctx.createGain();
+      this.musicGain.gain.setValueAtTime(this.musicVolume, this.ctx.currentTime);
+      this.musicGain.connect(this.masterGain);
+
       // 1. Electric Propulsion Engine (FM Sawtooth + Modulator)
       this.engineOsc = this.ctx.createOscillator();
       this.engineOsc.type = 'sawtooth';
@@ -58,7 +70,7 @@ export class CyberpunkAudioEngine {
 
       this.engineOsc.connect(engineFilter);
       engineFilter.connect(this.engineGain);
-      this.engineGain.connect(this.masterGain);
+      this.engineGain.connect(this.sfxGain);
       this.engineOsc.start();
 
       // 2. Hyper-Boost Plasma Whine (High Sine Wave)
@@ -70,7 +82,7 @@ export class CyberpunkAudioEngine {
       this.boostGain.gain.setValueAtTime(0.0, this.ctx.currentTime);
 
       this.boostOsc.connect(this.boostGain);
-      this.boostGain.connect(this.masterGain);
+      this.boostGain.connect(this.sfxGain);
       this.boostOsc.start();
 
       // 3. Drift Friction Screech
@@ -82,7 +94,7 @@ export class CyberpunkAudioEngine {
       this.driftGain.gain.setValueAtTime(0.0, this.ctx.currentTime);
 
       this.driftOsc.connect(this.driftGain);
-      this.driftGain.connect(this.masterGain);
+      this.driftGain.connect(this.sfxGain);
       this.driftOsc.start();
 
       this.isInitialized = true;
@@ -117,10 +129,16 @@ export class CyberpunkAudioEngine {
 
   setSfxVolume(val) {
     this.sfxVolume = Math.max(0.0, Math.min(1.0, val));
+    if (this.sfxGain && this.ctx) {
+      this.sfxGain.gain.setValueAtTime(this.sfxVolume, this.ctx.currentTime);
+    }
   }
 
   setMusicVolume(val) {
     this.musicVolume = Math.max(0.0, Math.min(1.0, val));
+    if (this.musicGain && this.ctx) {
+      this.musicGain.gain.setValueAtTime(this.musicVolume, this.ctx.currentTime);
+    }
   }
 
   setMusicState(state) {
@@ -182,7 +200,7 @@ export class CyberpunkAudioEngine {
       gain.gain.setValueAtTime(0.06, this.ctx.currentTime);
       gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.8);
       osc.connect(gain);
-      gain.connect(this.masterGain);
+      gain.connect(this.musicGain || this.masterGain);
       osc.start();
       osc.stop(this.ctx.currentTime + 0.85);
     } else if (this.musicState === 'RACING' || this.musicState === 'FINAL_LAP') {
@@ -204,7 +222,7 @@ export class CyberpunkAudioEngine {
 
       osc.connect(filter);
       filter.connect(gain);
-      gain.connect(this.masterGain);
+      gain.connect(this.musicGain || this.masterGain);
 
       osc.start();
       osc.stop(this.ctx.currentTime + 0.2);
@@ -224,7 +242,7 @@ export class CyberpunkAudioEngine {
     gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.35);
 
     osc.connect(gain);
-    gain.connect(this.masterGain);
+    gain.connect(this.sfxGain || this.masterGain);
 
     osc.start();
     osc.stop(this.ctx.currentTime + 0.38);
@@ -239,7 +257,7 @@ export class CyberpunkAudioEngine {
       gain.gain.setValueAtTime(0.2, this.ctx.currentTime + idx * 0.05);
       gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + idx * 0.05 + 0.25);
       osc.connect(gain);
-      gain.connect(this.masterGain);
+      gain.connect(this.sfxGain || this.masterGain);
       osc.start(this.ctx.currentTime + idx * 0.05);
       osc.stop(this.ctx.currentTime + idx * 0.05 + 0.3);
     });
@@ -255,7 +273,7 @@ export class CyberpunkAudioEngine {
     gain.gain.setValueAtTime(0.18, this.ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.15);
     osc.connect(gain);
-    gain.connect(this.masterGain);
+    gain.connect(this.sfxGain || this.masterGain);
     osc.start();
     osc.stop(this.ctx.currentTime + 0.18);
   }
@@ -270,7 +288,7 @@ export class CyberpunkAudioEngine {
     gain.gain.setValueAtTime(0.35, this.ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + (isFinal ? 0.45 : 0.2));
     osc.connect(gain);
-    gain.connect(this.masterGain);
+    gain.connect(this.sfxGain || this.masterGain);
     osc.start();
     osc.stop(this.ctx.currentTime + (isFinal ? 0.5 : 0.22));
   }
@@ -284,7 +302,7 @@ export class CyberpunkAudioEngine {
       gain.gain.setValueAtTime(0.3, this.ctx.currentTime + idx * 0.08);
       gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + idx * 0.08 + 0.5);
       osc.connect(gain);
-      gain.connect(this.masterGain);
+      gain.connect(this.sfxGain || this.masterGain);
       osc.start(this.ctx.currentTime + idx * 0.08);
       osc.stop(this.ctx.currentTime + idx * 0.08 + 0.55);
     });
@@ -300,7 +318,7 @@ export class CyberpunkAudioEngine {
     gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.3);
     osc.connect(gain);
-    gain.connect(this.masterGain);
+    gain.connect(this.sfxGain || this.masterGain);
     osc.start();
     osc.stop(this.ctx.currentTime + 0.32);
   }
@@ -314,7 +332,7 @@ export class CyberpunkAudioEngine {
       gain.gain.setValueAtTime(0.2, this.ctx.currentTime + i * 0.06);
       gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + i * 0.06 + 0.3);
       osc.connect(gain);
-      gain.connect(this.masterGain);
+      gain.connect(this.sfxGain || this.masterGain);
       osc.start(this.ctx.currentTime + i * 0.06);
       osc.stop(this.ctx.currentTime + i * 0.06 + 0.35);
     });
@@ -328,8 +346,62 @@ export class CyberpunkAudioEngine {
     gain.gain.setValueAtTime(0.12, this.ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.06);
     osc.connect(gain);
-    gain.connect(this.masterGain);
+    gain.connect(this.sfxGain || this.masterGain);
     osc.start();
     osc.stop(this.ctx.currentTime + 0.07);
+  }
+
+  playCameraSwitchSound() {
+    if (!this.ctx || this.isMuted) return;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(1400, this.ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(700, this.ctx.currentTime + 0.08);
+    gain.gain.setValueAtTime(0.18, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.09);
+    osc.connect(gain);
+    gain.connect(this.sfxGain || this.masterGain);
+    osc.start();
+    osc.stop(this.ctx.currentTime + 0.1);
+  }
+
+  playAirbrakeSound() {
+    if (!this.ctx || this.isMuted) return;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(260, this.ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(95, this.ctx.currentTime + 0.12);
+    gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.12);
+    osc.connect(gain);
+    gain.connect(this.sfxGain || this.masterGain);
+    osc.start();
+    osc.stop(this.ctx.currentTime + 0.13);
+  }
+
+  playOverdriveBurstSound() {
+    if (!this.ctx || this.isMuted) return;
+    const osc1 = this.ctx.createOscillator();
+    const osc2 = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc1.type = 'sine';
+    osc1.frequency.setValueAtTime(120, this.ctx.currentTime);
+    osc1.frequency.exponentialRampToValueAtTime(35, this.ctx.currentTime + 0.45);
+    osc2.type = 'sawtooth';
+    osc2.frequency.setValueAtTime(1600, this.ctx.currentTime);
+    osc2.frequency.exponentialRampToValueAtTime(220, this.ctx.currentTime + 0.35);
+
+    gain.gain.setValueAtTime(0.38, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.5);
+
+    osc1.connect(gain);
+    osc2.connect(gain);
+    gain.connect(this.sfxGain || this.masterGain);
+    osc1.start();
+    osc2.start();
+    osc1.stop(this.ctx.currentTime + 0.52);
+    osc2.stop(this.ctx.currentTime + 0.52);
   }
 }

@@ -39,7 +39,8 @@ export default async function handler(req, res) {
 
   // 1. GET: Fetch cloud pilot profile
   if (req.method === 'GET') {
-    const callsign = (req.query.callsign || 'RANJEET').toString().trim().toUpperCase();
+    const query = req.query || (req.url && req.url.includes('?') ? Object.fromEntries(new URLSearchParams(req.url.split('?')[1])) : {});
+    const callsign = (query.callsign || query.pilot || 'RANJEET').toString().trim().toUpperCase();
 
     if (!pilotProfiles.has(callsign)) {
       // Create new profile dynamically

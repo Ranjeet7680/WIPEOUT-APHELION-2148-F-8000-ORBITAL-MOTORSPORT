@@ -113,16 +113,19 @@ class GameManager {
   }
 
   setupRenderer() {
+    this.isMobile = typeof navigator !== 'undefined' && (/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.innerWidth <= 768);
+
     this.renderer = new THREE.WebGLRenderer({
-      antialias: true,
+      antialias: !this.isMobile,
       powerPreference: 'high-performance',
       stencil: false
     });
     this.renderer.setSize(window.innerWidth, window.innerHeight);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    const initialDpr = this.isMobile ? 1.0 : Math.min(window.devicePixelRatio, 1.5);
+    this.renderer.setPixelRatio(initialDpr);
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.25;
-    this.renderer.shadowMap.enabled = true;
+    this.renderer.toneMappingExposure = 1.0;
+    this.renderer.shadowMap.enabled = !this.isMobile;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
     this.container.appendChild(this.renderer.domElement);
@@ -133,22 +136,24 @@ class GameManager {
     this.scene.background = new THREE.Color(0x06080F);
     this.scene.fog = new THREE.FogExp2(0x06080F, 0.00035);
 
-    this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.2, 10000);
+    // Camera near 0.5 prevents near-plane surface slicing and barrier clipping
+    this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.5, 10000);
     this.scene.add(this.camera);
   }
 
   setupLighting() {
-    const ambient = new THREE.AmbientLight(0x223048, 2.2);
+    // Rich cyberpunk night ambient contrast
+    const ambient = new THREE.AmbientLight(0x182436, 1.2);
     this.scene.add(ambient);
 
-    const hemiLight = new THREE.HemisphereLight(0x00F0FF, 0x141822, 1.5);
+    const hemiLight = new THREE.HemisphereLight(0x00F0FF, 0x090D16, 0.9);
     this.scene.add(hemiLight);
 
-    this.sunLight = new THREE.DirectionalLight(0xE0F0FF, 2.8);
+    this.sunLight = new THREE.DirectionalLight(0xD8EEFF, 1.8);
     this.sunLight.position.set(350, 1600, 450);
     this.sunLight.target.position.set(0, 150, 0);
     this.scene.add(this.sunLight.target);
-    this.sunLight.castShadow = true;
+    this.sunLight.castShadow = !this.isMobile;
     this.sunLight.shadow.mapSize.width = 2048;
     this.sunLight.shadow.mapSize.height = 2048;
     this.sunLight.shadow.camera.near = 50;
@@ -159,7 +164,7 @@ class GameManager {
     this.sunLight.shadow.camera.bottom = -700;
     this.scene.add(this.sunLight);
 
-    const rimLight = new THREE.DirectionalLight(0x7928CA, 1.8);
+    const rimLight = new THREE.DirectionalLight(0x7928CA, 1.2);
     rimLight.position.set(-500, 600, -400);
     this.scene.add(rimLight);
   }
@@ -169,16 +174,99 @@ class GameManager {
     const renderPass = new RenderPass(this.scene, this.camera);
     this.composer.addPass(renderPass);
 
-    const bloomPass = new UnrealBloomPass(
+    // Balanced cyberpunk bloom: threshold 0.78 isolates true light sources without blowing out the screen
+    this.bloomPass = new UnrealBloomPass(
       new THREE.Vector2(window.innerWidth, window.innerHeight),
-      0.85,
-      0.38,
-      0.72
+      0.45,
+      0.78,
+      0.45
     );
-    this.composer.addPass(bloomPass);
+    this.composer.addPass(this.bloomPass);
 
     const outputPass = new OutputPass();
     this.composer.addPass(outputPass);
+  }
+
+  setGraphicsQuality(quality = 'HIGH') {
+    this.graphicsQuality = quality;
+    saveManager.updateSettings({ graphicsQuality: quality });
+
+    switch (quality) {
+      case 'LOW':
+        // Rock-solid 60 FPS mode for mobile and low-spec hardware (bypasses full-screen composer)
+        this.renderer.setPixelRatio(1.0);
+        this.renderer.shadowMap.enabled = false;
+        this.skipComposer = true;
+        if (this.bloomPass) this.bloomPass.enabled = false;
+        if (this.vfx) this.vfx.setQuality('LOW');
+        break;
+
+      case 'MEDIUM':
+        // Smooth 60 FPS with soft cyberpunk bloom
+        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.0));
+        this.renderer.shadowMap.enabled = false;
+        this.skipComposer = false;
+        if (this.bloomPass) {
+          this.bloomPass.enabled = true;
+          this.bloomPass.strength = 0.30;
+          this.bloomPass.threshold = 0.82;
+        }
+        if (this.vfx) this.vfx.setQuality('MEDIUM');
+        break;
+
+      case 'HIGH':
+        // Rich high-definition presentation with soft shadows
+        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.25));
+        this.renderer.shadowMap.enabled = true;
+        this.skipComposer = false;
+        if (this.bloomPass) {
+          this.bloomPass.enabled = true;
+          this.bloomPass.strength = 0.45;
+          this.bloomPass.threshold = 0.78;
+        }
+        if (this.vfx) this.vfx.setQuality('HIGH');
+        break;
+
+      case 'ULTRA':
+      default:
+        // Studio cinematic preset
+        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
+        this.renderer.shadowMap.enabled = true;
+        this.skipComposer = false;
+        if (this.bloomPass) {
+          this.bloomPass.enabled = true;
+          this.bloomPass.strength = 0.52;
+          this.bloomPass.threshold = 0.75;
+        }
+        if (this.vfx) this.vfx.setQuality('ULTRA');
+        break;
+    }
+
+    if (this.ui && this.ui.syncSettingsDisplay) {
+      this.ui.syncSettingsDisplay();
+    }
+  }
+
+  toggleFpsCounter(forceState = null) {
+    const nextState = forceState !== null ? forceState : !this.showFps;
+    this.showFps = nextState;
+    saveManager.updateSettings({ showFps: nextState });
+    if (this.ui && this.ui.setFpsCounterVisible) {
+      this.ui.setFpsCounterVisible(nextState);
+    }
+    return nextState;
+  }
+
+  setControlScheme(scheme) {
+    this.controlScheme = scheme;
+    saveManager.updateSettings({ controlScheme: scheme });
+    if (this.ui) {
+      if (scheme === 'TOUCH') {
+        this.ui.setTouchControlsVisible(true);
+      } else {
+        this.ui.setTouchControlsVisible(this.isMobile);
+      }
+    }
   }
 
   setupSubsystems() {
@@ -212,7 +300,10 @@ class GameManager {
     this.rivals = new RivalRacersSystem(this.scene, this.circuit);
 
     // 7. Dynamic Camera & Game State
-    this.cameraController = new CameraController(this.camera, this.renderer.domElement);
+    this.cameraController = new CameraController(this.camera, this.renderer.domElement, this.circuit);
+    this.cameraController.onCameraChange = (mode) => {
+      if (this.ui) this.ui.updateCameraBadge(mode);
+    };
     this.gameState = new GameState(this.sound);
     this.gameState.totalRacers = 8;
 
@@ -221,6 +312,17 @@ class GameManager {
     this.vector = new VectorInstructor(this.sound);
     this.tutorial = new TutorialManager(this, this.vector);
     this.cinematicIntro = new FirstTimeCinematic(this);
+
+    // Apply saved settings (Quality, Audio volumes, FPS, Control Scheme)
+    const savedSettings = saveManager.getSettings();
+    const defaultQuality = this.isMobile ? 'MEDIUM' : 'HIGH';
+    this.setGraphicsQuality(savedSettings.graphicsQuality || defaultQuality);
+    this.showFps = !!savedSettings.showFps;
+    this.controlScheme = savedSettings.controlScheme || (this.isMobile ? 'TOUCH' : 'KEYBOARD');
+    if (this.sound) {
+      if (savedSettings.sfxVolume !== undefined) this.sound.setSfxVolume(savedSettings.sfxVolume);
+      if (savedSettings.musicVolume !== undefined) this.sound.setMusicVolume(savedSettings.musicVolume);
+    }
 
     // 9. Holographic Ghost Vehicle (Time-Attack Replay)
     this.ghostVehicle = new HolographicGhostVehicle(this.scene, this.circuit);
@@ -253,7 +355,11 @@ class GameManager {
 
       if (e.code === 'KeyC' || e.code === 'KeyV') {
         if (this.state === 'RACING' || this.state === 'TUTORIAL') {
-          this.cameraController.cycleMode();
+          const mode = this.cameraController.cycleMode();
+          if (this.sound && this.sound.playCameraSwitchSound) {
+            this.sound.playCameraSwitchSound();
+          }
+          if (this.ui) this.ui.updateCameraBadge(mode);
         }
       }
 
@@ -262,7 +368,13 @@ class GameManager {
       }
 
       if (e.code === 'KeyM') {
-        if (this.worldMap) this.worldMap.toggle();
+        if (this.ui) {
+          if (this.ui.currentScreen === 'WORLD_MAP' || this.ui.currentScreen === 'EVENT_SELECT') {
+            this.ui.showScreen('LOBBY');
+          } else if (this.state === 'LOBBY') {
+            this.ui.showWorldMap();
+          }
+        }
       }
 
       if (e.code === 'KeyG') {
@@ -280,6 +392,8 @@ class GameManager {
           this.skipRaceIntro();
         } else if (this.state === 'CINEMATIC_INTRO') {
           if (this.cinematicIntro) this.cinematicIntro.skip();
+        } else if (this.ui && (this.ui.currentScreen === 'WORLD_MAP' || this.ui.currentScreen === 'EVENT_SELECT')) {
+          this.ui.showScreen('LOBBY');
         } else if (this.worldMap && this.worldMap.isOpen) {
           this.worldMap.close();
         }
@@ -388,6 +502,7 @@ class GameManager {
 
   setTrackVisible(visible) {
     if (this.circuit && this.circuit.trackMesh) this.circuit.trackMesh.visible = visible;
+    if (this.circuit && this.circuit.substructureMesh) this.circuit.substructureMesh.visible = visible;
     if (this.circuit && this.circuit.barrierMesh) this.circuit.barrierMesh.visible = visible;
     if (this.circuit && this.circuit.glowRailsMesh) this.circuit.glowRailsMesh.visible = visible;
     if (this.circuit && this.circuit.boostPadsGroup) this.circuit.boostPadsGroup.visible = visible;
@@ -453,6 +568,7 @@ class GameManager {
   startCountdown() {
     this.state = 'COUNTDOWN';
     this.ui.showScreen('RACING');
+    this.ui.showCountdownOverlay();
     this.sound.setMusicState('COUNTDOWN');
 
     this.physics.resetToStart();
@@ -594,6 +710,7 @@ class GameManager {
     this.garageLobby.setCameraAnglePreset('FRONT');
     if (this.ui) {
       this.ui.hideTutorialHUD();
+      this.ui.hideCountdownOverlay();
       this.ui.showScreen('LOBBY');
     }
     if (this.vector) this.vector.hide();
@@ -620,15 +737,20 @@ class GameManager {
     let drift = false;
     let boost = false;
     let energyBrake = false;
+    let airbrakeLeft = false;
+    let airbrakeRight = false;
 
     if (this.keys['KeyW'] || this.keys['ArrowUp']) throttle = 1.0;
     if (this.keys['KeyS'] || this.keys['ArrowDown']) brake = 1.0;
     if (this.keys['KeyA'] || this.keys['ArrowLeft']) steer -= 1.0;
     if (this.keys['KeyD'] || this.keys['ArrowRight']) steer += 1.0;
 
+    if (this.keys['KeyQ']) airbrakeLeft = true;
+    if (this.keys['KeyE']) airbrakeRight = true;
+    if (this.keys['KeyB'] || (this.keys['KeyQ'] && this.keys['KeyE'])) energyBrake = true;
+
     if (this.keys['ShiftLeft'] || this.keys['ShiftRight']) drift = true;
     if (this.keys['Space']) boost = true;
-    if (this.keys['KeyE']) energyBrake = true;
 
     // Mobile touch
     if (this.touchInputs.throttle > 0) throttle = this.touchInputs.throttle;
@@ -636,6 +758,9 @@ class GameManager {
     if (this.touchInputs.steer !== 0) steer = this.touchInputs.steer;
     if (this.touchInputs.drift) drift = true;
     if (this.touchInputs.boost) boost = true;
+    if (this.touchInputs.airbrakeLeft) airbrakeLeft = true;
+    if (this.touchInputs.airbrakeRight) airbrakeRight = true;
+    if (this.touchInputs.energyBrake) energyBrake = true;
 
     // Gamepad
     const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
@@ -647,17 +772,42 @@ class GameManager {
       if (gp.buttons[0] && gp.buttons[0].pressed) throttle = 1.0;
       if (gp.buttons[2] && gp.buttons[2].pressed) brake = 1.0;
       if (gp.buttons[1] && gp.buttons[1].pressed) boost = true;
-      if (gp.buttons[4] && gp.buttons[4].pressed) drift = true;
-      if (gp.buttons[5] && gp.buttons[5].pressed) energyBrake = true;
+      if (gp.buttons[4] && gp.buttons[4].pressed) airbrakeLeft = true;
+      if (gp.buttons[5] && gp.buttons[5].pressed) airbrakeRight = true;
+      if (gp.buttons[3] && gp.buttons[3].pressed) drift = true;
     }
 
-    return { throttle, brake, steer, drift, boost, energyBrake };
+    return { throttle, brake, steer, drift, boost, energyBrake, airbrakeLeft, airbrakeRight };
   }
 
   animate() {
     requestAnimationFrame(() => this.animate());
 
     const delta = Math.min(this.clock.getDelta(), 0.1);
+
+    // Adaptive frame performance monitor
+    this.frameCount = (this.frameCount || 0) + 1;
+    this.lastFpsCheck = this.lastFpsCheck || performance.now();
+    const now = performance.now();
+    if (now - this.lastFpsCheck >= 500) {
+      const elapsed = (now - this.lastFpsCheck) * 0.001;
+      const currentFps = Math.round(this.frameCount / elapsed);
+      const frameMs = (1000 / Math.max(1, currentFps)).toFixed(1);
+      this.frameCount = 0;
+      this.lastFpsCheck = now;
+      this.currentFps = currentFps;
+
+      if (this.ui && this.ui.updateFpsCounter) {
+        this.ui.updateFpsCounter(currentFps, frameMs, this.graphicsQuality, this.showFps);
+      }
+
+      // Automatically downgrade graphics if sub-26 FPS persists
+      if (currentFps < 26 && this.graphicsQuality === 'ULTRA') {
+        this.setGraphicsQuality('HIGH');
+      } else if (currentFps < 22 && this.graphicsQuality === 'HIGH') {
+        this.setGraphicsQuality('MEDIUM');
+      }
+    }
 
     // State Machine Dispatch
     switch (this.state) {
@@ -717,9 +867,15 @@ class GameManager {
         this.cameraController.update(delta, interpPos, this.physics.vel, interpQuat, 0, false, false);
 
         this.gameState.update(delta, this.physics.currentU, 0, this.rivals.rivals);
+        if (this.ui) {
+          this.ui.updateCountdown(this.gameState.countdownTime, this.gameState.countdownInt);
+          this.ui.updateHUD(this.physics, this.gameState);
+        }
+
         if (this.gameState.status === RACE_STATUS.RACING) {
           this.state = 'RACING';
           this.sound.setMusicState('RACING');
+          if (this.ui) this.ui.triggerCountdownGo();
         }
         break;
       }
@@ -848,6 +1004,9 @@ class GameManager {
 
         if (this.ui) {
           this.ui.updateHUD(this.physics, this.gameState);
+          if (currentDistrict) {
+            this.ui.updateDistrictHUD(currentDistrict);
+          }
         }
 
         if (this.minimap) {
@@ -879,8 +1038,12 @@ class GameManager {
       }
     }
 
-    // Render via Post-Processing Composer (Bloom + ACES Tone Mapping)
-    this.composer.render();
+    // Render via Post-Processing Composer (Bloom + ACES Tone Mapping) or direct WebGL for 60 FPS mobile
+    if (this.skipComposer) {
+      this.renderer.render(this.scene, this.camera);
+    } else {
+      this.composer.render();
+    }
   }
 
   onResize() {

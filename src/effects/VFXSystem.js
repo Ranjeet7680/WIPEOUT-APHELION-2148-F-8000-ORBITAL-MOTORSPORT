@@ -12,6 +12,24 @@ export class VFXSystem {
     this.scene = scene;
     this.camera = camera;
 
+    // Soft circular radial alpha texture for organic glow
+    let softParticleTex = null;
+    if (typeof document !== 'undefined') {
+      const c = document.createElement('canvas');
+      c.width = 64;
+      c.height = 64;
+      const ctx = c.getContext('2d');
+      const g = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+      g.addColorStop(0, 'rgba(255, 255, 255, 1.0)');
+      g.addColorStop(0.35, 'rgba(255, 255, 255, 0.7)');
+      g.addColorStop(0.7, 'rgba(255, 255, 255, 0.2)');
+      g.addColorStop(1.0, 'rgba(255, 255, 255, 0.0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, 64, 64);
+      softParticleTex = new THREE.CanvasTexture(c);
+    }
+    this.softParticleTex = softParticleTex;
+
     // 1. Boost & Exhaust Plasma Particles
     this.maxBoostParticles = 300;
     this.boostGeo = new THREE.BufferGeometry();
@@ -33,6 +51,7 @@ export class VFXSystem {
 
     const boostMat = new THREE.PointsMaterial({
       size: 3.5,
+      map: softParticleTex,
       vertexColors: true,
       transparent: true,
       opacity: 0.95,
@@ -61,6 +80,7 @@ export class VFXSystem {
 
     const driftMat = new THREE.PointsMaterial({
       size: 2.8,
+      map: softParticleTex,
       vertexColors: true,
       transparent: true,
       opacity: 0.85,
@@ -89,6 +109,7 @@ export class VFXSystem {
 
     const colMat = new THREE.PointsMaterial({
       size: 3.2,
+      map: softParticleTex,
       vertexColors: true,
       transparent: true,
       opacity: 1.0,
@@ -151,6 +172,10 @@ export class VFXSystem {
     this.rainLines = new THREE.LineSegments(this.rainGeo, rainMat);
     this.rainLines.frustumCulled = false;
     this.scene.add(this.rainLines);
+
+    // Dynamic performance scaling defaults
+    this.activeRainDrops = 800;
+    this.activeSpeedLines = 120;
 
     // 6. Hypersonic Speed Warp Lines (> 300 km/h)
     this.maxSpeedLines = 150;
@@ -233,6 +258,7 @@ export class VFXSystem {
 
     const confettiMat = new THREE.PointsMaterial({
       size: 4.5,
+      map: softParticleTex,
       vertexColors: true,
       transparent: true,
       opacity: 0.0,
@@ -474,6 +500,32 @@ export class VFXSystem {
     return -1;
   }
 
+  setQuality(preset = 'HIGH') {
+    switch (preset) {
+      case 'LOW':
+        this.activeRainDrops = 0;
+        this.activeSpeedLines = 40;
+        this.rainLines.visible = false;
+        break;
+      case 'MEDIUM':
+        this.activeRainDrops = 400;
+        this.activeSpeedLines = 80;
+        this.rainLines.visible = true;
+        break;
+      case 'HIGH':
+        this.activeRainDrops = 800;
+        this.activeSpeedLines = 120;
+        this.rainLines.visible = true;
+        break;
+      case 'ULTRA':
+      default:
+        this.activeRainDrops = 1200;
+        this.activeSpeedLines = 150;
+        this.rainLines.visible = true;
+        break;
+    }
+  }
+
   // --------------------------------------------------------------------------
   // FRAME UPDATE LOOP
   // --------------------------------------------------------------------------
@@ -566,8 +618,12 @@ export class VFXSystem {
     });
 
     // 6. Update High-Velocity Rain Lines around Player
-    if (playerPos) {
-      for (let i = 0; i < this.maxRainDrops; i++) {
+    if (playerPos && this.rainLines.visible && this.activeRainDrops > 0) {
+      const count = Math.min(this.activeRainDrops, this.maxRainDrops);
+      const pVx = playerVel ? playerVel.x * 0.04 : 0;
+      const pVz = playerVel ? playerVel.z * 0.04 : 0;
+
+      for (let i = 0; i < count; i++) {
         const drop = this.rainOffset[i];
         drop.y -= drop.speed * delta;
         if (drop.y < -15.0) {
@@ -580,16 +636,18 @@ export class VFXSystem {
         const worldY = playerPos.y + drop.y;
         const worldZ = playerPos.z + drop.z;
 
+        const base = i * 6;
         // Top vertex
-        this.rainPos[i * 6] = worldX;
-        this.rainPos[i * 6 + 1] = worldY;
-        this.rainPos[i * 6 + 2] = worldZ;
+        this.rainPos[base] = worldX;
+        this.rainPos[base + 1] = worldY;
+        this.rainPos[base + 2] = worldZ;
 
         // Bottom vertex with velocity angle
-        this.rainPos[i * 6 + 3] = worldX - (playerVel ? playerVel.x * 0.04 : 0);
-        this.rainPos[i * 6 + 4] = worldY - drop.len;
-        this.rainPos[i * 6 + 5] = worldZ - (playerVel ? playerVel.z * 0.04 : 0);
+        this.rainPos[base + 3] = worldX - pVx;
+        this.rainPos[base + 4] = worldY - drop.len;
+        this.rainPos[base + 5] = worldZ - pVz;
       }
+      this.rainGeo.setDrawRange(0, count * 2);
       this.rainGeo.attributes.position.needsUpdate = true;
     }
 
@@ -598,7 +656,8 @@ export class VFXSystem {
     this.speedLinesMesh.material.opacity = Math.min(0.85, speedRatio * (isBoosting ? 0.95 : 0.65));
 
     if (this.speedLinesMesh.material.opacity > 0.01) {
-      for (let i = 0; i < this.maxSpeedLines; i++) {
+      const lineCount = Math.min(this.activeSpeedLines || 120, this.maxSpeedLines);
+      for (let i = 0; i < lineCount; i++) {
         const line = this.speedLinesData[i];
         line.z += line.speed * delta * (1.0 + speedRatio);
         if (line.z > 5.0) {
@@ -610,16 +669,18 @@ export class VFXSystem {
         const lx = Math.cos(line.angle) * line.radius;
         const ly = Math.sin(line.angle) * line.radius;
 
+        const base = i * 6;
         // Line start (further away)
-        this.speedLinePos[i * 6] = lx;
-        this.speedLinePos[i * 6 + 1] = ly;
-        this.speedLinePos[i * 6 + 2] = line.z - line.len;
+        this.speedLinePos[base] = lx;
+        this.speedLinePos[base + 1] = ly;
+        this.speedLinePos[base + 2] = line.z - line.len;
 
         // Line end (closer)
-        this.speedLinePos[i * 6 + 3] = lx;
-        this.speedLinePos[i * 6 + 4] = ly;
-        this.speedLinePos[i * 6 + 5] = line.z;
+        this.speedLinePos[base + 3] = lx;
+        this.speedLinePos[base + 4] = ly;
+        this.speedLinePos[base + 5] = line.z;
       }
+      this.speedLineGeo.setDrawRange(0, lineCount * 2);
       this.speedLineGeo.attributes.position.needsUpdate = true;
     }
 

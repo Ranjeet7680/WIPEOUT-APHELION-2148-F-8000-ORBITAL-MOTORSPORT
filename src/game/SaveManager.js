@@ -40,11 +40,18 @@ const DEFAULT_SAVE_DATA = {
   },
   player: {
     name: 'RANJEET',
-    level: 7,
+    level: 87,
     xp: 8450,
+    nextLevelXp: 12000,
     credits: 45200,
     tokens: 350,
-    winStreak: 3
+    energy: 10,
+    maxEnergy: 10,
+    winStreak: 3,
+    worldProgress: 140,
+    maxWorldProgress: 144,
+    selectedRegion: 'neo_city',
+    selectedCar: 'f8000'
   }
 };
 
@@ -55,6 +62,9 @@ export class SaveManager {
 
   load() {
     try {
+      if (typeof localStorage === 'undefined') {
+        return JSON.parse(JSON.stringify(DEFAULT_SAVE_DATA));
+      }
       const raw = localStorage.getItem(SAVE_KEY);
       if (!raw) {
         return JSON.parse(JSON.stringify(DEFAULT_SAVE_DATA));
@@ -78,18 +88,24 @@ export class SaveManager {
         },
         player: {
           ...DEFAULT_SAVE_DATA.player,
-          ...(parsed.player || {})
+          ...(parsed.player || {}),
+          level: Math.max(DEFAULT_SAVE_DATA.player.level, parsed.player?.level || 0),
+          energy: parsed.player?.energy ?? 10,
+          maxEnergy: 10,
+          worldProgress: parsed.player?.worldProgress ?? 140,
+          maxWorldProgress: 144
         }
       };
     } catch (e) {
-      console.warn('Failed to load save data from localStorage, using defaults', e);
       return JSON.parse(JSON.stringify(DEFAULT_SAVE_DATA));
     }
   }
 
   save() {
     try {
-      localStorage.setItem(SAVE_KEY, JSON.stringify(this.data));
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(SAVE_KEY, JSON.stringify(this.data));
+      }
     } catch (e) {
       console.warn('Failed to persist save data to localStorage', e);
     }

@@ -34,6 +34,9 @@ export class NeoShinjukuWorld {
   }
 
   buildDistrictEnvironments() {
+    // 0. CELESTIAL SKY DOME & ORBITAL RING
+    this.buildCelestialSkyDome();
+
     // 1. NEON CORE & MEGA TOWER SKYSCRAPERS (Instanced architecture)
     this.buildSkyscraperArcologies();
 
@@ -51,28 +54,162 @@ export class NeoShinjukuWorld {
 
     // 6. UNDERCITY SUBTERRANEAN TUNNEL ENCLOSURE
     this.buildUndercityTunnelSection();
+
+    // 7. HIGHWAY OVERPASS ARCHES WITH ANIMATED LED CHEVRONS
+    this.buildSkywayOverpassArches();
+  }
+
+  buildCelestialSkyDome() {
+    const skyGroup = new THREE.Group();
+
+    // 1. Distant Glowing Moon / Orbital Station Silhouette
+    const moonGeo = new THREE.CircleGeometry(180, 32);
+    const moonMat = new THREE.MeshBasicMaterial({
+      color: 0x9be5ff,
+      transparent: true,
+      opacity: 0.75,
+      depthWrite: false
+    });
+    const moon = new THREE.Mesh(moonGeo, moonMat);
+    moon.position.set(450, 1600, -850);
+    moon.lookAt(0, 150, 0);
+    skyGroup.add(moon);
+
+    // Glowing atmospheric moon halo
+    const haloGeo = new THREE.RingGeometry(180, 240, 32);
+    const haloMat = new THREE.MeshBasicMaterial({
+      color: 0x00F0FF,
+      transparent: true,
+      opacity: 0.22,
+      depthWrite: false,
+      side: THREE.DoubleSide
+    });
+    const halo = new THREE.Mesh(haloGeo, haloMat);
+    halo.position.copy(moon.position);
+    halo.quaternion.copy(moon.quaternion);
+    skyGroup.add(halo);
+
+    // 2. Gigantic Orbital Ring in Upper Stratosphere
+    const ringGeo = new THREE.RingGeometry(3200, 3280, 64);
+    const ringMat = new THREE.MeshBasicMaterial({
+      color: 0x00F0FF,
+      transparent: true,
+      opacity: 0.25,
+      side: THREE.DoubleSide,
+      depthWrite: false
+    });
+    const ring = new THREE.Mesh(ringGeo, ringMat);
+    ring.position.set(0, 1800, 0);
+    ring.rotation.x = Math.PI * 0.35;
+    ring.rotation.y = Math.PI * 0.15;
+    skyGroup.add(ring);
+
+    // 3. Towering Light Spires shooting into the night sky
+    const spireColors = [0x00F0FF, 0x7928CA, 0xFF007F, 0x00FF88, 0xFFB800];
+    const spirePositions = [
+      { x: -500, z: -300 },
+      { x: 800, z: 400 },
+      { x: 300, z: 800 },
+      { x: -700, z: 200 },
+      { x: 100, z: -700 }
+    ];
+    spirePositions.forEach((pos, idx) => {
+      const spireBeamGeo = new THREE.CylinderGeometry(0.8, 14, 1800, 8);
+      const spireBeamMat = new THREE.MeshBasicMaterial({
+        color: spireColors[idx % spireColors.length],
+        transparent: true,
+        opacity: 0.28,
+        depthWrite: false
+      });
+      const beam = new THREE.Mesh(spireBeamGeo, spireBeamMat);
+      beam.position.set(pos.x, 900, pos.z);
+      skyGroup.add(beam);
+    });
+
+    this.root.add(skyGroup);
+  }
+
+  buildSkywayOverpassArches() {
+    const archUValues = [0.08, 0.22, 0.35, 0.48, 0.60, 0.72, 0.84, 0.94];
+    const archGroup = new THREE.Group();
+
+    archUValues.forEach((u, i) => {
+      const frame = this.circuit.getFrameAt(u);
+      const span = this.circuit.roadWidth + 8;
+      const height = 12;
+
+      // Heavy industrial support gantry
+      const gantryGeo = new THREE.BoxGeometry(span, 1.4, 3.2);
+      const gantryMat = new THREE.MeshStandardMaterial({
+        color: 0x111622,
+        metalness: 0.92,
+        roughness: 0.25
+      });
+      const gantry = new THREE.Mesh(gantryGeo, gantryMat);
+      gantry.position.copy(frame.pos).addScaledVector(frame.normal, height);
+      gantry.quaternion.setFromRotationMatrix(
+        new THREE.Matrix4().makeBasis(frame.binormal, frame.normal, frame.tangent)
+      );
+      archGroup.add(gantry);
+
+      // Glowing LED guidance strip
+      const neonStripGeo = new THREE.PlaneGeometry(span * 0.85, 0.6);
+      const neonColor = (i % 2 === 0) ? 0x00F0FF : 0xFF007F;
+      const neonMat = new THREE.MeshBasicMaterial({
+        color: neonColor,
+        side: THREE.DoubleSide
+      });
+      const strip = new THREE.Mesh(neonStripGeo, neonMat);
+      strip.position.copy(frame.pos).addScaledVector(frame.normal, height - 0.4);
+      strip.quaternion.copy(gantry.quaternion);
+      archGroup.add(strip);
+
+      // Dual upright columns
+      [-span * 0.48, span * 0.48].forEach(sideOffset => {
+        const colGeo = new THREE.CylinderGeometry(0.8, 1.0, height, 8);
+        const col = new THREE.Mesh(colGeo, gantryMat);
+        col.position.copy(frame.pos)
+          .addScaledVector(frame.binormal, sideOffset)
+          .addScaledVector(frame.normal, height * 0.5);
+        col.quaternion.copy(gantry.quaternion);
+        archGroup.add(col);
+      });
+    });
+
+    this.root.add(archGroup);
   }
 
   buildSkyscraperArcologies() {
     const boxGeo = new THREE.BoxGeometry(1, 1, 1);
 
-    // Procedural sci-fi facade texture with glowing window grids
+    // Procedural sci-fi facade texture with glowing window grids and architectural light battens
     const canvas = document.createElement('canvas');
     canvas.width = 512;
     canvas.height = 1024;
     const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#070a12';
+    ctx.fillStyle = '#080c16';
     ctx.fillRect(0, 0, 512, 1024);
 
-    for (let y = 10; y < 1000; y += 20) {
-      if (Math.random() > 0.3) {
-        ctx.fillStyle = Math.random() > 0.4 ? '#00F0FF' : (Math.random() > 0.5 ? '#FFB800' : '#FF007F');
-        for (let x = 20; x < 500; x += 40) {
-          if (Math.random() > 0.35) {
-            ctx.fillRect(x, y, 22, 6);
-          }
+    // Architectural edge accent neon stripes
+    ctx.fillStyle = 'rgba(0, 240, 255, 0.7)';
+    ctx.fillRect(4, 0, 8, 1024);
+    ctx.fillRect(500, 0, 8, 1024);
+
+    // Warm & cool glowing window bands
+    for (let y = 14; y < 1000; y += 22) {
+      const isWarm = (y % 44 === 0);
+      ctx.fillStyle = isWarm ? 'rgba(255, 184, 0, 0.85)' : 'rgba(0, 240, 255, 0.85)';
+      for (let x = 32; x < 480; x += 36) {
+        if (Math.random() > 0.28) {
+          ctx.fillRect(x, y, 22, 9);
         }
       }
+    }
+
+    // High-level penthouse / observation sky-lounges
+    for (let py = 120; py < 950; py += 180) {
+      ctx.fillStyle = 'rgba(255, 0, 127, 0.6)';
+      ctx.fillRect(20, py, 472, 5);
     }
 
     const buildingTex = new THREE.CanvasTexture(canvas);
@@ -83,8 +220,8 @@ export class NeoShinjukuWorld {
       map: buildingTex,
       metalness: 0.85,
       roughness: 0.25,
-      emissive: new THREE.Color(0x040810),
-      emissiveIntensity: 0.8
+      emissive: new THREE.Color(0x060a14),
+      emissiveIntensity: 0.9
     });
 
     const towerCount = 140;
@@ -170,29 +307,54 @@ export class NeoShinjukuWorld {
       const mat = new THREE.MeshBasicMaterial({
         map: tex,
         transparent: true,
-        opacity: 0.88,
-        side: THREE.DoubleSide,
-        blending: THREE.AdditiveBlending
+        opacity: 0.94,
+        side: THREE.FrontSide
       });
       this.hologramMaterials.push(mat);
 
-      const billboardGeo = new THREE.PlaneGeometry(36, 18);
-      const mesh = new THREE.Mesh(billboardGeo, mat);
+      const billboardGroup = new THREE.Group();
 
-      // Position billboards along track
+      // Screen plane
+      const billboardGeo = new THREE.PlaneGeometry(36, 18);
+      const screenMesh = new THREE.Mesh(billboardGeo, mat);
+      screenMesh.position.z = 0.2;
+      billboardGroup.add(screenMesh);
+
+      // High-tech dark titanium backing frame & bezel
+      const frameGeo = new THREE.BoxGeometry(37.5, 19.5, 0.4);
+      const frameMat = new THREE.MeshStandardMaterial({
+        color: 0x0a0e16,
+        metalness: 0.95,
+        roughness: 0.3
+      });
+      const frameMesh = new THREE.Mesh(frameGeo, frameMat);
+      billboardGroup.add(frameMesh);
+
+      // Support truss pylon connecting to ground/buildings
+      const trussGeo = new THREE.CylinderGeometry(0.6, 0.9, 32, 6);
+      const trussMat = new THREE.MeshStandardMaterial({
+        color: 0x111622,
+        metalness: 0.9,
+        roughness: 0.35
+      });
+      const trussMesh = new THREE.Mesh(trussGeo, trussMat);
+      trussMesh.position.set(0, -20, 0);
+      billboardGroup.add(trussMesh);
+
+      // Position billboards along track with generous clearance
       const u = (i * 0.16 + 0.05) % 1.0;
       const frame = this.circuit.getFrameAt(u);
       const side = (i % 2 === 0 ? 1 : -1);
 
-      mesh.position.copy(frame.pos)
-        .addScaledVector(frame.binormal, side * 28)
-        .addScaledVector(frame.normal, 16 + Math.random() * 8);
+      billboardGroup.position.copy(frame.pos)
+        .addScaledVector(frame.binormal, side * 36)
+        .addScaledVector(frame.normal, 18 + (i % 3) * 6);
 
-      mesh.quaternion.setFromRotationMatrix(
+      billboardGroup.quaternion.setFromRotationMatrix(
         new THREE.Matrix4().makeBasis(frame.binormal.clone().multiplyScalar(side), frame.normal, frame.tangent)
       );
 
-      this.root.add(mesh);
+      this.root.add(billboardGroup);
     });
   }
 
@@ -406,27 +568,46 @@ export class NeoShinjukuWorld {
   }
 
   buildRainParticleField() {
-    const rainCount = 4000;
-    const rainGeo = new THREE.BufferGeometry();
-    const rainPositions = new Float32Array(rainCount * 3);
+    // Atmospheric ambient mist field (static GPU buffers without expensive CPU updates)
+    const mistCount = 450;
+    const mistGeo = new THREE.BufferGeometry();
+    const mistPositions = new Float32Array(mistCount * 3);
 
-    for (let i = 0; i < rainCount; i++) {
-      rainPositions[i * 3 + 0] = (Math.random() - 0.5) * 500;
-      rainPositions[i * 3 + 1] = Math.random() * 300;
-      rainPositions[i * 3 + 2] = (Math.random() - 0.5) * 500;
+    for (let i = 0; i < mistCount; i++) {
+      mistPositions[i * 3 + 0] = (Math.random() - 0.5) * 450;
+      mistPositions[i * 3 + 1] = 10 + Math.random() * 180;
+      mistPositions[i * 3 + 2] = (Math.random() - 0.5) * 450;
     }
 
-    rainGeo.setAttribute('position', new THREE.BufferAttribute(rainPositions, 3));
+    mistGeo.setAttribute('position', new THREE.BufferAttribute(mistPositions, 3));
 
-    const rainMat = new THREE.PointsMaterial({
+    let circleTex = null;
+    if (typeof document !== 'undefined') {
+      const c = document.createElement('canvas');
+      c.width = 32;
+      c.height = 32;
+      const ctx = c.getContext('2d');
+      const g = ctx.createRadialGradient(16, 16, 0, 16, 16, 16);
+      g.addColorStop(0, 'rgba(180, 230, 255, 1.0)');
+      g.addColorStop(0.35, 'rgba(100, 200, 255, 0.6)');
+      g.addColorStop(0.8, 'rgba(50, 150, 255, 0.15)');
+      g.addColorStop(1.0, 'rgba(0, 50, 150, 0.0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, 32, 32);
+      circleTex = new THREE.CanvasTexture(c);
+    }
+
+    const mistMat = new THREE.PointsMaterial({
       color: 0x99ddff,
-      size: 1.4,
+      size: 1.0,
+      map: circleTex,
       transparent: true,
-      opacity: 0.45,
-      blending: THREE.AdditiveBlending
+      opacity: 0.2,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
     });
 
-    this.rainParticles = new THREE.Points(rainGeo, rainMat);
+    this.rainParticles = new THREE.Points(mistGeo, mistMat);
     this.root.add(this.rainParticles);
   }
 
@@ -472,19 +653,14 @@ export class NeoShinjukuWorld {
       this.monorailTrain.group.quaternion.setFromRotationMatrix(m);
     }
 
-    // 5. Rain particles centered around player
-    if (this.rainParticles && playerPos) {
-      this.rainParticles.position.x = playerPos.x;
-      this.rainParticles.position.z = playerPos.z;
-
-      const pos = this.rainParticles.geometry.attributes.position.array;
-      for (let i = 1; i < pos.length; i += 3) {
-        pos[i] -= delta * 350; // High terminal velocity rain fall
-        if (pos[i] < -20) {
-          pos[i] = 280;
-        }
+    // 5. Ambient mist centered on player (Zero CPU buffer iteration!)
+    if (this.rainParticles) {
+      if (playerPos) {
+        this.rainParticles.position.x = playerPos.x;
+        this.rainParticles.position.y = playerPos.y * 0.2;
+        this.rainParticles.position.z = playerPos.z;
       }
-      this.rainParticles.geometry.attributes.position.needsUpdate = true;
+      this.rainParticles.rotation.y = time * 0.02;
     }
   }
 }

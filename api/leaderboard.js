@@ -138,7 +138,8 @@ export default async function handler(req, res) {
 
   // 1. GET: Fetch global leaderboard
   if (req.method === 'GET') {
-    const limit = Math.min(parseInt(req.query.limit || '50', 10), 100);
+    const query = req.query || (req.url && req.url.includes('?') ? Object.fromEntries(new URLSearchParams(req.url.split('?')[1])) : {});
+    const limit = Math.min(parseInt(query.limit || '50', 10), 100);
     const sorted = [...leaderboardData].sort((a, b) => a.lapTime - b.lapTime);
     sorted.forEach((item, idx) => {
       item.rank = idx + 1;
