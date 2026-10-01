@@ -91,6 +91,14 @@ class GameManager {
     this.keys = {};
     this.touchInputs = { throttle: 0, steer: 0, brake: 0, drift: false, boost: false };
 
+    // Pre-allocated math vectors to eliminate garbage collection micro-stutters
+    this._rearOffsetL = new THREE.Vector3(-1.1, 0.4, -2.2);
+    this._rearOffsetR = new THREE.Vector3(1.1, 0.4, -2.2);
+    this._rearPosL = new THREE.Vector3();
+    this._rearPosR = new THREE.Vector3();
+    this._driftDir = new THREE.Vector3();
+    this._hitNorm = new THREE.Vector3();
+
     this.init();
   }
 
@@ -1043,8 +1051,11 @@ class GameManager {
           if (this.sound && this.sound.playCollisionImpact) { this.sound.playCollisionImpact(this.physics.collisionImpulse); }
           this.cameraController.addShake(this.physics.collisionImpulse);
           if (this.vfx && Math.random() < 0.3) {
-            const hitNorm = this.physics.pos.clone().sub(this.circuit.getFrameAt(this.physics.currentU).pos).normalize();
-            this.vfx.spawnCollisionSparks(this.physics.pos, hitNorm, this.physics.collisionImpulse);
+            const frame = this.circuit.getFrameAt(this.physics.currentU);
+            if (frame) {
+              this._hitNorm.copy(this.physics.pos).sub(frame.pos).normalize();
+              this.vfx.spawnCollisionSparks(this.physics.pos, this._hitNorm, this.physics.collisionImpulse);
+            }
           }
         }
 
@@ -1092,21 +1103,21 @@ class GameManager {
           this.sound.update(speedKmh, inputs.throttle, this.physics.isBoosting, this.physics.isDrifting, delta);
         }
 
-        // VFX System: Boost, Drift & Environment Particles
+        // VFX System: Boost, Drift & Environment Particles (Zero Allocation Pipeline)
         if (this.vfx) {
-          const rearL = interpPos.clone().add(new THREE.Vector3(-1.1, 0.4, -2.2).applyQuaternion(interpQuat));
-          const rearR = interpPos.clone().add(new THREE.Vector3(1.1, 0.4, -2.2).applyQuaternion(interpQuat));
+          this._rearPosL.copy(this._rearOffsetL).applyQuaternion(interpQuat).add(interpPos);
+          this._rearPosR.copy(this._rearOffsetR).applyQuaternion(interpQuat).add(interpPos);
 
           if (this.physics.isBoosting) {
-            this.vfx.spawnBoostParticles(rearL, rearR, this.physics.forward, this.physics.boostTier === 'OVERDRIVE');
+            this.vfx.spawnBoostParticles(this._rearPosL, this._rearPosR, this.physics.forward, this.physics.boostTier === 'OVERDRIVE');
           }
 
           if (this.physics.isDrifting) {
             const steerSign = Math.sign(inputs.steer || 1.0);
             const driftIntensity = this.physics.driftIntensity !== undefined ? this.physics.driftIntensity : 0.5;
-            this.vfx.spawnDriftSparks(interpPos, new THREE.Vector3(-steerSign, 0, 0).applyQuaternion(interpQuat), this.physics.driftDuration > 1.2, driftIntensity);
+            this._driftDir.set(-steerSign, 0, 0).applyQuaternion(interpQuat);
+            this.vfx.spawnDriftSparks(interpPos, this._driftDir, this.physics.driftDuration > 1.2, driftIntensity);
           }
-
 
           this.vfx.update(delta, interpPos, this.physics.vel, this.camera, this.physics.isBoosting, this.physics.isDrifting, speedKmh);
         }

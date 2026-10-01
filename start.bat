@@ -1,11 +1,11 @@
 @echo off
-title NEO RACING // WORLD TOUR — Aether-9 Motorsport
+title WIPEOUT: APHELION 2148 // PC GAMING DESKTOP RUNTIME
 color 0B
 cls
 
 echo ===================================================================
-echo     NEO RACING // WORLD TOUR — AETHER-9 ORBITAL MOTORSPORT
-echo     DEVELOPED BY RANJEET KUMAR
+echo     WIPEOUT: APHELION 2148 // F-8000 ORBITAL MOTORSPORT
+echo     NATIVE PC DESKTOP SOFTWARE // DEVELOPED BY RANJEET KUMAR
 echo ===================================================================
 echo.
 
@@ -25,19 +25,13 @@ for /f "tokens=*" %%v in ('node -v') do set NODE_VER=%%v
 echo [OK] Node.js detected: %NODE_VER%
 echo.
 
-:: 2. Check and install dependencies if needed
-echo [2/4] Verifying project dependencies...
-if not exist "node_modules\" (
-    echo [INFO] node_modules not detected. Installing dependencies via npm...
-    call npm install
-    if %ERRORLEVEL% NEQ 0 (
-        color 0C
-        echo [ERROR] npm install encountered an error.
-        pause
-        exit /b 1
-    )
+:: 2. Check and build bundle if needed
+echo [2/4] Verifying production game assets...
+if not exist "dist\index.html" (
+    echo [INFO] Compiling production shaders and WebGPU bundle...
+    call npm run build
 ) else (
-    echo [OK] Dependencies already installed.
+    echo [OK] Production game bundle ready.
 )
 echo.
 
@@ -52,18 +46,16 @@ if %ERRORLEVEL% NEQ 0 (
 )
 echo.
 
-:: 4. Launch Vite server and open browser
-echo [4/4] Launching NEO RACING web server on http://localhost:5173 ...
+:: 4. Launch Native PC Desktop Software
+echo [4/4] Launching Dedicated PC Desktop Software (120Hz Hardware Accelerated)...
 echo.
-echo ===================================================================
-echo   Press [Ctrl + C] in this window to stop the server at any time.
-echo ===================================================================
-echo.
+if exist "node_modules\electron\dist\electron.exe" (
+    start /HIGH "" "node_modules\electron\dist\electron.exe" "desktop\main.cjs"
+) else (
+    start "" http://localhost:5173
+    call npm run dev
+)
 
-:: Automatically open default browser after a brief delay
-start "" http://localhost:5173
-
-:: Start the Vite development server
-call npm run dev
-
-pause
+echo [OK] Game Software running! You can close this command window.
+timeout /t 3 >nul
+exit /b 0

@@ -14,6 +14,11 @@ export class TrafficSystem {
     this.group = new THREE.Group();
     this.scene.add(this.group);
 
+    // Pre-allocated math objects to eliminate garbage collection stutter
+    this._basisMatrix = new THREE.Matrix4();
+    this._repelVector = new THREE.Vector3();
+    this._collisionResult = { hit: false, vehicle: null, repelVector: this._repelVector };
+
     this.spawnTrafficFleet();
   }
 
@@ -121,25 +126,33 @@ export class TrafficSystem {
         .addScaledVector(frame.binormal, v.lane)
         .addScaledVector(frame.normal, 0.5);
 
-      const m = new THREE.Matrix4().makeBasis(frame.binormal, frame.normal, frame.tangent);
-      v.mesh.quaternion.setFromRotationMatrix(m);
+      this._basisMatrix.makeBasis(frame.binormal, frame.normal, frame.tangent);
+      v.mesh.quaternion.setFromRotationMatrix(this._basisMatrix);
+
+      // Dynamic distance culling: skip rendering vehicles beyond 450m
+      if (playerPos) {
+        const dSq = v.mesh.position.distanceToSquared(playerPos);
+        v.mesh.visible = dSq < 202500; // 450^2
+      }
     });
   }
 
   checkCollision(playerPos, playerRadius = 2.4) {
     for (let i = 0; i < this.vehicles.length; i++) {
       const v = this.vehicles[i];
+      if (!v.mesh.visible) continue;
       const dist = v.mesh.position.distanceTo(playerPos);
       if (dist < playerRadius + v.spec.length * 0.4) {
-        // Return collision info
-        return {
-          hit: true,
-          vehicle: v,
-          repelVector: playerPos.clone().sub(v.mesh.position).normalize()
-        };
+        this._repelVector.copy(playerPos).sub(v.mesh.position).normalize();
+        this._collisionResult.hit = true;
+        this._collisionResult.vehicle = v;
+        this._collisionResult.repelVector = this._repelVector;
+        return this._collisionResult;
       }
     }
-    return { hit: false };
+    this._collisionResult.hit = false;
+    this._collisionResult.vehicle = null;
+    return this._collisionResult;
   }
 
   spawnCivilianDroneCluster(targetU, count = 3) {

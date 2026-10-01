@@ -17,6 +17,8 @@
   "scripts": {
     "dev": "vite --host --port 5173",
     "build": "vite build",
+    "desktop": "electron desktop/main.cjs",
+    "desktop:build": "vite build && electron desktop/main.cjs",
     "preview": "vite preview",
     "test": "node test/e2e-simulation-test.js"
   },
@@ -49,6 +51,7 @@
     "three": "^0.160.0"
   },
   "devDependencies": {
+    "electron": "^44.5.1",
     "vite": "^5.0.12"
   }
 }
