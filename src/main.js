@@ -383,6 +383,20 @@ class GameManager {
         }
       }
 
+      if (e.code === 'Space' || e.code === 'Enter') {
+        if (this.state === 'MATCH_PREP') {
+          this.skipMatchmaking();
+        } else if (this.state === 'PRE_RACE_LOADING') {
+          this.skipPreRaceLoading();
+        } else if (this.state === 'POST_RACE_LOADING') {
+          this.skipPostRaceLoading();
+        } else if (this.state === 'PUBG_REWARDS') {
+          if (this.ui && this.ui.claimPubgRewards) this.ui.claimPubgRewards();
+        } else if (this.state === 'PODIUM') {
+          this.startPostRaceLoading(() => this.showPubgRewards());
+        }
+      }
+
       if (e.code === 'Escape') {
         if (this.state === 'RACING' || this.state === 'TUTORIAL') {
           this.togglePause();
@@ -522,13 +536,15 @@ class GameManager {
     this.state = 'MATCH_PREP';
     this.ui.showScreen('MATCH_PREP');
 
+    if (this.matchInterval) clearInterval(this.matchInterval);
     let p = 0;
-    const matchInterval = setInterval(() => {
+    this.matchInterval = setInterval(() => {
       p += 10 + Math.random() * 12;
       this.ui.updateMatchPrep(Math.min(100, Math.floor(p)));
 
       if (p >= 100) {
-        clearInterval(matchInterval);
+        clearInterval(this.matchInterval);
+        this.matchInterval = null;
 
         setTimeout(() => {
           this.startPreRaceLoading(() => {
@@ -539,42 +555,82 @@ class GameManager {
     }, 100);
   }
 
+  skipMatchmaking() {
+    if (this.matchInterval) {
+      clearInterval(this.matchInterval);
+      this.matchInterval = null;
+    }
+    this.startPreRaceLoading(() => {
+      this.beginRaceIntro();
+    });
+  }
+
   startPreRaceLoading(onComplete) {
     this.state = 'PRE_RACE_LOADING';
     if (this.ui) this.ui.showScreen('PRE_RACE_LOADING');
 
+    if (this.preRaceInterval) clearInterval(this.preRaceInterval);
+    this.preRaceOnComplete = onComplete;
     let p = 0;
-    const interval = setInterval(() => {
+    this.preRaceInterval = setInterval(() => {
       p += 14 + Math.random() * 18;
       if (this.ui && this.ui.updatePreRaceProgress) {
         this.ui.updatePreRaceProgress(Math.min(100, Math.floor(p)));
       }
       if (p >= 100) {
-        clearInterval(interval);
+        clearInterval(this.preRaceInterval);
+        this.preRaceInterval = null;
         setTimeout(() => {
-          if (onComplete) onComplete();
+          if (this.preRaceOnComplete) this.preRaceOnComplete();
         }, 400);
       }
     }, 110);
+  }
+
+  skipPreRaceLoading() {
+    if (this.preRaceInterval) {
+      clearInterval(this.preRaceInterval);
+      this.preRaceInterval = null;
+    }
+    if (this.preRaceOnComplete) {
+      this.preRaceOnComplete();
+    } else {
+      this.beginRaceIntro();
+    }
   }
 
   startPostRaceLoading(onComplete) {
     this.state = 'POST_RACE_LOADING';
     if (this.ui) this.ui.showScreen('POST_RACE_LOADING');
 
+    if (this.postSyncInterval) clearInterval(this.postSyncInterval);
+    this.postSyncOnComplete = onComplete;
     let p = 0;
-    const interval = setInterval(() => {
+    this.postSyncInterval = setInterval(() => {
       p += 15 + Math.random() * 18;
       if (this.ui && this.ui.updatePostSyncProgress) {
         this.ui.updatePostSyncProgress(Math.min(100, Math.floor(p)));
       }
       if (p >= 100) {
-        clearInterval(interval);
+        clearInterval(this.postSyncInterval);
+        this.postSyncInterval = null;
         setTimeout(() => {
-          if (onComplete) onComplete();
+          if (this.postSyncOnComplete) this.postSyncOnComplete();
         }, 400);
       }
     }, 110);
+  }
+
+  skipPostRaceLoading() {
+    if (this.postSyncInterval) {
+      clearInterval(this.postSyncInterval);
+      this.postSyncInterval = null;
+    }
+    if (this.postSyncOnComplete) {
+      this.postSyncOnComplete();
+    } else {
+      this.showPubgRewards();
+    }
   }
 
   showPubgRewards() {

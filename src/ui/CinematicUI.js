@@ -292,7 +292,7 @@ export class CinematicUI {
   buildAllDOM() {
     this.container.innerHTML = `
       <!-- 1. DEVELOPER CREDIT -->
-      <div id="screen-dev-credit" class="ui-screen dev-credit-overlay">
+      <div id="screen-dev-credit" class="ui-screen dev-credit-overlay" style="cursor: pointer;">
         <div class="dev-credit-box">
           <div class="dev-bracket top-left"></div>
           <div class="dev-bracket top-right"></div>
@@ -305,6 +305,7 @@ export class CinematicUI {
           <span class="dev-subtitle">A GAME BY</span>
           <h1 class="dev-title">RANJEET KUMAR</h1>
           <div class="dev-role-badge">CHIEF SIMULATION ARCHITECT & CREATOR</div>
+          <div class="dev-skip-hint" style="font-family: var(--font-mono); font-size: 11px; color: var(--color-cyan); margin-top: 18px; letter-spacing: 2px; text-shadow: 0 0 8px #00F0FF;">CLICK ANYWHERE OR PRESS [SPACE / ENTER] TO START ►</div>
           <div class="dev-scanline"></div>
         </div>
       </div>
@@ -894,6 +895,9 @@ export class CinematicUI {
             <div class="match-progress-track">
               <div id="match-progress-fill" class="match-progress-fill" style="width: 0%"></div>
             </div>
+            <div style="margin-top: 14px; text-align: center;">
+              <button id="btn-match-launch-now" class="btn-action-primary" style="padding: 10px 24px; font-size: 13px; letter-spacing: 2px; cursor: pointer;">⚡ LAUNCH RACE NOW [SPACE / ENTER] ►</button>
+            </div>
           </div>
         </div>
       </div>
@@ -948,6 +952,9 @@ export class CinematicUI {
             </div>
             <div class="pr-progress-track">
               <div id="pr-progress-fill" class="pr-progress-fill" style="width: 94%"></div>
+            </div>
+            <div style="margin-top: 14px; text-align: center;">
+              <button id="btn-pr-skip" class="btn-action-primary" style="padding: 10px 24px; font-size: 13px; letter-spacing: 2px; cursor: pointer;">START RACE NOW [SPACE / ENTER] ►</button>
             </div>
           </div>
         </div>
@@ -1442,6 +1449,9 @@ export class CinematicUI {
               <div id="post-sync-fill" class="psp-fill" style="width: 88%"></div>
             </div>
             <span class="psp-pct" id="post-sync-pct">88%</span>
+          </div>
+          <div style="margin-top: 16px; text-align: center;">
+            <button id="btn-post-sync-skip" class="btn-action-primary" style="padding: 10px 24px; font-size: 13px; letter-spacing: 2px; cursor: pointer;">PROCEED TO REWARDS [SPACE / ENTER] ►</button>
           </div>
         </div>
       </div>
@@ -1969,6 +1979,22 @@ export class CinematicUI {
       }
     });
 
+    // 5b. Matchmaking instant launch
+    safeBind('btn-match-launch-now', 'click', () => {
+      if (this.game.sound) this.game.sound.playMenuClick();
+      if (this.game.skipMatchmaking) {
+        this.game.skipMatchmaking();
+      }
+    });
+
+    // 5c. Pre-race loading instant launch
+    safeBind('btn-pr-skip', 'click', () => {
+      if (this.game.sound) this.game.sound.playMenuClick();
+      if (this.game.skipPreRaceLoading) {
+        this.game.skipPreRaceLoading();
+      }
+    });
+
     // 6. Skip race intro
     safeBind('btn-skip-intro', 'click', () => {
       this.game.skipRaceIntro();
@@ -2015,12 +2041,32 @@ export class CinematicUI {
       }
     });
 
+    // 9b. Post-race telemetry sync skip
+    safeBind('btn-post-sync-skip', 'click', () => {
+      if (this.game.sound) this.game.sound.playMenuClick();
+      if (this.game.skipPostRaceLoading) {
+        this.game.skipPostRaceLoading();
+      }
+    });
+
     // PUBG Claim All & Return to Lobby
     safeBind('btn-pubg-claim', 'click', () => {
       if (this.game.sound) {
         this.game.sound.playVictorySting();
       }
       this.claimPubgRewards();
+    });
+
+    // PUBG Card click interactions
+    this.container.querySelectorAll('.pubg-reward-card').forEach(card => {
+      card.style.cursor = 'pointer';
+      card.addEventListener('click', () => {
+        if (this.game.sound) this.game.sound.playBoostCollect();
+        card.style.transform = 'scale(1.08) translateY(-8px)';
+        setTimeout(() => {
+          card.style.transform = '';
+        }, 250);
+      });
     });
 
     // 10. Winning lobby buttons
@@ -2686,13 +2732,31 @@ export class CinematicUI {
     el.style.display = 'flex';
     el.classList.add('fade-in');
 
-    setTimeout(() => {
+    let completed = false;
+    const finish = () => {
+      if (completed) return;
+      completed = true;
+      el.removeEventListener('click', finish);
+      window.removeEventListener('keydown', keyHandler);
       el.classList.add('fade-out');
       setTimeout(() => {
         el.style.display = 'none';
         if (callback) callback();
-      }, 800);
-    }, 2400);
+      }, 300);
+    };
+
+    const keyHandler = (e) => {
+      if (['Space', 'Enter', 'Escape'].includes(e.code) || e.key === ' ' || e.key === 'Enter' || e.key === 'Escape') {
+        finish();
+      }
+    };
+
+    el.addEventListener('click', finish);
+    window.addEventListener('keydown', keyHandler);
+
+    setTimeout(() => {
+      finish();
+    }, 2800);
   }
 
   showFirstTimeWelcome() {
