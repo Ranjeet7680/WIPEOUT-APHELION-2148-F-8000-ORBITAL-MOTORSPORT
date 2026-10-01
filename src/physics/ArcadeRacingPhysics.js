@@ -94,6 +94,15 @@ export class ArcadeRacingPhysics {
     this.isSlipstreaming = false;
     this.slipstreamTimer = 0.0;
     this.lastNearMissTime = 0.0;
+    this.slipstreamBonus = 0.0;
+
+    // Additional Properties
+    this.rubberBandStrength = 0.0;
+    this.boostRechargeRate = 0.0;
+    this.boostJustFilled = false;
+    this.boostRecentlyUsed = 0.0;
+    this.driftIntensity = 0.0;
+    this.collisionRecoveryTimer = 0.0;
 
     // Player inputs
     this.inputs = {
@@ -158,6 +167,10 @@ export class ArcadeRacingPhysics {
     this.comboTimer = 0.0;
     this.lastTriggeredPadIndex = -1;
     this.boostPadCooldown = 0.0;
+    this.collisionRecoveryTimer = 0.0;
+    this.boostRecentlyUsed = 0.0;
+    this.boostJustFilled = false;
+    this.slipstreamBonus = 0.0;
 
     this.aerialState = {
       inAir: false,
@@ -217,6 +230,14 @@ export class ArcadeRacingPhysics {
       this.boostPadCooldown -= delta;
     }
 
+    if (this.collisionRecoveryTimer > 0) {
+      this.collisionRecoveryTimer -= delta;
+    }
+
+    if (this.boostRecentlyUsed > 0) {
+      this.boostRecentlyUsed -= delta;
+    }
+
     while (this.accumulator >= this.fixedDelta) {
       this.prevPos.copy(this.pos);
       this.prevQuat.copy(this.quat);
@@ -229,11 +250,13 @@ export class ArcadeRacingPhysics {
 
   stepPhysics(dt) {
     let speedKmh = this.getSpeedKmh();
+    const prevBoostForTracking = this.boostCapacity;
 
     // ------------------------------------------------------------------------
     // 1. 3-TIER HYPER-BOOST & OVERDRIVE SYSTEM
     // ------------------------------------------------------------------------
     if (this.inputs.boost && this.boostCapacity > 0.03) {
+      this.boostRecentlyUsed = 0.5;
       if (!this.isBoosting) {
         this.isBoosting = true;
         this.totalBoostUses++;
@@ -286,6 +309,7 @@ export class ArcadeRacingPhysics {
       // Drifting actively charges Hyper-Boost
       this.boostCapacity = Math.min(1.0, this.boostCapacity + dt * 0.18);
       this.driftAngle = THREE.MathUtils.lerp(this.driftAngle, this.driftDirection * 0.48, dt * 7.0);
+      this.driftIntensity = Math.min(1.0, this.driftDuration / 1.5);
 
       if (this.driftDuration > 1.2 && Math.random() < 0.02) {
         this.triggerAction('POWER DRIFT', 120);
@@ -304,7 +328,7 @@ export class ArcadeRacingPhysics {
       : this.baseMaxSpeedKmh;
 
     if (this.isSlipstreaming) {
-      targetTopSpeed += 30.0; // Slipstream top speed bonus
+      targetTopSpeed += 30.0 * this.slipstreamBonus; // Slipstream top speed bonus
     }
 
     // Dual Airbrakes or dedicated Energy Brake
@@ -321,7 +345,8 @@ export class ArcadeRacingPhysics {
       speedKmh = Math.min(targetTopSpeed, speedKmh + this.accelRate * this.inputs.throttle * accelMult * dt);
     } else {
       // Natural aerodynamic drag
-      speedKmh = Math.max(0.0, speedKmh - speedKmh * this.dragCoeff * dt * 0.85);
+      const adaptiveDrag = this.dragCoeff * (0.6 + 0.4 * (speedKmh / this.baseMaxSpeedKmh));
+      speedKmh = Math.max(0.0, speedKmh - speedKmh * adaptiveDrag * dt * 0.85);
     }
 
     // ------------------------------------------------------------------------
@@ -426,7 +451,7 @@ export class ArcadeRacingPhysics {
     }
     steerForce = THREE.MathUtils.clamp(steerForce, -1.0, 1.0);
 
-    const steerResponse = (this.isDrifting ? 1.55 : 1.1) * (this.handlingRate / 90.0);
+    const steerResponse = (this.isDrifting ? 1.55 : 1.1) * (this.handlingRate / 90.0) * (1.0 - 0.3 * Math.max(0, this.collisionRecoveryTimer / 0.4));
     const targetLateralSpeed = steerForce * (18.0 + (speedKmh / 420.0) * 16.0) * steerResponse;
 
     // Smooth lateral acceleration with drift inertia
@@ -444,6 +469,7 @@ export class ArcadeRacingPhysics {
       // Rebound inward
       this.lateralVelocity = -this.lateralVelocity * 0.35;
       this.isColliding = true;
+      this.collisionRecoveryTimer = 0.4;
       this.collisionImpulse = speedKmh * 0.0035;
       speedKmh = Math.max(110.0, speedKmh * 0.93);
       this.sparkBurst = true;
@@ -506,6 +532,11 @@ export class ArcadeRacingPhysics {
 
     // Ensure this.vel is completely accurate and persisted with all modified speeds
     this.vel.copy(this.forward).multiplyScalar(speedMs);
+
+    this.boostRechargeRate = Math.max(0, (this.boostCapacity - prevBoostForTracking) / dt);
+    if (prevBoostForTracking < 1.0 && this.boostCapacity >= 1.0) {
+      this.boostJustFilled = true;
+    }
   }
 
   checkTrafficNearMiss(trafficVehicles, playerPos) {
@@ -553,6 +584,12 @@ export class ArcadeRacingPhysics {
       this.triggerAction('SLIPSTREAM ACTIVE', 100);
     } else if (!drafting && this.isSlipstreaming) {
       this.isSlipstreaming = false;
+    }
+
+    if (drafting) {
+      this.slipstreamBonus = THREE.MathUtils.lerp(this.slipstreamBonus, 1.0, 0.1);
+    } else {
+      this.slipstreamBonus = THREE.MathUtils.lerp(this.slipstreamBonus, 0.0, 0.1);
     }
   }
 

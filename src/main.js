@@ -524,17 +524,76 @@ class GameManager {
 
     let p = 0;
     const matchInterval = setInterval(() => {
-      p += 8 + Math.random() * 12;
-      this.ui.updateMatchPrep(p);
+      p += 10 + Math.random() * 12;
+      this.ui.updateMatchPrep(Math.min(100, Math.floor(p)));
 
       if (p >= 100) {
         clearInterval(matchInterval);
 
         setTimeout(() => {
-          this.beginRaceIntro();
-        }, 500);
+          this.startPreRaceLoading(() => {
+            this.beginRaceIntro();
+          });
+        }, 400);
       }
-    }, 120);
+    }, 100);
+  }
+
+  startPreRaceLoading(onComplete) {
+    this.state = 'PRE_RACE_LOADING';
+    if (this.ui) this.ui.showScreen('PRE_RACE_LOADING');
+
+    let p = 0;
+    const interval = setInterval(() => {
+      p += 14 + Math.random() * 18;
+      if (this.ui && this.ui.updatePreRaceProgress) {
+        this.ui.updatePreRaceProgress(Math.min(100, Math.floor(p)));
+      }
+      if (p >= 100) {
+        clearInterval(interval);
+        setTimeout(() => {
+          if (onComplete) onComplete();
+        }, 400);
+      }
+    }, 110);
+  }
+
+  startPostRaceLoading(onComplete) {
+    this.state = 'POST_RACE_LOADING';
+    if (this.ui) this.ui.showScreen('POST_RACE_LOADING');
+
+    let p = 0;
+    const interval = setInterval(() => {
+      p += 15 + Math.random() * 18;
+      if (this.ui && this.ui.updatePostSyncProgress) {
+        this.ui.updatePostSyncProgress(Math.min(100, Math.floor(p)));
+      }
+      if (p >= 100) {
+        clearInterval(interval);
+        setTimeout(() => {
+          if (onComplete) onComplete();
+        }, 400);
+      }
+    }, 110);
+  }
+
+  showPubgRewards() {
+    this.state = 'PUBG_REWARDS';
+    this.podiumScene.hide();
+    this.garageLobby.show();
+    this.garageLobby.setCameraAnglePreset('FRONT');
+
+    // Mount player vehicle
+    if (this.playerVehicle && this.playerVehicle.group.parent) {
+      this.playerVehicle.group.parent.remove(this.playerVehicle.group);
+    }
+    if (this.garageLobby && this.garageLobby.turntable && this.playerVehicle) {
+      this.garageLobby.turntable.add(this.playerVehicle.group);
+      this.playerVehicle.group.position.set(0, 0.4, 0);
+    }
+
+    if (this.ui) this.ui.showScreen('PUBG_REWARDS');
+    if (this.sound) this.sound.playVictorySting();
   }
 
   beginRaceIntro() {
@@ -598,6 +657,7 @@ class GameManager {
 
   triggerRaceFinish() {
     this.state = 'FINISH';
+    this.finalRacePosition = this.gameState.currentPosition;
     this.sound.setMusicState('PODIUM');
     this.sound.playVictorySting();
     this.cameraController.setMode(CAMERA_MODES.SLOW_MO_FINISH);
@@ -807,6 +867,15 @@ class GameManager {
       } else if (currentFps < 22 && this.graphicsQuality === 'HIGH') {
         this.setGraphicsQuality('MEDIUM');
       }
+      if (currentFps > 55) {
+        this.goodFpsTimer = (this.goodFpsTimer || 0) + elapsed;
+        if (this.goodFpsTimer > 5.0 && this.graphicsQuality === 'MEDIUM') {
+          this.setGraphicsQuality('HIGH');
+          this.goodFpsTimer = 0;
+        }
+      } else {
+        this.goodFpsTimer = 0;
+      }
     }
 
     // State Machine Dispatch
@@ -817,6 +886,9 @@ class GameManager {
       case 'CAR_SELECT':
       case 'GARAGE':
       case 'MATCH_PREP':
+      case 'PRE_RACE_LOADING':
+      case 'POST_RACE_LOADING':
+      case 'PUBG_REWARDS':
       case 'WINNING_LOBBY':
       case 'DRIVING_SCHOOL':
       case 'SETTINGS': {
@@ -864,7 +936,7 @@ class GameManager {
         this.playerVehicle.group.quaternion.copy(interpQuat);
         this.playerVehicle.updateKineticState(delta, inputs.steer, 0, 0, false, false, 0);
 
-        this.cameraController.update(delta, interpPos, this.physics.vel, interpQuat, 0, false, false);
+        this.cameraController.update(delta, interpPos, this.physics.vel, interpQuat, 0, false, false, this.physics.aerialState);
 
         this.gameState.update(delta, this.physics.currentU, 0, this.rivals.rivals);
         if (this.ui) {
@@ -911,6 +983,7 @@ class GameManager {
         }
 
         if (this.physics.isColliding) {
+          if (this.sound && this.sound.playCollisionImpact) { this.sound.playCollisionImpact(this.physics.collisionImpulse); }
           this.cameraController.addShake(this.physics.collisionImpulse);
           if (this.vfx && Math.random() < 0.3) {
             const hitNorm = this.physics.pos.clone().sub(this.circuit.getFrameAt(this.physics.currentU).pos).normalize();
@@ -973,11 +1046,15 @@ class GameManager {
 
           if (this.physics.isDrifting) {
             const steerSign = Math.sign(inputs.steer || 1.0);
-            this.vfx.spawnDriftSparks(interpPos, new THREE.Vector3(-steerSign, 0, 0).applyQuaternion(interpQuat), this.physics.driftDuration > 1.2);
+            const driftIntensity = this.physics.driftIntensity !== undefined ? this.physics.driftIntensity : 0.5;
+            this.vfx.spawnDriftSparks(interpPos, new THREE.Vector3(-steerSign, 0, 0).applyQuaternion(interpQuat), this.physics.driftDuration > 1.2, driftIntensity);
           }
+
 
           this.vfx.update(delta, interpPos, this.physics.vel, this.camera, this.physics.isBoosting, this.physics.isDrifting, speedKmh);
         }
+
+        if (this.physics.boostJustFilled && this.ui && this.ui.flashBoostBar) { this.ui.flashBoostBar(); this.physics.boostJustFilled = false; }
 
         // Camera follow
         this.cameraController.update(
@@ -987,7 +1064,8 @@ class GameManager {
           interpQuat,
           speedKmh,
           this.physics.isColliding,
-          this.physics.isBoosting
+          this.physics.isBoosting,
+          this.physics.aerialState
         );
 
         // Minimap & HUD
@@ -1004,6 +1082,7 @@ class GameManager {
 
         if (this.ui) {
           this.ui.updateHUD(this.physics, this.gameState);
+          if (this.ui && this.ui.updateSectorHUD && this.gameState.currentSector !== undefined) { this.ui.updateSectorHUD(this.gameState.currentSector, this.gameState.lapDeltaToPersonalBest, this.gameState.zoneColor); }
           if (currentDistrict) {
             this.ui.updateDistrictHUD(currentDistrict);
           }
@@ -1055,6 +1134,7 @@ class GameManager {
 
     this.renderer.setSize(w, h);
     this.composer.setSize(w, h);
+    if (this.bloomPass) { this.bloomPass.setSize(w, h); }
   }
 }
 

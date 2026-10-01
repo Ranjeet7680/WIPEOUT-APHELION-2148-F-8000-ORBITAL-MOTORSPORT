@@ -20,10 +20,14 @@ export class CyberpunkAudioEngine {
     // Continuous SFX nodes
     this.engineOsc = null;
     this.engineGain = null;
+    this.engineOsc2 = null;
+    this.engineGain2 = null;
     this.boostOsc = null;
     this.boostGain = null;
     this.driftOsc = null;
     this.driftGain = null;
+    this.windOsc = null;
+    this.windGain = null;
 
     // Music State
     this.musicState = 'LOBBY'; // 'LOBBY', 'INTRO', 'COUNTDOWN', 'RACING', 'FINAL_LAP', 'PODIUM'
@@ -64,14 +68,40 @@ export class CyberpunkAudioEngine {
       this.engineGain = this.ctx.createGain();
       this.engineGain.gain.setValueAtTime(0.08, this.ctx.currentTime);
 
+      this.engineOsc2 = this.ctx.createOscillator();
+      this.engineOsc2.type = 'square';
+      this.engineOsc2.frequency.setValueAtTime(40, this.ctx.currentTime);
+
+      this.engineGain2 = this.ctx.createGain();
+      this.engineGain2.gain.setValueAtTime(0.04, this.ctx.currentTime);
+
       const engineFilter = this.ctx.createBiquadFilter();
       engineFilter.type = 'lowpass';
       engineFilter.frequency.setValueAtTime(450, this.ctx.currentTime);
 
       this.engineOsc.connect(engineFilter);
+      this.engineOsc2.connect(this.engineGain2);
+      this.engineGain2.connect(engineFilter);
       engineFilter.connect(this.engineGain);
       this.engineGain.connect(this.sfxGain);
       this.engineOsc.start();
+      this.engineOsc2.start();
+
+      // Wind sound
+      this.windOsc = this.ctx.createOscillator();
+      this.windOsc.type = 'sawtooth';
+      
+      const windFilter = this.ctx.createBiquadFilter();
+      windFilter.type = 'lowpass';
+      windFilter.frequency.setValueAtTime(300, this.ctx.currentTime);
+
+      this.windGain = this.ctx.createGain();
+      this.windGain.gain.setValueAtTime(0.0, this.ctx.currentTime);
+
+      this.windOsc.connect(windFilter);
+      windFilter.connect(this.windGain);
+      this.windGain.connect(this.sfxGain);
+      this.windOsc.start();
 
       // 2. Hyper-Boost Plasma Whine (High Sine Wave)
       this.boostOsc = this.ctx.createOscillator();
@@ -160,6 +190,14 @@ export class CyberpunkAudioEngine {
     const baseFreq = 75 + normSpeed * 280 + (throttle * 80);
     this.engineOsc.frequency.setTargetAtTime(baseFreq, t, 0.05);
     this.engineGain.gain.setTargetAtTime(0.06 + normSpeed * 0.12, t, 0.05);
+    this.engineOsc2.frequency.setTargetAtTime(baseFreq * 0.5 + normSpeed * 80, t, 0.05);
+
+    // Wind Sound Modulation
+    if (speedKmh > 280) {
+      this.windGain.gain.setTargetAtTime(Math.max(0, (normSpeed - 0.65) * 0.08), t, 0.1);
+    } else {
+      this.windGain.gain.setTargetAtTime(0.0, t, 0.1);
+    }
 
     // 2. Modulate Hyper-Boost Plasma Sound
     if (isBoosting) {
@@ -203,6 +241,18 @@ export class CyberpunkAudioEngine {
       gain.connect(this.musicGain || this.masterGain);
       osc.start();
       osc.stop(this.ctx.currentTime + 0.85);
+    } else if (this.musicState === 'COUNTDOWN') {
+      // Ascending tension arpeggio
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(220 * Math.pow(2, this.seqStep / 12.0), this.ctx.currentTime);
+      gain.gain.setValueAtTime(0.10, this.ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.1);
+      osc.connect(gain);
+      gain.connect(this.musicGain || this.masterGain);
+      osc.start();
+      osc.stop(this.ctx.currentTime + 0.12);
     } else if (this.musicState === 'RACING' || this.musicState === 'FINAL_LAP') {
       // 150-160 BPM Driving Techno Bassline
       const osc = this.ctx.createOscillator();
@@ -293,6 +343,38 @@ export class CyberpunkAudioEngine {
     osc.stop(this.ctx.currentTime + (isFinal ? 0.5 : 0.22));
   }
 
+  playCountdownBeep(isFinal) {
+    this.playCountdownPip(isFinal);
+  }
+
+  playCollisionImpact(intensity) {
+    if (!this.ctx || this.isMuted) return;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(80 + Math.random() * 40, this.ctx.currentTime);
+    
+    // WaveShaperNode distortion
+    const dist = this.ctx.createWaveShaper();
+    const curve = new Float32Array(400);
+    for (let i = 0; i < 400; i++) {
+      const x = (i * 2) / 400 - 1;
+      curve[i] = (3 + 20) * x * 20 * (Math.PI / 180) / (Math.PI + 20 * Math.abs(x));
+    }
+    dist.curve = curve;
+
+    const safeGain = Math.max(0.001, 0.15 * Math.min(1, Math.max(0.01, intensity || 0.1)));
+    gain.gain.setValueAtTime(safeGain, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.15);
+
+    osc.connect(dist);
+    dist.connect(gain);
+    gain.connect(this.sfxGain || this.masterGain);
+    
+    osc.start();
+    osc.stop(this.ctx.currentTime + 0.16);
+  }
+
   playVictorySting() {
     if (!this.ctx || this.isMuted) return;
     [523.25, 659.25, 783.99, 1046.5, 1318.5].forEach((freq, idx) => {
@@ -325,17 +407,31 @@ export class CyberpunkAudioEngine {
 
   playLapChime() {
     if (!this.ctx || this.isMuted) return;
-    [523.25, 659.25, 783.99, 1046.5].forEach((freq, i) => {
+    const t = this.ctx.currentTime;
+    
+    // Chord
+    [523.25, 659.25, 784.0].forEach((freq) => {
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
-      osc.frequency.setValueAtTime(freq, this.ctx.currentTime + i * 0.06);
-      gain.gain.setValueAtTime(0.2, this.ctx.currentTime + i * 0.06);
-      gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + i * 0.06 + 0.3);
+      osc.frequency.setValueAtTime(freq + (Math.random() * 4 - 2), t);
+      gain.gain.setValueAtTime(0.2, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
       osc.connect(gain);
       gain.connect(this.sfxGain || this.masterGain);
-      osc.start(this.ctx.currentTime + i * 0.06);
-      osc.stop(this.ctx.currentTime + i * 0.06 + 0.35);
+      osc.start(t);
+      osc.stop(t + 0.45);
     });
+
+    // Delayed higher note
+    const osc2 = this.ctx.createOscillator();
+    const gain2 = this.ctx.createGain();
+    osc2.frequency.setValueAtTime(1046.5, t + 0.15);
+    gain2.gain.setValueAtTime(0.2, t + 0.15);
+    gain2.gain.exponentialRampToValueAtTime(0.001, t + 0.15 + 0.25);
+    osc2.connect(gain2);
+    gain2.connect(this.sfxGain || this.masterGain);
+    osc2.start(t + 0.15);
+    osc2.stop(t + 0.45);
   }
 
   playMenuClick() {

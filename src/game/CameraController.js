@@ -64,6 +64,8 @@ export class CameraController {
     this.shakeIntensity = 0.0;
     this.shakeDecay = 4.2;
 
+    this.boostPushback = 0.0;
+
     // FOV elasticity
     this.baseFov = 75.0;
     this.targetFov = 75.0;
@@ -128,7 +130,7 @@ export class CameraController {
     this.camera.up.copy(_up);
   }
 
-  update(delta, craftPos, craftVel, craftQuat, speedKmh, isScraping, isBoosting) {
+  update(delta, craftPos, craftVel, craftQuat, speedKmh, isScraping, isBoosting, aerialInfo = null) {
     _fwd.set(0, 0, 1).applyQuaternion(craftQuat);
     _up.set(0, 1, 0).applyQuaternion(craftQuat);
     _right.set(1, 0, 0).applyQuaternion(craftQuat);
@@ -190,10 +192,11 @@ export class CameraController {
 
     _shakeOffset.set(0, 0, 0);
     if (this.shakeIntensity > 0.001) {
+      const shakeScale = 0.5 + speedRatio * 0.5;
       _shakeOffset.set(
-        Math.sin(time * 65.0) * this.shakeIntensity * 0.18,
-        Math.cos(time * 85.0) * this.shakeIntensity * 0.18,
-        Math.sin(time * 105.0) * this.shakeIntensity * 0.12
+        Math.sin(time * 65.0) * this.shakeIntensity * 0.18 * shakeScale,
+        Math.cos(time * 85.0) * this.shakeIntensity * 0.18 * shakeScale,
+        Math.sin(time * 105.0) * this.shakeIntensity * 0.12 * shakeScale
       );
       this.shakeIntensity = Math.max(0.0, this.shakeIntensity - delta * this.shakeDecay);
     }
@@ -206,6 +209,10 @@ export class CameraController {
       const lateralVel = craftVel.dot(_right);
       const targetRollDeg = THREE.MathUtils.clamp(-lateralVel * 0.025, -0.22, 0.22);
       this.currentRoll = THREE.MathUtils.lerp(this.currentRoll, targetRollDeg, delta * 6.5);
+      
+      if (aerialInfo && aerialInfo.inAir && aerialInfo.barrelRollAngle) {
+        this.currentRoll += aerialInfo.barrelRollAngle * 0.18;
+      }
     } else {
       this.currentRoll = THREE.MathUtils.lerp(this.currentRoll, 0.0, delta * 8.0);
     }
@@ -232,8 +239,14 @@ export class CameraController {
           _velDir.lerp(_fwd, 0.45).normalize();
         }
 
+        if (isBoosting) {
+          this.boostPushback = THREE.MathUtils.lerp(this.boostPushback, 1.8, delta * 12.0);
+        } else {
+          this.boostPushback = THREE.MathUtils.lerp(this.boostPushback, 0.0, delta * 8.0);
+        }
+
         // Dynamic distance & height based on speed and boost
-        const dynamicDistance = THREE.MathUtils.lerp(6.6, 9.4, speedRatio) + (isBoosting ? 1.6 : 0.0);
+        const dynamicDistance = THREE.MathUtils.lerp(6.6, 9.4, speedRatio) + this.boostPushback;
         const dynamicHeight   = THREE.MathUtils.lerp(2.2, 2.7, speedRatio);
 
         this.targetCameraPos.copy(craftPos)
@@ -247,6 +260,9 @@ export class CameraController {
 
         const followSpeed = 16.0;
         this.currentCameraPos.lerp(this.targetCameraPos, Math.min(1.0, delta * followSpeed));
+
+        const lateralVel = craftVel.dot(_right);
+        this.currentCameraPos.addScaledVector(_right, -lateralVel * 0.012);
 
         // Track surface clearance clamping: prevents camera from penetrating track underside or clipping barriers
         if (this.circuit) {
@@ -304,6 +320,9 @@ export class CameraController {
         const eyePos = _tempVec1.copy(craftPos)
           .addScaledVector(_fwd, 0.15)
           .addScaledVector(_up, 0.65);
+
+        const bobAmt = Math.min(speedKmh / 420.0, 1.0) * 0.04;
+        eyePos.addScaledVector(_up, Math.sin(time * 18.0) * bobAmt);
 
         this.camera.position.copy(eyePos).add(_shakeOffset);
         this.lookTarget.copy(craftPos).addScaledVector(_fwd, 18.0).addScaledVector(_up, 0.45);
@@ -377,10 +396,11 @@ export class CameraController {
 
       case CAMERA_MODES.SLOW_MO_FINISH: {
         // Dramatic side-angle tracking pass across finish line
+        const finishAngle = time * 0.6;
         this.targetCameraPos.copy(craftPos)
-          .addScaledVector(_right, 7.5)
-          .addScaledVector(_fwd, 1.2)
-          .addScaledVector(_up, 1.6);
+          .addScaledVector(_right, Math.cos(finishAngle) * 8.5)
+          .addScaledVector(_fwd, Math.sin(finishAngle) * 3.5)
+          .addScaledVector(_up, 1.8 + Math.sin(finishAngle * 0.5) * 0.5);
 
         this.camera.position.lerp(this.targetCameraPos, delta * 12.0);
         this.lookTarget.copy(craftPos).addScaledVector(_fwd, 2.0).addScaledVector(_up, 0.4);

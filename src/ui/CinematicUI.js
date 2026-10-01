@@ -298,6 +298,9 @@ export class CinematicUI {
           <div class="dev-bracket top-right"></div>
           <div class="dev-bracket btm-left"></div>
           <div class="dev-bracket btm-right"></div>
+          <div class="dev-logo-container">
+            <img src="/images/game_logo.jpg" alt="Wipeout Aphelion 2148 Logo" class="dev-game-logo-img" />
+          </div>
           <div class="dev-studio-tag">ORBITAL MOTORSPORT STUDIOS PRESENTS</div>
           <span class="dev-subtitle">A GAME BY</span>
           <h1 class="dev-title">RANJEET KUMAR</h1>
@@ -860,42 +863,91 @@ export class CinematicUI {
         </div>
       </div>
 
-      <!-- 8. MATCH PREPARATION & TIPS MODAL -->
-      <div id="screen-match-prep" class="ui-screen" style="display: none;">
+      <!-- 8. HIGH-TECH 8-PILOT MATCHMAKING RADAR -->
+      <div id="screen-match-prep" class="ui-screen" style="display: none; pointer-events: auto;">
+        <div class="match-prep-backdrop">
+          <img src="/images/match_making.jpg" class="match-backdrop-img" alt="Matchmaking Radar Grid" />
+          <div class="match-backdrop-tint"></div>
+        </div>
         <div class="match-prep-window">
           <div class="match-found-banner">
             <span class="pulse-marker"></span>
-            <h2>RACE FOUND // COMPETITIVE GRID</h2>
+            <h2>MATCHMAKING: TOKYO METROPOLITAN RIFT // RANKED GRAND PRIX</h2>
           </div>
-
-          <div class="match-track-card">
-            <div class="mt-detail"><strong>TRACK:</strong> NEO-SHINJUKU RIFT</div>
-            <div class="mt-detail"><strong>SECTOR:</strong> 07 // AETHER SKYWAY</div>
-            <div class="mt-detail"><strong>WEATHER:</strong> NIGHT // ACID RAIN</div>
-            <div class="mt-detail"><strong>DISTANCE:</strong> 3 LAPS // 5.4 KM</div>
-            <div class="mt-detail"><strong>OPPONENTS:</strong> 7 CLASS-A AI RACERS</div>
+          <div class="match-radar-header-row">
+            <div class="radar-status-badge"><span class="green-dot"></span> <strong id="match-pilot-count">7/8</strong> PILOTS CONNECTED</div>
+            <div class="radar-ping-badge">PING: <strong>28ms</strong> | LOSS: <strong>0%</strong></div>
+            <div class="radar-timer-badge">SESSION LAUNCH: <strong id="match-timer-val">00:14</strong></div>
           </div>
-
-          <div class="match-racer-lineup">
-            <div class="match-racer you">01 RANJEET (YOU)</div>
-            <div class="match-racer">02 RYUKI</div>
-            <div class="match-racer">03 KAITO</div>
-            <div class="match-racer">04 HARUTO</div>
-            <div class="match-racer">05 SORA</div>
-            <div class="match-racer">06 TANAKA</div>
-            <div class="match-racer">07 MIKA</div>
-            <div class="match-racer">08 KENJI</div>
+          <div class="match-pilot-grid" id="match-pilot-grid">
+            <div class="pilot-card ready"><span class="pc-rank">R1</span><div class="pc-avatar"></div><strong class="pc-name">VOID_WALKER</strong><span class="pc-tier platinum">PLATINUM</span><small>V-SPEC FURY</small><span class="pc-status">READY</span></div>
+            <div class="pilot-card ready"><span class="pc-rank">R2</span><div class="pc-avatar"></div><strong class="pc-name">CHRONOS_RACER</strong><span class="pc-tier gold">GOLD</span><small>STEALTH INTERCEPTOR</small><span class="pc-status">READY</span></div>
+            <div class="pilot-card ready"><span class="pc-rank">R3</span><div class="pc-avatar"></div><strong class="pc-name">N30_KID</strong><span class="pc-tier silver">SILVER</span><small>PLASMA WRAITH</small><span class="pc-status">READY</span></div>
+            <div class="pilot-card ready"><span class="pc-rank">R4</span><div class="pc-avatar"></div><strong class="pc-name">CYBER_SAMURAI</strong><span class="pc-tier diamond">DIAMOND</span><small>NEON STRIKER</small><span class="pc-status">READY</span></div>
+            <div class="pilot-card ready"><span class="pc-rank">R5</span><div class="pc-avatar"></div><strong class="pc-name">AETHER_DRIFTER</strong><span class="pc-tier gold">GOLD</span><small>GRAVITY RIDER</small><span class="pc-status">READY</span></div>
+            <div class="pilot-card ready"><span class="pc-rank">R6</span><div class="pc-avatar"></div><strong class="pc-name">SHADOW_FAX</strong><span class="pc-tier platinum">PLATINUM</span><small>SONIC BOOM</small><span class="pc-status">READY</span></div>
+            <div class="pilot-card ready"><span class="pc-rank">R7</span><div class="pc-avatar"></div><strong class="pc-name">HEX_WAVE</strong><span class="pc-tier gold">GOLD</span><small>PULSE PHANTOM</small><span class="pc-status">READY</span></div>
+            <div class="pilot-card ready you"><span class="pc-rank">R8</span><div class="pc-avatar avatar-you"></div><strong class="pc-name">RANJEET (YOU)</strong><span class="pc-tier grandmaster">GRANDMASTER</span><small>F-8000 NIGHTRIFT</small><span class="pc-status">READY</span></div>
           </div>
-
-          <div class="match-tip-box">
-            <span class="tip-label">PRO RACING TIP:</span>
-            <p id="match-tip-text">DRIFT THROUGH SHARP CORNERS TO BUILD BOOST.</p>
-          </div>
-
           <div class="match-loading-bar-row">
-            <span id="match-loading-msg">ENTERING GRID...</span>
+            <span id="match-loading-msg">GRID SYNCED // ALL 8 PILOTS CONNECTED...</span>
             <div class="match-progress-track">
               <div id="match-progress-fill" class="match-progress-fill" style="width: 0%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PRE-RACE TRACK LOADING SCREEN (VERSUS & SCHEMATIC) -->
+      <div id="screen-pre-race-loading" class="ui-screen" style="display: none; pointer-events: auto;">
+        <div class="pre-race-backdrop">
+          <img src="/images/loading_pre_race.jpg" class="pre-race-bg-img" alt="Pre-Race Loading Circuit" />
+          <div class="pre-race-tint"></div>
+        </div>
+        <div class="pre-race-content">
+          <div class="pre-race-top-bar">
+            <div class="pr-title-box">
+              <span class="pr-sub">ORBITAL GRAND PRIX // PRE-RACE BRIEFING</span>
+              <h2 class="pr-title">NEO-SHINJUKU RIFT CIRCUIT</h2>
+            </div>
+            <div class="pr-specs-box">
+              <div class="pr-spec-pill">LENGTH: <strong>5.4 KM</strong></div>
+              <div class="pr-spec-pill">TURNS: <strong>8 GATES</strong></div>
+              <div class="pr-spec-pill">ELEVATION: <strong>+140M</strong></div>
+            </div>
+          </div>
+          <div class="pre-race-versus-container">
+            <div class="pr-versus-card player-side">
+              <span class="pr-card-badge">LEAD PILOT</span>
+              <div class="pr-pilot-info">
+                <h3>RANJEET</h3>
+                <span class="pr-team">TEAM APHELION</span>
+              </div>
+              <div class="pr-vehicle-info">
+                <span class="pr-vname">F-8000 // NIGHTRIFT</span>
+                <span class="pr-vclass">S-CLASS 420 KM/H</span>
+              </div>
+            </div>
+            <div class="pr-versus-badge">VS</div>
+            <div class="pr-versus-card rival-side">
+              <span class="pr-card-badge red">CHALLENGER</span>
+              <div class="pr-pilot-info">
+                <h3>RYUKI</h3>
+                <span class="pr-team">TOKYO KINETICS</span>
+              </div>
+              <div class="pr-vehicle-info">
+                <span class="pr-vname">AURORA FALCON</span>
+                <span class="pr-vclass">AGGRESSIVE RACER</span>
+              </div>
+            </div>
+          </div>
+          <div class="pre-race-loading-footer">
+            <div class="pr-progress-header">
+              <span id="pr-loading-msg">COMPILING WEBGPU GRAPH PIPELINES...</span>
+              <strong id="pr-loading-pct">94%</strong>
+            </div>
+            <div class="pr-progress-track">
+              <div id="pr-progress-fill" class="pr-progress-fill" style="width: 94%"></div>
             </div>
           </div>
         </div>
@@ -995,6 +1047,8 @@ export class CinematicUI {
             </div>
             <div class="gear-badge" id="rh-gear">GEAR 5</div>
             <div class="time-pink-badge" id="rh-lap-time">TIME: 00:48.326</div>
+            <div id="rh-sector-label" style="display: none;">S1</div>
+            <div id="rh-pb-delta" style="display: none;">PB +0.00s</div>
           </div>
           <div class="hud-tacho-line">
             <div class="tacho-line-fill" id="rh-tacho-fill" style="width: 65%"></div>
@@ -1362,7 +1416,93 @@ export class CinematicUI {
         </div>
 
         <div class="podium-bottom-actions">
-          <button class="btn-action-primary" id="btn-podium-continue">CONTINUE TO HQ ►</button>
+          <button class="btn-action-primary" id="btn-podium-continue">CONTINUE TO REWARDS ►</button>
+        </div>
+      </div>
+
+      <!-- POST-RACE CLOUD SYNC LOADING SCREEN -->
+      <div id="screen-post-loading" class="ui-screen" style="display: none; pointer-events: auto;">
+        <div class="post-loading-backdrop">
+          <img src="/images/loading_post_race.jpg" class="post-loading-bg-img" alt="Cloud Telemetry Sync" />
+          <div class="post-loading-tint"></div>
+        </div>
+        <div class="post-loading-content">
+          <div class="post-sync-header">
+            <span class="ps-sub">RACING LEGENDS HQ // SECURE TELEMETRY</span>
+            <h2 class="ps-title">SYNCHRONIZING TELEMETRY TO CLOUD SERVERS</h2>
+          </div>
+          <div class="post-sync-terminal">
+            <div class="pst-line">✓ VALIDATING LAP TIMES & SECTOR SPLITS...</div>
+            <div class="pst-line">✓ ENCRYPTING ANTI-CHEAT TOKENS...</div>
+            <div class="pst-line">✓ UPDATING GLOBAL LEADERBOARDS & RANKINGS...</div>
+            <div class="pst-line">✓ CALCULATING PILOT EXP & VICTORY LOOT...</div>
+          </div>
+          <div class="post-sync-progress-box">
+            <div class="psp-track">
+              <div id="post-sync-fill" class="psp-fill" style="width: 88%"></div>
+            </div>
+            <span class="psp-pct" id="post-sync-pct">88%</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- PUBG / APEX STYLE VICTORY REWARD LOBBY -->
+      <div id="screen-pubg-rewards" class="ui-screen" style="display: none; pointer-events: auto;">
+        <div class="pubg-rewards-backdrop">
+          <img src="/images/reward_lobby_pubg.jpg" class="pubg-rewards-bg-img" alt="Victory Rewards Crate" />
+          <div class="pubg-rewards-tint"></div>
+        </div>
+        <div class="pubg-rewards-container">
+          <div class="pubg-banner-wrap">
+            <div class="pubg-victory-banner">
+              <span class="pv-icon">🏆</span>
+              <h1 class="pv-headline">VICTORY // APHELION CHAMPION</h1>
+              <span class="pv-sub">ORBITAL MOTORSPORT SEASON 5 // TOURNAMENT WINNER</span>
+            </div>
+          </div>
+
+          <div class="pubg-cards-row">
+            <div class="pubg-reward-card legendary">
+              <div class="prc-tier-badge">LEGENDARY</div>
+              <div class="prc-icon-art livery">⚡</div>
+              <strong class="prc-title">NEON OVERDRIVE</strong>
+              <span class="prc-desc">EXCLUSIVE SHIP LIVERY</span>
+              <div class="prc-glow"></div>
+            </div>
+
+            <div class="pubg-reward-card credits">
+              <div class="prc-tier-badge gold">CURRENCY</div>
+              <div class="prc-icon-art coins">🪙</div>
+              <strong class="prc-title">+5,000 CR</strong>
+              <span class="prc-desc">TOURNAMENT CREDITS</span>
+              <div class="prc-glow"></div>
+            </div>
+
+            <div class="pubg-reward-card exp">
+              <div class="prc-tier-badge blue">EXPERIENCE</div>
+              <div class="prc-icon-art xp">⭐</div>
+              <strong class="prc-title">+1,500 EXP</strong>
+              <span class="prc-desc">PILOT MASTERY</span>
+              <div class="prc-glow"></div>
+            </div>
+          </div>
+
+          <div class="pubg-battlepass-row">
+            <div class="pb-bp-header">
+              <span class="bp-title">BATTLE PASS PROGRESSION // SEASON 5</span>
+              <strong class="bp-levels">TIER 48 ➔ <span class="gold-text">TIER 49 [LEVEL UP!]</span></strong>
+            </div>
+            <div class="pb-bp-track">
+              <div class="pb-bp-fill" id="pubg-bp-fill" style="width: 100%"></div>
+            </div>
+          </div>
+
+          <div class="pubg-footer-actions">
+            <button class="btn-claim-rewards" id="btn-pubg-claim">
+              <span class="bcr-icon">🎁</span>
+              <strong class="bcr-text">CLAIM ALL & RETURN TO MAIN LOBBY</strong>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -1863,9 +2003,24 @@ export class CinematicUI {
       this.game.showWinningLobby();
     });
 
-    // 9. Podium continue
+    // 9. Podium continue -> Post-Race Cloud Sync Loading -> PUBG Rewards
     safeBind('btn-podium-continue', 'click', () => {
-      this.game.showWinningLobby();
+      if (this.game.sound) this.game.sound.playMenuClick();
+      if (this.game.startPostRaceLoading) {
+        this.game.startPostRaceLoading(() => {
+          this.game.showPubgRewards();
+        });
+      } else {
+        this.game.showWinningLobby();
+      }
+    });
+
+    // PUBG Claim All & Return to Lobby
+    safeBind('btn-pubg-claim', 'click', () => {
+      if (this.game.sound) {
+        this.game.sound.playVictorySting();
+      }
+      this.claimPubgRewards();
     });
 
     // 10. Winning lobby buttons
@@ -2187,6 +2342,7 @@ export class CinematicUI {
       'screen-car-select',
       'screen-garage',
       'screen-match-prep',
+      'screen-pre-race-loading',
       'screen-race-intro',
       'screen-racing-hud',
       'screen-tutorial-certified',
@@ -2195,6 +2351,8 @@ export class CinematicUI {
       'screen-pause',
       'screen-results',
       'screen-podium',
+      'screen-post-loading',
+      'screen-pubg-rewards',
       'screen-win-lobby',
       'screen-leaderboard',
       'screen-countdown-overlay'
@@ -2215,6 +2373,7 @@ export class CinematicUI {
       'CAR_SELECT': 'screen-car-select',
       'GARAGE': 'screen-garage',
       'MATCH_PREP': 'screen-match-prep',
+      'PRE_RACE_LOADING': 'screen-pre-race-loading',
       'RACE_INTRO': 'screen-race-intro',
       'RACING': 'screen-racing-hud',
       'CERTIFIED': 'screen-tutorial-certified',
@@ -2223,6 +2382,8 @@ export class CinematicUI {
       'PAUSED': 'screen-pause',
       'RESULTS': 'screen-results',
       'PODIUM': 'screen-podium',
+      'POST_RACE_LOADING': 'screen-post-loading',
+      'PUBG_REWARDS': 'screen-pubg-rewards',
       'WINNING_LOBBY': 'screen-win-lobby',
       'LEADERBOARD': 'screen-leaderboard'
     };
@@ -3187,8 +3348,14 @@ export class CinematicUI {
     const tachoFill = document.getElementById('rh-tacho-fill') || this.container.querySelector('#rh-tacho-fill');
     if (tachoFill) tachoFill.style.width = `${Math.round(tachoRatio * 100)}%`;
 
-    // Position & Lap
-    this.safeSetHTML('rh-pos', `${gameState.currentPosition.toString().padStart(2, '0')}<small>/08</small>`);
+    // Position & Lap (use smoothed displayPosition if available)
+    const displayPos = gameState.displayPosition !== undefined ? gameState.displayPosition : gameState.currentPosition;
+    this.safeSetHTML('rh-pos', `${displayPos.toString().padStart(2, '0')}<small>/08</small>`);
+    const posEl = document.getElementById('rh-pos') || this.container.querySelector('#rh-pos');
+    if (posEl) {
+      if (displayPos === 1) posEl.classList.add('pos-first');
+      else posEl.classList.remove('pos-first');
+    }
     this.safeSetHTML('rh-lap', `${gameState.currentLap.toString().padStart(2, '0')}<small>/02</small>`);
 
     // Race Progress %
@@ -3197,14 +3364,45 @@ export class CinematicUI {
     this.safeSetText('rh-progress-badge', `${progressPct}%`);
     this.safeSetWidth('hud-dual-progress-fill', `${progressPct}%`);
 
-    // Boost meter & reservoir
+    // Boost meter & reservoir with overdrive pulse effect
     const boostPct = Math.round(physics.boostCapacity * 100);
     const boostFill = document.getElementById('rh-boost-fill') || this.container.querySelector('#rh-boost-fill');
-    if (boostFill) boostFill.style.width = `${boostPct}%`;
+    if (boostFill) {
+      boostFill.style.width = `${boostPct}%`;
+      // Visual tier styling: OVERDRIVE gets a golden glow
+      if (physics.isBoosting && physics.boostTier === 'OVERDRIVE') {
+        boostFill.style.background = 'linear-gradient(90deg, #FFB800, #FF6600)';
+        boostFill.style.boxShadow = '0 0 12px rgba(255,184,0,0.8)';
+      } else if (physics.isBoosting) {
+        boostFill.style.background = 'linear-gradient(90deg, #00F0FF, #7928CA)';
+        boostFill.style.boxShadow = '0 0 8px rgba(0,240,255,0.6)';
+      } else if (physics.boostCapacity >= 0.98) {
+        // Full charge indicator: gentle cyan pulse
+        boostFill.style.background = 'linear-gradient(90deg, #00F0FF, #00FF88)';
+        boostFill.style.boxShadow = '0 0 6px rgba(0,240,255,0.5)';
+      } else {
+        boostFill.style.background = '';
+        boostFill.style.boxShadow = '';
+      }
+    }
 
     this.safeSetWidth('hud-dual-nitro-fill', `${boostPct}%`);
     this.safeSetText('rh-boost-pct', `${boostPct}%`);
-    this.safeSetText('rh-boost-tier-label', physics.boostTier === 'OVERDRIVE' ? 'OVERDRIVE NITRO' : 'NITRO RESERVOIR');
+    this.safeSetText('rh-boost-tier-label', physics.boostTier === 'OVERDRIVE' ? '⚡ OVERDRIVE NITRO' : 'NITRO RESERVOIR');
+
+    // Personal Best Delta display (if available from improved GameState)
+    const deltaEl = document.getElementById('rh-pb-delta') || this.container.querySelector('#rh-pb-delta');
+    if (deltaEl) {
+      if (gameState.lapDeltaToPersonalBest !== null && gameState.lapDeltaToPersonalBest !== undefined) {
+        const delta = gameState.lapDeltaToPersonalBest;
+        const sign = delta <= 0 ? '' : '+';
+        deltaEl.textContent = `PB ${sign}${delta.toFixed(2)}s`;
+        deltaEl.style.color = delta <= 0 ? '#00FF88' : '#FF4400';
+        deltaEl.style.display = 'block';
+      } else {
+        deltaEl.style.display = 'none';
+      }
+    }
 
     // Live 8-Pilot Leaderboard Tower Update
     if (this.game.rivals) {
@@ -3269,10 +3467,59 @@ export class CinematicUI {
     }
   }
 
+  // Sector time & PB delta HUD — called from main.js after updateHUD in RACING state
+  updateSectorHUD(currentSector, lapDeltaToPB, zoneColor) {
+    // Sector indicator (S1/S2/S3)
+    const sectorEl = document.getElementById('rh-sector-label') || this.container.querySelector('#rh-sector-label');
+    if (sectorEl) {
+      const labels = ['S1', 'S2', 'S3'];
+      sectorEl.textContent = labels[Math.min(currentSector, 2)] || 'S1';
+      sectorEl.style.display = 'block';
+    }
+
+    // Zone color (Zone mode) — tint the boost bar container
+    if (zoneColor) {
+      const boostContainer = document.getElementById('rh-boost-fill') || this.container.querySelector('#rh-boost-fill');
+      if (boostContainer && boostContainer.parentElement) {
+        boostContainer.parentElement.style.borderColor = zoneColor;
+      }
+    }
+  }
+
+  // Flash the boost bar white for 1 frame on full recharge — called from main.js when boostJustFilled
+  flashBoostBar() {
+    const boostFill = document.getElementById('rh-boost-fill') || this.container.querySelector('#rh-boost-fill');
+    if (!boostFill) return;
+
+    // White flash overlay
+    boostFill.style.transition = 'background 0.05s ease';
+    boostFill.style.background = '#FFFFFF';
+    boostFill.style.boxShadow = '0 0 20px rgba(255,255,255,0.9)';
+
+    setTimeout(() => {
+      // Fade back to cyan over 200ms
+      boostFill.style.transition = 'background 0.2s ease, box-shadow 0.2s ease';
+      boostFill.style.background = 'linear-gradient(90deg, #00F0FF, #00FF88)';
+      boostFill.style.boxShadow = '0 0 8px rgba(0,240,255,0.5)';
+    }, 80);
+
+    // Also flash the percentage text
+    const boostPct = document.getElementById('rh-boost-pct') || this.container.querySelector('#rh-boost-pct');
+    if (boostPct) {
+      boostPct.style.color = '#FFFFFF';
+      boostPct.style.textShadow = '0 0 8px #00F0FF';
+      setTimeout(() => {
+        boostPct.style.color = '';
+        boostPct.style.textShadow = '';
+      }, 300);
+    }
+  }
+
   updateGhostDeltaHUD(timeDelta, isGhostAhead) {
     const el = document.getElementById('rh-ghost-delta') || this.container.querySelector('#rh-ghost-delta');
     const valEl = document.getElementById('rh-ghost-delta-val') || this.container.querySelector('#rh-ghost-delta-val');
     if (!el || !valEl) return;
+
 
     el.style.display = 'flex';
     const sign = timeDelta >= 0 ? '+' : '';
@@ -3403,5 +3650,30 @@ export class CinematicUI {
       if (badgeEl) badgeEl.className = 'currency-pill cloud offline';
       if (relayText) relayText.textContent = `EDGE RELAY: OFFLINE // LOCAL STORAGE`;
     }
+  }
+
+  updatePreRaceProgress(pct) {
+    this.safeSetWidth('pr-progress-fill', `${pct}%`);
+    this.safeSetText('pr-loading-pct', `${pct}%`);
+    if (pct >= 85) {
+      this.safeSetText('pr-loading-msg', 'SYNCHRONIZING ORBITAL GRID... READY TO LAUNCH');
+    }
+  }
+
+  updatePostSyncProgress(pct) {
+    this.safeSetWidth('post-sync-fill', `${pct}%`);
+    this.safeSetText('post-sync-pct', `${pct}%`);
+  }
+
+  claimPubgRewards() {
+    if (this.game.saveManager) {
+      this.game.saveManager.credits = (this.game.saveManager.credits || 0) + 5000;
+      this.game.saveManager.pilotLevel = (this.game.saveManager.pilotLevel || 48) + 1;
+      this.game.saveManager.save();
+    }
+    this.safeSetText('lobby-credits-val', (this.game.saveManager?.credits || 129500).toLocaleString());
+    this.safeSetText('lobby-level-val', `LVL ${(this.game.saveManager?.pilotLevel || 49)}`);
+    this.showScreen('LOBBY');
+    this.game.returnToLobby();
   }
 }

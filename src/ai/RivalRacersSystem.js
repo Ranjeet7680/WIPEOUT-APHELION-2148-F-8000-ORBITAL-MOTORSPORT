@@ -7,6 +7,8 @@ import { FuturisticVehicle } from '../craft/FuturisticVehicle.js';
 // Diverse Driving Styles: Aggressive, Technical, Speedster, Balanced, Defensive, Drift Specialist, Risk-Taker
 // ============================================================================
 
+const _rivalMat = new THREE.Matrix4();
+
 export const RIVAL_ROSTER = [
   {
     id: 'ryuki',
@@ -150,7 +152,8 @@ export class RivalRacersSystem {
         steerInput: 0.0,
         throttleInput: 1.0,
         brakeInput: 0.0,
-        driftActive: false
+        driftActive: false,
+        isFinished: false
       });
     });
   }
@@ -164,26 +167,44 @@ export class RivalRacersSystem {
 
       // 1. Throttle / Acceleration & Braking into curves
       if (raceActive) {
-        const curvature = frame.curvature || 0;
         let targetSpeed = r.baseSpeedKmh;
 
-        if (curvature > 0.0035) {
-          targetSpeed = r.baseSpeedKmh * (0.68 + (1.0 - r.spec.aggro) * 0.1);
-          r.brakeInput = 0.5;
-          r.driftActive = r.spec.style === 'DRIFT SPECIALIST' || Math.random() < 0.4;
-        } else {
+        if (r.isFinished) {
+          // Finished rivals cruise smoothly down track
+          targetSpeed = r.baseSpeedKmh * 0.65;
           r.brakeInput = 0.0;
           r.driftActive = false;
-        }
+          r.boostTimer = 0.0;
+        } else {
+          const curvature = frame.curvature || 0;
 
-        // Boost bursts on straights
-        if (curvature < 0.002 && Math.random() < 0.012 && r.boostTimer <= 0) {
-          r.boostTimer = 3.2;
-        }
+          if (curvature > 0.0035) {
+            targetSpeed = r.baseSpeedKmh * (0.68 + (1.0 - r.spec.aggro) * 0.1);
+            r.brakeInput = 0.5;
+            r.driftActive = r.spec.style === 'DRIFT SPECIALIST' || Math.random() < 0.4;
+          } else {
+            r.brakeInput = 0.0;
+            r.driftActive = false;
+          }
 
-        if (r.boostTimer > 0) {
-          r.boostTimer -= delta;
-          targetSpeed = r.baseSpeedKmh * 1.16;
+          // Boost bursts on straights
+          if (curvature < 0.002 && Math.random() < 0.012 && r.boostTimer <= 0) {
+            r.boostTimer = 3.2;
+          }
+
+          if (r.boostTimer > 0) {
+            r.boostTimer -= delta;
+            targetSpeed = r.baseSpeedKmh * 1.16;
+          }
+
+          if (playerTotalDist !== undefined) {
+            const distGap = playerTotalDist - r.totalDistance;
+            if (distGap > 800) {
+              targetSpeed *= (1.0 + Math.min(0.12, distGap / 20000));
+            } else if (distGap < -500) {
+              targetSpeed *= Math.max(0.88, 1.0 - (r.totalDistance - playerTotalDist) / 25000);
+            }
+          }
         }
 
         r.speedKmh = THREE.MathUtils.lerp(r.speedKmh, targetSpeed, delta * 3.5 * r.spec.accel);
@@ -204,6 +225,11 @@ export class RivalRacersSystem {
         r.currentLap++;
       }
 
+      if (r.currentLap > 3) {
+        r.currentLap = 3;
+        r.isFinished = true;
+      }
+
       // 3. Dynamic Racing Line, Apex Cut & Overtaking
       const turnDir = frame.tangent.clone().cross(lookFrame.tangent).dot(frame.normal);
       if (Math.abs(turnDir) > 0.05) {
@@ -220,8 +246,8 @@ export class RivalRacersSystem {
         .addScaledVector(frame.binormal, r.lane)
         .addScaledVector(frame.normal, 0.7);
 
-      const m = new THREE.Matrix4().makeBasis(frame.binormal, frame.normal, frame.tangent);
-      r.vehicle.group.quaternion.setFromRotationMatrix(m);
+      _rivalMat.makeBasis(frame.binormal, frame.normal, frame.tangent);
+      r.vehicle.group.quaternion.setFromRotationMatrix(_rivalMat);
 
       // 5. Update vehicle kinetics
       r.vehicle.updateKineticState(
@@ -233,6 +259,18 @@ export class RivalRacersSystem {
         r.boostTimer > 0,
         r.speedKmh
       );
+
+      // 6. Rivals avoid each other
+      this.rivals.forEach((otherRival, otherIdx) => {
+        if (idx !== otherIdx && !otherRival.isFinished) {
+          if (Math.abs(r.u - otherRival.u) < 0.01) {
+            const latDist = r.lane - otherRival.lane;
+            if (Math.abs(latDist) < 8.0) {
+              r.targetLane += latDist > 0 ? 2.0 : -2.0;
+            }
+          }
+        }
+      });
     });
   }
 
@@ -285,7 +323,8 @@ export class RivalRacersSystem {
       steerInput: 0.0,
       throttleInput: 1.0,
       brakeInput: 0.0,
-      driftActive: false
+      driftActive: false,
+      isFinished: false
     });
   }
 
@@ -316,7 +355,8 @@ export class RivalRacersSystem {
         steerInput: 0.0,
         throttleInput: 1.0,
         brakeInput: 0.0,
-        driftActive: false
+        driftActive: false,
+        isFinished: false
       });
     });
   }

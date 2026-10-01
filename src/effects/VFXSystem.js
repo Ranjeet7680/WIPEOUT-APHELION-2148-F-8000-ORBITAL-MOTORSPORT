@@ -311,8 +311,11 @@ export class VFXSystem {
     }
   }
 
-  spawnDriftSparks(contactPos, lateralDir, isPerfect = false) {
-    const count = isPerfect ? 8 : 4;
+  spawnDriftSparks(contactPos, lateralDir, isPerfect = false, driftIntensity = 0.5) {
+    // Scale particle count with drift intensity (0..1): 2 at low intensity, 12 at max
+    const baseCount = isPerfect ? 8 : 4;
+    const count = Math.max(2, Math.floor(baseCount * (0.5 + driftIntensity * 0.5)));
+
     for (let k = 0; k < count; k++) {
       const idx = this.findFreeDriftParticle();
       if (idx === -1) break;
@@ -321,10 +324,12 @@ export class VFXSystem {
       this.driftPos[idx * 3 + 1] = contactPos.y + 0.1;
       this.driftPos[idx * 3 + 2] = contactPos.z + (Math.random() - 0.5) * 0.5;
 
+      // Speed scales with drift intensity
+      const sparkSpeed = 6.0 + driftIntensity * 14.0;
       this.driftVel[idx].set(
-        lateralDir.x * (6.0 + Math.random() * 12.0) + (Math.random() - 0.5) * 3.0,
-        2.5 + Math.random() * 4.0,
-        lateralDir.z * (6.0 + Math.random() * 12.0) + (Math.random() - 0.5) * 3.0
+        lateralDir.x * (sparkSpeed + Math.random() * 8.0) + (Math.random() - 0.5) * 3.0,
+        2.5 + driftIntensity * 3.0 + Math.random() * 4.0,
+        lateralDir.z * (sparkSpeed + Math.random() * 8.0) + (Math.random() - 0.5) * 3.0
       );
 
       this.driftLife[idx] = 1.0;
@@ -335,13 +340,14 @@ export class VFXSystem {
         this.driftColors[idx * 3 + 1] = 1.0;
         this.driftColors[idx * 3 + 2] = 1.0;
       } else {
-        // Orange / Amber friction sparks
+        // Color heat: orange at low intensity, white-hot at max intensity
         this.driftColors[idx * 3] = 1.0;
-        this.driftColors[idx * 3 + 1] = 0.65 + Math.random() * 0.25;
-        this.driftColors[idx * 3 + 2] = 0.1;
+        this.driftColors[idx * 3 + 1] = Math.max(0.2, 0.65 + Math.random() * 0.25 - driftIntensity * 0.3);
+        this.driftColors[idx * 3 + 2] = Math.max(0.0, 0.1 - driftIntensity * 0.08);
       }
     }
   }
+
 
   spawnLandingShockwave(groundPos, trackNormal, isPerfect = false) {
     const sw = this.shockwaves.find(s => !s.active) || this.shockwaves[0];
