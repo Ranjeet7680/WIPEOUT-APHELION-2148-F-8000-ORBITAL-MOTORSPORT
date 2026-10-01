@@ -406,8 +406,9 @@ class GameManager {
           this.skipRaceIntro();
         } else if (this.state === 'CINEMATIC_INTRO') {
           if (this.cinematicIntro) this.cinematicIntro.skip();
-        } else if (this.ui && (this.ui.currentScreen === 'WORLD_MAP' || this.ui.currentScreen === 'EVENT_SELECT')) {
+        } else if (this.ui && ['WORLD_MAP', 'EVENT_SELECT', 'LEADERBOARD', 'SETTINGS', 'DRIVING_SCHOOL', 'CAR_SELECT', 'GARAGE'].includes(this.ui.currentScreen)) {
           this.ui.showScreen('LOBBY');
+          if (this.garageLobby) this.garageLobby.setCameraAnglePreset('FRONT');
         } else if (this.worldMap && this.worldMap.isOpen) {
           this.worldMap.close();
         }

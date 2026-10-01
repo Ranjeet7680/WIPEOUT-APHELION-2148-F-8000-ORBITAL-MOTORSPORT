@@ -4877,7 +4877,7 @@ button {
   left: 0;
   width: 100vw;
   height: 100vh;
-  display: flex !important;
+  display: none;
   align-items: center;
   justify-content: center;
   background: rgba(4, 6, 12, 0.88);

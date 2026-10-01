@@ -3652,13 +3652,19 @@ export class CinematicUI {
       tbody.innerHTML = `<tr><td colspan="7" class="lb-loading"><span class="pulse-marker"></span> QUERYING ORBITAL TELEMETRY RELAY...</td></tr>`;
     }
 
-    // Ping check
-    const status = await backendService.checkStatus();
-    this.updateCloudStatusBadge(status.online, status.ping);
+    try {
+      // Ping check
+      const status = await backendService.checkStatus();
+      this.updateCloudStatusBadge(status.online, status.ping);
 
-    const data = await backendService.getLeaderboard(50);
-    this.cachedLeaderboard = data;
-    this.renderLeaderboardRows('all');
+      const data = await backendService.getLeaderboard(50);
+      this.cachedLeaderboard = data;
+      this.renderLeaderboardRows('all');
+    } catch (err) {
+      console.warn('[Leaderboard] Network error, utilizing local telemetry cache:', err);
+      this.cachedLeaderboard = backendService.getLocalFallbackLeaderboard();
+      this.renderLeaderboardRows('all');
+    }
   }
 
   renderLeaderboardRows(filter = 'all') {
