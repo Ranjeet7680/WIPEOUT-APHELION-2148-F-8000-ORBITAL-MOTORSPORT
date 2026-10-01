@@ -1,12 +1,48 @@
 {
-  "name": "wipeout-aphelion",
-  "private": true,
+  "name": "@ranjeet7680/wipeout-aphelion",
   "version": "1.0.0",
   "type": "module",
+  "description": "NEO RACING // WORLD TOUR — AAA Futuristic Cyberpunk Arcade Racing Game & Simulation Engine by Ranjeet Kumar",
+  "main": "dist/assets/index-DiUrtcsq.js",
+  "module": "dist/assets/index-DiUrtcsq.js",
+  "files": [
+    "dist",
+    "api",
+    "src",
+    "public",
+    "docs",
+    "index.html",
+    "start.bat"
+  ],
   "scripts": {
     "dev": "vite --host --port 5173",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "node test/e2e-simulation-test.js"
+  },
+  "keywords": [
+    "racing-game",
+    "arcade-racing",
+    "cyberpunk",
+    "threejs",
+    "webgl",
+    "webgpu",
+    "neo-shinjuku",
+    "wipeout",
+    "orbital-motorsport"
+  ],
+  "author": "Ranjeet Kumar",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Ranjeet7680/WIPEOUT-APHELION-2148-F-8000-ORBITAL-MOTORSPORT.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Ranjeet7680/WIPEOUT-APHELION-2148-F-8000-ORBITAL-MOTORSPORT/issues"
+  },
+  "homepage": "https://github.com/Ranjeet7680/WIPEOUT-APHELION-2148-F-8000-ORBITAL-MOTORSPORT#readme",
+  "publishConfig": {
+    "access": "public"
   },
   "dependencies": {
     "onnxruntime-web": "^1.30.0",
@@ -14,10 +50,5 @@
   },
   "devDependencies": {
     "vite": "^5.0.12"
-  },
-  "description": "",
-  "main": "index.js",
-  "keywords": [],
-  "author": "",
-  "license": "ISC"
+  }
 }

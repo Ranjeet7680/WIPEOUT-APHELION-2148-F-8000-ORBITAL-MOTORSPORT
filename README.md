@@ -137,4 +137,40 @@ The game features an integrated serverless backend running on **Vercel Serverles
 - **Host**: Vercel
 
 ---
-**Developed by Ranjeet Kumar**
+
+## ⚡ Quick Launch for Windows (`start.bat`)
+For instant 1-click execution on Windows:
+```cmd
+start.bat
+```
+This batch script automatically:
+1. Validates Node.js environment.
+2. Installs required dependencies if missing.
+3. Executes the 47-test physics & circuit verification suite.
+4. Boots the local high-performance Vite web server.
+5. Launches your default web browser directly to `http://localhost:5173`.
+
+---
+
+## 🤖 GitHub Actions CI/CD Workflows
+The repository is equipped with official GitHub Actions workflows:
+- **`Publish Node.js Package`** (`.github/workflows/npm-publish.yml`): Publishes `@ranjeet7680/wipeout-aphelion` directly to npm upon release.
+- **`Deno`** (`.github/workflows/deno.yml`): Tests and lints the project in a clean Deno runtime.
+- **`Publish Node.js Package to GitHub Packages`** (`.github/workflows/npm-publish-github-packages.yml`): Publishes package artifacts to GitHub Packages registry.
+- **`CI / Build & Simulation Test`** (`.github/workflows/ci.yml`): Verifies all 47 simulation test cases and builds production bundles on every commit and pull request.
+
+---
+
+## 📖 Official GitHub Wiki
+Comprehensive technical documentation, lore, and guides are published on the [Official GitHub Wiki](https://github.com/Ranjeet7680/WIPEOUT-APHELION-2148-F-8000-ORBITAL-MOTORSPORT/wiki):
+- **[Home & Overview](https://github.com/Ranjeet7680/WIPEOUT-APHELION-2148-F-8000-ORBITAL-MOTORSPORT/wiki)**
+- **[World Tour Map & 8 Regions](https://github.com/Ranjeet7680/WIPEOUT-APHELION-2148-F-8000-ORBITAL-MOTORSPORT/wiki/World-Tour-Map-&-Regions)**
+- **[Vehicle Fleet & 7-Tab Hangar Customization](https://github.com/Ranjeet7680/WIPEOUT-APHELION-2148-F-8000-ORBITAL-MOTORSPORT/wiki/Vehicle-Catalog-&-Customization)**
+- **[120Hz Physics & Dynamic Flight Mechanics](https://github.com/Ranjeet7680/WIPEOUT-APHELION-2148-F-8000-ORBITAL-MOTORSPORT/wiki/Physics-&-Driving-Mechanics)**
+- **[AI Rivals & Competitive 8-Racer Grid](https://github.com/Ranjeet7680/WIPEOUT-APHELION-2148-F-8000-ORBITAL-MOTORSPORT/wiki/AI-Rivals-&-Multiplayer-Grid)**
+- **[Vercel Serverless Architecture & Performance Guide](https://github.com/Ranjeet7680/WIPEOUT-APHELION-2148-F-8000-ORBITAL-MOTORSPORT/wiki/Architecture-&-Vercel-Deployment)**
+
+---
+
+**Developed by Ranjeet Kumar**  
+*NEO RACING // WORLD TOUR © 2089 Aether-9 Orbital Motorsport*
