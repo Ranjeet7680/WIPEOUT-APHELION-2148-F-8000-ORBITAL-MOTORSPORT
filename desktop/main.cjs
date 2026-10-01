@@ -37,6 +37,8 @@ function startLocalServer(distDir, callback) {
     '.svg': 'image/svg+xml',
     '.wasm': 'application/wasm',
     '.onnx': 'application/octet-stream',
+    '.mp3': 'audio/mpeg',
+    '.wav': 'audio/wav',
     '.ico': 'image/x-icon'
   };
 

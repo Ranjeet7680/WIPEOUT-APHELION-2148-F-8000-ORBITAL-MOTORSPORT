@@ -39,6 +39,14 @@ export class CyberpunkAudioEngine {
     this.bassFreqs = [55, 55, 65, 55, 73, 55, 82, 65]; // A minor driving bass
     this.finalLapBass = [65, 65, 82, 65, 98, 82, 110, 82]; // High octave tension
     this.lobbyChords = [110, 130.81, 164.81, 196.00]; // Ambient synth pad
+
+    // Main Lobby Exclusive Soundtracks (User theme songs)
+    this.lobbyAudio = null;
+    this.currentLobbyTheme = 'CHASE_THE_HORIZON'; // 'CHASE_THE_HORIZON', 'BORN_TO_RACE', 'PROCEDURAL_SYNTH'
+    this.lobbyTracks = {
+      'CHASE_THE_HORIZON': '/audio/chase_the_horizon.mp3',
+      'BORN_TO_RACE': '/audio/born_to_race.mp3'
+    };
   }
 
   init() {
@@ -140,12 +148,70 @@ export class CyberpunkAudioEngine {
     if (this.ctx && this.ctx.state === 'suspended') {
       this.ctx.resume();
     }
+    if (this.musicState === 'LOBBY') {
+      this.playLobbyTheme();
+    }
+  }
+
+  setLobbyTheme(theme) {
+    this.currentLobbyTheme = theme;
+    if (this.musicState === 'LOBBY') {
+      this.playLobbyTheme();
+    } else {
+      this.stopLobbyTheme();
+    }
+  }
+
+  playLobbyTheme() {
+    if (this.isMuted) return;
+
+    const trackSrc = this.lobbyTracks[this.currentLobbyTheme];
+    if (trackSrc && typeof Audio !== 'undefined') {
+      try {
+        if (!this.lobbyAudio) {
+          this.lobbyAudio = new Audio();
+          this.lobbyAudio.loop = true;
+          this.lobbyAudio.preload = 'auto';
+        }
+
+        const currentSrc = this.lobbyAudio.getAttribute('src');
+        if (currentSrc !== trackSrc) {
+          this.lobbyAudio.src = trackSrc;
+        }
+
+        this.lobbyAudio.volume = Math.max(0.0, Math.min(1.0, this.musicVolume));
+        const p = this.lobbyAudio.play();
+        if (p !== undefined) {
+          p.catch(() => {
+            // Autoplay deferred until user interaction
+          });
+        }
+      } catch (err) {
+        console.warn('[AudioEngine] Lobby theme playback error:', err);
+      }
+    } else {
+      this.stopLobbyTheme();
+    }
+  }
+
+  stopLobbyTheme() {
+    if (this.lobbyAudio) {
+      try {
+        this.lobbyAudio.pause();
+      } catch {}
+    }
   }
 
   toggleMute() {
     this.isMuted = !this.isMuted;
     if (this.masterGain && this.ctx) {
       this.masterGain.gain.setValueAtTime(this.isMuted ? 0.0 : 0.5, this.ctx.currentTime);
+    }
+    if (this.lobbyAudio) {
+      this.lobbyAudio.muted = this.isMuted;
+      if (!this.isMuted && this.musicState === 'LOBBY') {
+        this.playLobbyTheme();
+      }
     }
     return !this.isMuted;
   }
@@ -169,6 +235,9 @@ export class CyberpunkAudioEngine {
     if (this.musicGain && this.ctx) {
       this.musicGain.gain.setValueAtTime(this.musicVolume, this.ctx.currentTime);
     }
+    if (this.lobbyAudio) {
+      this.lobbyAudio.volume = this.musicVolume;
+    }
   }
 
   setMusicState(state) {
@@ -177,6 +246,13 @@ export class CyberpunkAudioEngine {
       this.bpm = 160;
     } else {
       this.bpm = 150;
+    }
+
+    if (state === 'LOBBY') {
+      this.playLobbyTheme();
+    } else {
+      // Main lobby theme only: immediately stop when leaving lobby
+      this.stopLobbyTheme();
     }
   }
 
@@ -230,6 +306,9 @@ export class CyberpunkAudioEngine {
     if (!this.ctx || this.isMuted) return;
 
     if (this.musicState === 'LOBBY') {
+      // Only play procedural synth arpeggio if user explicitly selected PROCEDURAL_SYNTH
+      if (this.currentLobbyTheme !== 'PROCEDURAL_SYNTH') return;
+
       // Ambient atmospheric arpeggio
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();

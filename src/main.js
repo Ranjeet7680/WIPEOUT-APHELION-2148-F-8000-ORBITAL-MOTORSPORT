@@ -265,6 +265,17 @@ class GameManager {
     return nextState;
   }
 
+  setLobbyTheme(theme) {
+    this.lobbyTheme = theme;
+    saveManager.updateSettings({ lobbyTheme: theme });
+    if (this.sound && this.sound.setLobbyTheme) {
+      this.sound.setLobbyTheme(theme);
+    }
+    if (this.ui && this.ui.syncSettingsDisplay) {
+      this.ui.syncSettingsDisplay();
+    }
+  }
+
   setControlScheme(scheme) {
     this.controlScheme = scheme;
     saveManager.updateSettings({ controlScheme: scheme });
@@ -330,6 +341,8 @@ class GameManager {
     if (this.sound) {
       if (savedSettings.sfxVolume !== undefined) this.sound.setSfxVolume(savedSettings.sfxVolume);
       if (savedSettings.musicVolume !== undefined) this.sound.setMusicVolume(savedSettings.musicVolume);
+      this.lobbyTheme = savedSettings.lobbyTheme || 'CHASE_THE_HORIZON';
+      if (this.sound.setLobbyTheme) this.sound.setLobbyTheme(this.lobbyTheme);
     }
 
     // 9. Holographic Ghost Vehicle (Time-Attack Replay)

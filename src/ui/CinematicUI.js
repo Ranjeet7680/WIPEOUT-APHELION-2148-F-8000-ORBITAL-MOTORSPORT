@@ -1342,6 +1342,17 @@ export class CinematicUI {
               </div>
               <input type="range" min="0" max="100" value="85" class="setting-slider" id="slider-music">
             </div>
+            <div class="setting-item">
+              <div class="si-info">
+                <strong>MAIN LOBBY THEME SONG</strong>
+                <small>Select exclusive soundtrack for the Main HQ Lobby</small>
+              </div>
+              <div class="quality-selector-group" id="settings-lobby-theme-group">
+                <button class="btn-theme-chip active" data-theme="CHASE_THE_HORIZON">CHASE THE HORIZON</button>
+                <button class="btn-theme-chip" data-theme="BORN_TO_RACE">BORN TO RACE</button>
+                <button class="btn-theme-chip" data-theme="PROCEDURAL_SYNTH">CYBER SYNTH</button>
+              </div>
+            </div>
             <div class="setting-item danger">
               <div class="si-info">
                 <strong>RESET PROGRESS</strong>
@@ -2249,6 +2260,19 @@ export class CinematicUI {
       });
     }
 
+    // Main Lobby Theme Song selector chips
+    this.container.querySelectorAll('.btn-theme-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        this.container.querySelectorAll('.btn-theme-chip').forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+        const theme = chip.dataset.theme;
+        if (this.game.setLobbyTheme) {
+          this.game.setLobbyTheme(theme);
+        }
+        if (this.game.sound) this.game.sound.playMenuClick();
+      });
+    });
+
     safeBind('btn-reset-save', 'click', () => {
       if (confirm('RESET ALL DRIVER SAVED DATA & PROGRESS?')) {
         saveManager.resetData();
@@ -2975,6 +2999,12 @@ export class CinematicUI {
     if (musSlider && settings.musicVolume !== undefined) {
       musSlider.value = Math.round(settings.musicVolume * 100);
     }
+
+    // 9. Main Lobby Theme Song Chips
+    const activeTheme = this.game.lobbyTheme || settings.lobbyTheme || 'CHASE_THE_HORIZON';
+    this.container.querySelectorAll('.btn-theme-chip').forEach(c => {
+      c.classList.toggle('active', c.dataset.theme === activeTheme);
+    });
   }
 
   updateFpsCounter(fps, ms, quality, isVisible) {

@@ -36,7 +36,8 @@ const DEFAULT_SAVE_DATA = {
     sfxVolume: 1.0,
     musicVolume: 0.85,
     ghostEnabled: true,
-    graphicsQuality: 'HIGH'
+    graphicsQuality: 'HIGH',
+    lobbyTheme: 'CHASE_THE_HORIZON'
   },
   player: {
     name: 'RANJEET',

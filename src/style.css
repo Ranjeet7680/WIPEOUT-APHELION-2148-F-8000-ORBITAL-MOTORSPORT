@@ -4719,7 +4719,7 @@ button {
   flex-wrap: wrap;
 }
 
-.btn-quality-chip, .btn-cam-chip, .btn-control-chip {
+.btn-quality-chip, .btn-cam-chip, .btn-control-chip, .btn-theme-chip {
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.2);
   color: #BAC7D5;
@@ -4731,12 +4731,12 @@ button {
   transition: all 0.15s ease;
 }
 
-.btn-quality-chip:hover, .btn-cam-chip:hover, .btn-control-chip:hover {
+.btn-quality-chip:hover, .btn-cam-chip:hover, .btn-control-chip:hover, .btn-theme-chip:hover {
   border-color: var(--color-cyan);
   color: var(--color-cyan);
 }
 
-.btn-quality-chip.active, .btn-cam-chip.active, .btn-control-chip.active {
+.btn-quality-chip.active, .btn-cam-chip.active, .btn-control-chip.active, .btn-theme-chip.active {
   background: var(--color-cyan);
   color: #06080F;
   border-color: var(--color-cyan);
