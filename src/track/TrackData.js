@@ -120,3 +120,95 @@ export const TRACK_CIRCUITS = {
     apexPoints: [0.19, 0.45, 0.72, 0.89]
   }
 };
+
+// ============================================================================
+// MASTER SECTOR MATRIX (AntiGravity World-Building Document, Page 25)
+// Sector 02: Coastline | 5.4 KM | 3 Laps | Coast + Ocean | Ocean Run / Boost Corridor
+// Sector 03: Fuji Skyway | 5.2 KM | 3 Laps | Mountain + Snow | Hairpin / Sky Bridge
+// Sector 05: Night District | 5.0 KM | 3 Laps | Megacity + Industrial | Vertical Zone / Elimination
+// ============================================================================
+
+export const SECTOR_DEFINITIONS = {
+  coastline: {
+    id: 'coastline',
+    sectorNum: 'SECTOR 02',
+    name: 'COASTLINE HYPERWAY',
+    title: 'SECTOR 02 // HYPERWAY — COASTLINE',
+    subtitle: 'PACIFIC OVERPASS // S-CLASS HYPERWAY',
+    lengthKm: 5.4,
+    laps: 3,
+    checkpoints: 8,
+    primarySkill: 'High-speed control',
+    signature: 'Ocean Run / Boost Corridor',
+    environment: 'Coast + Ocean',
+    atmosphere: 'OCEANIC HORIZON // SEA SPRAY',
+    difficulty: 'CLASS-S',
+    colorTheme: {
+      primary: '#00F0FF',
+      secondary: '#0088FF',
+      ambient: '#041021',
+      accent: '#FF007F'
+    },
+    circuitClass: 'CoastlineCircuit',
+    worldClass: 'CoastlineWorld'
+  },
+
+  fuji: {
+    id: 'fuji',
+    sectorNum: 'SECTOR 03',
+    name: 'ORIFT / FUJI SKYWAY',
+    title: 'SECTOR 03 // MOUNTAIN — ORIFT / FUJI SKYWAY',
+    subtitle: 'ALPINE VOLCANIC RIDGE // TECHNICAL PASS',
+    lengthKm: 5.2,
+    laps: 3,
+    checkpoints: 8,
+    primarySkill: 'Precision + elevation',
+    signature: 'Hairpin / Sky Bridge',
+    environment: 'Mountain + Snow',
+    atmosphere: 'HIGH-ALTITUDE MIST // VOLCANIC ICE',
+    difficulty: 'CLASS-S+',
+    colorTheme: {
+      primary: '#8AE2FF',
+      secondary: '#FF3B30',
+      ambient: '#080E17',
+      accent: '#FFB800'
+    },
+    circuitClass: 'FujiSkywayCircuit',
+    worldClass: 'FujiSkywayWorld'
+  },
+
+  district: {
+    id: 'district',
+    sectorNum: 'SECTOR 05',
+    name: 'NIGHT DISTRICT // ELIMINATION',
+    title: 'SECTOR 05 // ELIMINATION — NIGHT DISTRICT',
+    subtitle: 'MEGACITY VERTICAL CORE // ESCALATING HAZARDS',
+    lengthKm: 5.0,
+    laps: 3,
+    checkpoints: 8,
+    primarySkill: 'Survival + elimination',
+    signature: 'Vertical Zone / Elimination',
+    environment: 'Megacity + Industrial',
+    atmosphere: 'SUB-ORBITAL DENSE // ACID RAIN',
+    difficulty: 'CLASS-EX',
+    colorTheme: {
+      primary: '#FF007F',
+      secondary: '#7928CA',
+      ambient: '#060810',
+      accent: '#00F0FF'
+    },
+    circuitClass: 'CityCircuit',
+    worldClass: 'NeoShinjukuWorld'
+  }
+};
+
+// Aliases
+SECTOR_DEFINITIONS.shinjuku = SECTOR_DEFINITIONS.district;
+SECTOR_DEFINITIONS.sector02 = SECTOR_DEFINITIONS.coastline;
+SECTOR_DEFINITIONS.sector03 = SECTOR_DEFINITIONS.fuji;
+SECTOR_DEFINITIONS.sector05 = SECTOR_DEFINITIONS.district;
+
+export function getSectorDefinition(id) {
+  const norm = (id || 'district').toLowerCase();
+  return SECTOR_DEFINITIONS[norm] || SECTOR_DEFINITIONS.district;
+}

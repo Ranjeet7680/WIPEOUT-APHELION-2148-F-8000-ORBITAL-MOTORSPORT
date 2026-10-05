@@ -16,11 +16,42 @@ export const DISTRICTS = [
   { id: 'quantum', name: 'QUANTUM OUTSKIRTS', subtitle: 'DISTRICT 08 // HYPERSONIC HOME STRETCH', range: [0.90, 1.0], color: '#EAEFF5', theme: 'white' }
 ];
 
+export function isInsideTunnel(u) {
+  const normU = ((u % 1.0) + 1.0) % 1.0;
+  const tunnelRanges = [
+    [0.075, 0.135],
+    [0.315, 0.385],
+    [0.455, 0.520],
+    [0.560, 0.660],
+    [0.815, 0.885]
+  ];
+  return tunnelRanges.some(([start, end]) => normU >= start && normU <= end);
+}
+
+const _scratchDeltaVec = new THREE.Vector3();
+const _closestResult = {
+  frame: null,
+  u: 0,
+  lateralOffset: 0,
+  trackWidth: 26.0,
+  distance: 0
+};
+const _interpFrame = {
+  u: 0,
+  pos: new THREE.Vector3(),
+  tangent: new THREE.Vector3(),
+  normal: new THREE.Vector3(),
+  binormal: new THREE.Vector3(),
+  curvature: 0,
+  bank: 0,
+  district: null
+};
+
 export class CityCircuit {
   constructor(scene) {
     this.scene = scene;
     this.segments = 600;
-    this.roadWidth = 26.0;
+    this.roadWidth = 28.0;
     this.barrierHeight = 1.8;
 
     this.samples = []; // Array of { u, pos, tangent, normal, binormal, curvature, bank, district }
@@ -32,30 +63,51 @@ export class CityCircuit {
       { u: 0.50, name: 'CP 04 // OLD ALLEY' },
       { u: 0.65, name: 'CP 05 // UNDERCITY EXIT' },
       { u: 0.78, name: 'CP 06 // LAUNCH PYLON' },
-      { u: 0.88, name: 'CP 07 // SPIRE PLUNGE' },
+      { u: 0.88, name: 'CP 07 // MEGA TOWER SWEEP' },
       { u: 0.98, name: 'CP 08 // GANTRY APPROACH' }
     ];
 
     this.trackMesh = null;
+    this.substructureMesh = null;
     this.barrierMesh = null;
-    this.glowRailsMesh = null;
+    this.leftRailMesh = null;
+    this.rightRailMesh = null;
+    this.racingLineMesh = null;
+    this.curveIndicatorsGroup = new THREE.Group();
     this.boostPadsGroup = new THREE.Group();
     this.checkpointGatesGroup = new THREE.Group();
     this.stuntRampsGroup = new THREE.Group();
     this.startFinishGantry = null;
+    this.zebraCrossingsGroup = new THREE.Group();
+    this.trafficLightsGroup = new THREE.Group();
+    this.streetlightsGroup = new THREE.Group();
+
+    this.scene.add(this.curveIndicatorsGroup);
+    this.scene.add(this.boostPadsGroup);
+    this.scene.add(this.checkpointGatesGroup);
+    this.scene.add(this.stuntRampsGroup);
+    this.scene.add(this.zebraCrossingsGroup);
+    this.scene.add(this.trafficLightsGroup);
+    this.scene.add(this.streetlightsGroup);
 
     this.buildCircuitSpline();
     this.generateRoadGeometry();
     this.generateBarriersAndNeonRails();
+    this.generateDynamicRacingLine();
+    this.generateCurveIndicators();
     this.generateBoostPads();
     this.generateCheckpointGates();
     this.generateStuntRamps();
     this.generateStartFinishArch();
+    this.generateZebraCrossings();
+    this.generateTrafficLightGantries();
+    this.generateStreetlights();
   }
 
   buildCircuitSpline() {
-    // 24 carefully engineered 3D waypoints through Neo-Shinjuku
-    // Creates high-speed straightaways, 90° chicanes, bridge climbs, a massive 70° vertical dive, and an undercity tunnel
+    // 26 carefully engineered 3D waypoints through Neo-Shinjuku
+    // Seamless continuous loop: high-speed straightaways, elevated bridge climb, undercity tunnel,
+    // and sweeping Southern Carousel return with zero self-intersections or kinks.
     const points = [
       new THREE.Vector3(0, 150, 0),         // 00: START/FINISH: Central Shinjuku Boulevard
       new THREE.Vector3(120, 148, 240),     // 01: Neon Core: Grand Holo-Spire Straight
@@ -77,15 +129,19 @@ export class CityCircuit {
       new THREE.Vector3(-590, 10, 320),     // 17: Undercity Ramp Exit into Aether Port
       new THREE.Vector3(-450, 110, 480),    // 18: Aether Port: Spaceport launch pad flyover
       new THREE.Vector3(-280, 180, 520),    // 19: Aether Port: Orbital tether gantry
-      new THREE.Vector3(-100, 260, 420),    // 20: Mega Tower Zone: Super-Spire Helix
-      new THREE.Vector3(60, 290, 240),      // 21: Mega Tower: Apex before the dive
-      new THREE.Vector3(40, 210, 100),      // 22: Mega Tower: 70° vertical plunge
-      new THREE.Vector3(10, 160, 30)        // 23: Quantum Outskirts: High-speed recovery to gantry
+      new THREE.Vector3(-180, 185, 300),    // 20: Mega Tower Zone: Super-Spire Helix
+      new THREE.Vector3(-220, 180, 100),    // 21: Mega Tower: High-speed sweep
+      new THREE.Vector3(-200, 170, -60),    // 22: Quantum Outskirts: Descending approach
+      new THREE.Vector3(-150, 160, -180),   // 23: Southern Carousel: Sweeping apex turn
+      new THREE.Vector3(-70, 154, -200),    // 24: Southern Carousel Exit
+      new THREE.Vector3(-10, 151, -100)     // 25: Boulevard Entry: Straight alignment into start line
     ];
 
     this.curve = new THREE.CatmullRomCurve3(points, true, 'centripetal', 0.5);
 
     this.samples = [];
+    const worldUp = new THREE.Vector3(0, 1, 0);
+
     for (let i = 0; i <= this.segments; i++) {
       const u = i / this.segments;
       const pos = this.curve.getPointAt(u);
@@ -99,22 +155,20 @@ export class CityCircuit {
       const dTan = nextTan.clone().sub(prevTan).multiplyScalar(100);
       const curvature = dTan.length();
 
-      // Calculate dynamic banking angle (inward tilt on sharp turns)
+      // Calculate dynamic banking angle (gentle, stable inward tilt on turns, clamped for high-speed stability)
       const crossHoriz = new THREE.Vector3(-tangent.z, 0, tangent.x).normalize();
       const lateralTurn = dTan.dot(crossHoriz);
-      const targetBank = THREE.MathUtils.clamp(-lateralTurn * 0.035, -Math.PI * 0.35, Math.PI * 0.35);
+      const targetBank = THREE.MathUtils.clamp(-lateralTurn * 0.012, -0.12, 0.12);
 
-      // Compute Frenet frame (Tangent, Normal, Binormal)
-      let normal = new THREE.Vector3(0, 1, 0);
-      let binormal = new THREE.Vector3().crossVectors(tangent, normal);
-      if (binormal.lengthSq() < 0.001) {
-        normal = new THREE.Vector3(1, 0, 0);
-        binormal = new THREE.Vector3().crossVectors(tangent, normal);
+      // Compute stable Frenet frame (Tangent, Normal, Binormal) referenced to world Up
+      let binormal = new THREE.Vector3().crossVectors(tangent, worldUp);
+      if (binormal.lengthSq() < 0.0001) {
+        binormal = new THREE.Vector3().crossVectors(tangent, new THREE.Vector3(0, 0, 1));
       }
       binormal.normalize();
-      normal.crossVectors(binormal, tangent).normalize();
+      let normal = new THREE.Vector3().crossVectors(binormal, tangent).normalize();
 
-      // Apply banking
+      // Apply banking around tangent
       const bankQuat = new THREE.Quaternion().setFromAxisAngle(tangent, targetBank);
       normal.applyQuaternion(bankQuat);
       binormal.applyQuaternion(bankQuat);
@@ -165,7 +219,7 @@ export class CityCircuit {
         p5.x, p5.y, p5.z
       );
 
-      const v = (i / this.segments) * 120;
+      const v = (i / this.segments) * 90;
       uvs.push(
         0.0, v,
         0.2, v,
@@ -201,59 +255,74 @@ export class CityCircuit {
 
     let roadMat;
     if (typeof document !== 'undefined') {
-      // Procedural Wet Asphalt Texture with glowing neon cyan induction centerlines & road markings
+      // High-definition Procedural Wet Asphalt Texture with luminous induction rails, lane markers & apex curbs
       const canvas = document.createElement('canvas');
       canvas.width = 1024;
       canvas.height = 1024;
       const ctx = canvas.getContext('2d');
 
-      // Dark wet asphalt base
-      ctx.fillStyle = '#080a0f';
+      // Illuminated dark slate asphalt base (crisp road readability, never pitch black)
+      ctx.fillStyle = '#18202e';
       ctx.fillRect(0, 0, 1024, 1024);
 
-      // Asphalt aggregate grain & micro-noise
-      for (let p = 0; p < 8000; p++) {
+      // Micro-texture asphalt grain
+      for (let p = 0; p < 6000; p++) {
         const px = Math.random() * 1024;
         const py = Math.random() * 1024;
-        const gray = Math.floor(18 + Math.random() * 22);
-        ctx.fillStyle = `rgb(${gray}, ${gray + 4}, ${gray + 10})`;
+        const gray = Math.floor(34 + Math.random() * 32);
+        ctx.fillStyle = `rgb(${gray}, ${gray + 8}, ${gray + 20})`;
         ctx.fillRect(px, py, 2, 2);
       }
 
-      // Outer neon guidance borders (Left Cyan, Right Amber/Red)
-      ctx.fillStyle = '#00F0FF';
-      ctx.fillRect(20, 0, 14, 1024);
-      ctx.fillStyle = '#FF2A13';
-      ctx.fillRect(990, 0, 14, 1024);
+      // Outer Apex Curb Rumble Strips (Left Cyan/Black, Right Red/White)
+      const curbPatternHeight = 64;
+      for (let cy = 0; cy < 1024; cy += curbPatternHeight) {
+        const isAlt = (Math.floor(cy / curbPatternHeight) % 2) === 0;
+        // Left curb
+        ctx.fillStyle = isAlt ? '#00F0FF' : '#0B1522';
+        ctx.fillRect(0, cy, 32, curbPatternHeight);
+        // Right curb
+        ctx.fillStyle = isAlt ? '#FF2244' : '#FFFFFF';
+        ctx.fillRect(992, cy, 32, curbPatternHeight);
+      }
 
-      // Dashed lane divider lines
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
-      ctx.lineWidth = 6;
-      ctx.setLineDash([40, 40]);
+      // Solid fluorescent border lines
+      ctx.fillStyle = '#00F0FF';
+      ctx.fillRect(36, 0, 12, 1024);
+      ctx.fillStyle = '#FFB800';
+      ctx.fillRect(976, 0, 12, 1024);
+
+      // Crisp White Dashed Lane Dividers (4 distinct driving lanes across 28m width)
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+      ctx.lineWidth = 8;
+      ctx.setLineDash([48, 40]);
       ctx.beginPath();
-      ctx.moveTo(310, 0); ctx.lineTo(310, 1024);
-      ctx.moveTo(714, 0); ctx.lineTo(714, 1024);
+      ctx.moveTo(270, 0); ctx.lineTo(270, 1024);
+      ctx.moveTo(754, 0); ctx.lineTo(754, 1024);
       ctx.stroke();
 
-      // High-tech magnetic induction double-centerline (electric cyan with glow)
+      // High-tech magnetic induction double-centerline (Glowing cyan with neon bloom)
       ctx.setLineDash([]);
       ctx.strokeStyle = '#00F0FF';
-      ctx.lineWidth = 10;
+      ctx.lineWidth = 14;
+      ctx.shadowColor = '#00F0FF';
+      ctx.shadowBlur = 12;
       ctx.beginPath();
-      ctx.moveTo(500, 0); ctx.lineTo(500, 1024);
-      ctx.moveTo(524, 0); ctx.lineTo(524, 1024);
+      ctx.moveTo(496, 0); ctx.lineTo(496, 1024);
+      ctx.moveTo(528, 0); ctx.lineTo(528, 1024);
       ctx.stroke();
+      ctx.shadowBlur = 0;
 
-      // Directional chevron speed markings
-      ctx.fillStyle = 'rgba(0, 240, 255, 0.25)';
-      for (let cy = 120; cy < 1024; cy += 256) {
+      // High-visibility directional racing chevrons
+      ctx.fillStyle = 'rgba(0, 240, 255, 0.75)';
+      for (let cy = 160; cy < 1024; cy += 320) {
         ctx.beginPath();
-        ctx.moveTo(512, cy - 30);
-        ctx.lineTo(460, cy + 30);
-        ctx.lineTo(480, cy + 30);
-        ctx.lineTo(512, cy);
-        ctx.lineTo(544, cy + 30);
-        ctx.lineTo(564, cy + 30);
+        ctx.moveTo(512, cy - 42);
+        ctx.lineTo(440, cy + 32);
+        ctx.lineTo(468, cy + 32);
+        ctx.lineTo(512, cy - 10);
+        ctx.lineTo(556, cy + 32);
+        ctx.lineTo(584, cy + 32);
         ctx.closePath();
         ctx.fill();
       }
@@ -261,20 +330,22 @@ export class CityCircuit {
       const roadTexture = new THREE.CanvasTexture(canvas);
       roadTexture.wrapS = THREE.RepeatWrapping;
       roadTexture.wrapT = THREE.RepeatWrapping;
-      roadTexture.repeat.set(1, 60);
+      roadTexture.repeat.set(1, 1);
 
       roadMat = new THREE.MeshStandardMaterial({
         map: roadTexture,
         roughness: 0.22,
-        metalness: 0.65,
-        emissive: new THREE.Color(0x020810),
-        emissiveIntensity: 0.5
+        metalness: 0.45,
+        emissive: new THREE.Color(0x0c1e36),
+        emissiveIntensity: 0.95
       });
     } else {
       roadMat = new THREE.MeshStandardMaterial({
-        color: 0x080a0f,
+        color: 0x18202e,
         roughness: 0.22,
-        metalness: 0.65
+        metalness: 0.45,
+        emissive: new THREE.Color(0x0c1e36),
+        emissiveIntensity: 0.95
       });
     }
 
@@ -382,11 +453,11 @@ export class CityCircuit {
     barrierGeo.computeVertexNormals();
 
     const barrierMat = new THREE.MeshStandardMaterial({
-      color: 0x182030,
+      color: 0x182436,
       metalness: 0.85,
       roughness: 0.28,
-      emissive: new THREE.Color(0x060c18),
-      emissiveIntensity: 0.35,
+      emissive: new THREE.Color(0x0a1628),
+      emissiveIntensity: 0.5,
       side: THREE.DoubleSide
     });
 
@@ -395,18 +466,13 @@ export class CityCircuit {
     this.barrierMesh.receiveShadow = true;
     this.scene.add(this.barrierMesh);
 
-    // Glowing Neon Rails atop barriers
-    const railMat = new THREE.MeshBasicMaterial({
-      color: 0x00F0FF,
-      wireframe: false
-    });
-    // Create tube or ribbon for neon glow rail
+    // Glowing Neon Rails atop barriers (Enlarged diameter for distant road readability)
     const leftRailCurve = [];
     const rightRailCurve = [];
     for (let i = 0; i <= this.segments; i += 4) {
       const frame = this.samples[i];
-      const lb = frame.pos.clone().addScaledVector(frame.binormal, -halfW).addScaledVector(frame.normal, this.barrierHeight + 0.1);
-      const rb = frame.pos.clone().addScaledVector(frame.binormal, halfW).addScaledVector(frame.normal, this.barrierHeight + 0.1);
+      const lb = frame.pos.clone().addScaledVector(frame.binormal, -halfW).addScaledVector(frame.normal, this.barrierHeight + 0.12);
+      const rb = frame.pos.clone().addScaledVector(frame.binormal, halfW).addScaledVector(frame.normal, this.barrierHeight + 0.12);
       leftRailCurve.push(lb);
       rightRailCurve.push(rb);
     }
@@ -414,14 +480,151 @@ export class CityCircuit {
     const leftSpline = new THREE.CatmullRomCurve3(leftRailCurve, true);
     const rightSpline = new THREE.CatmullRomCurve3(rightRailCurve, true);
 
-    const leftRailGeo = new THREE.TubeGeometry(leftSpline, 300, 0.25, 6, true);
-    const rightRailGeo = new THREE.TubeGeometry(rightSpline, 300, 0.25, 6, true);
+    const leftRailGeo = new THREE.TubeGeometry(leftSpline, 300, 0.32, 8, true);
+    const rightRailGeo = new THREE.TubeGeometry(rightSpline, 300, 0.32, 8, true);
 
-    const leftRailMesh = new THREE.Mesh(leftRailGeo, new THREE.MeshBasicMaterial({ color: 0x00F0FF }));
-    const rightRailMesh = new THREE.Mesh(rightRailGeo, new THREE.MeshBasicMaterial({ color: 0xFF2A13 }));
+    this.leftRailMesh = new THREE.Mesh(leftRailGeo, new THREE.MeshBasicMaterial({ color: 0x00F0FF }));
+    this.rightRailMesh = new THREE.Mesh(rightRailGeo, new THREE.MeshBasicMaterial({ color: 0xFF9900 }));
 
-    this.scene.add(leftRailMesh);
-    this.scene.add(rightRailMesh);
+    this.scene.add(this.leftRailMesh);
+    this.scene.add(this.rightRailMesh);
+  }
+
+  generateDynamicRacingLine() {
+    const halfW = this.roadWidth * 0.5;
+    const verts = [];
+    const colors = [];
+    const indices = [];
+
+    const cGreen = new THREE.Color(0x00FF66);
+    const cAmber = new THREE.Color(0xFFB800);
+    const cRed = new THREE.Color(0xFF2A13);
+
+    for (let i = 0; i <= this.segments; i++) {
+      const frame = this.samples[i];
+      const k = frame.curvature || 0;
+      const bank = frame.bank || 0;
+      // Lateral offset of racing line apex: swing out before curve, cut in at apex
+      const lateralShift = THREE.MathUtils.clamp(-bank * 12.0, -halfW * 0.65, halfW * 0.65);
+
+      const center = frame.pos.clone()
+        .addScaledVector(frame.normal, 0.14)
+        .addScaledVector(frame.binormal, lateralShift);
+
+      const ribbonHalfW = 0.9;
+      const leftV = center.clone().addScaledVector(frame.binormal, -ribbonHalfW);
+      const rightV = center.clone().addScaledVector(frame.binormal, ribbonHalfW);
+
+      verts.push(leftV.x, leftV.y, leftV.z);
+      verts.push(rightV.x, rightV.y, rightV.z);
+
+      // Vertex color based on curvature / braking requirement
+      const col = new THREE.Color();
+      if (k < 0.28) {
+        col.copy(cGreen);
+      } else if (k < 0.58) {
+        const t = (k - 0.28) / (0.58 - 0.28);
+        col.copy(cGreen).lerp(cAmber, t);
+      } else {
+        const t = Math.min(1.0, (k - 0.58) / 0.4);
+        col.copy(cAmber).lerp(cRed, t);
+      }
+
+      colors.push(col.r, col.g, col.b);
+      colors.push(col.r, col.g, col.b);
+    }
+
+    for (let i = 0; i < this.segments; i++) {
+      const r1 = i * 2;
+      const r2 = (i + 1) * 2;
+      indices.push(r1, r2, r1 + 1);
+      indices.push(r1 + 1, r2, r2 + 1);
+    }
+
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
+    geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+    geo.setIndex(indices);
+
+    const mat = new THREE.MeshBasicMaterial({
+      vertexColors: true,
+      transparent: true,
+      opacity: 0.82,
+      side: THREE.DoubleSide,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    });
+
+    this.racingLineMesh = new THREE.Mesh(geo, mat);
+    this.scene.add(this.racingLineMesh);
+  }
+
+  generateCurveIndicators() {
+    this.scene.add(this.curveIndicatorsGroup);
+
+    // Scan for sharp curve peaks along track
+    const halfW = this.roadWidth * 0.5;
+    let lastU = -1.0;
+
+    for (let i = 0; i < this.segments; i += 6) {
+      const frame = this.samples[i];
+      const k = frame.curvature || 0;
+      if (k > 0.42 && (lastU < 0 || Math.abs(frame.u - lastU) > 0.035)) {
+        lastU = frame.u;
+        const isLeftTurn = (frame.bank || 0) > 0;
+        // Mount sign on outside barrier
+        const sideOffset = isLeftTurn ? (halfW + 0.3) : -(halfW + 0.3);
+        const signPos = frame.pos.clone()
+          .addScaledVector(frame.binormal, sideOffset)
+          .addScaledVector(frame.normal, this.barrierHeight + 1.2);
+
+        const signGroup = new THREE.Group();
+        signGroup.position.copy(signPos);
+
+        const m = new THREE.Matrix4().makeBasis(frame.binormal, frame.normal, frame.tangent);
+        signGroup.quaternion.setFromRotationMatrix(m);
+
+        // Sign board
+        const boardGeo = new THREE.PlaneGeometry(3.6, 1.8);
+        boardGeo.rotateY(isLeftTurn ? -Math.PI * 0.5 : Math.PI * 0.5);
+
+        let boardMat;
+        if (typeof document !== 'undefined') {
+          const cv = document.createElement('canvas');
+          cv.width = 256;
+          cv.height = 128;
+          const ctx = cv.getContext('2d');
+          ctx.fillStyle = '#060B14';
+          ctx.fillRect(0, 0, 256, 128);
+          ctx.strokeStyle = '#FFB800';
+          ctx.lineWidth = 6;
+          ctx.strokeRect(4, 4, 248, 120);
+
+          ctx.fillStyle = '#FFB800';
+          ctx.font = 'bold 64px monospace';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(isLeftTurn ? '◄ ◄ ◄' : '► ► ►', 128, 64);
+
+          const tex = new THREE.CanvasTexture(cv);
+          boardMat = new THREE.MeshBasicMaterial({
+            map: tex,
+            side: THREE.DoubleSide,
+            transparent: true,
+            opacity: 0.95
+          });
+        } else {
+          boardMat = new THREE.MeshBasicMaterial({
+            color: 0xFFB800,
+            side: THREE.DoubleSide
+          });
+        }
+
+        const boardMesh = new THREE.Mesh(boardGeo, boardMat);
+        signGroup.add(boardMesh);
+        this.curveIndicatorsGroup.add(signGroup);
+      }
+    }
   }
 
   generateBoostPads() {
@@ -643,17 +846,288 @@ export class CityCircuit {
     this.scene.add(gantry);
   }
 
-  getFrameAt(u) {
+  generateZebraCrossings() {
+    // 6 major urban intersections with high-visibility zebra crossings across the circuit
+    const crossingUValues = [0.02, 0.16, 0.24, 0.425, 0.70, 0.93];
+    const stripeMat = new THREE.MeshStandardMaterial({
+      color: 0xFFFFFF,
+      roughness: 0.25,
+      metalness: 0.15,
+      emissive: new THREE.Color(0xD8EEFF),
+      emissiveIntensity: 0.22
+    });
+
+    const borderMat = new THREE.MeshStandardMaterial({
+      color: 0xFFB800,
+      roughness: 0.3,
+      metalness: 0.2,
+      emissive: new THREE.Color(0xFFB800),
+      emissiveIntensity: 0.18
+    });
+
+    crossingUValues.forEach(u => {
+      const frame = this.getFrameAt(u);
+      const crossGroup = new THREE.Group();
+      crossGroup.position.copy(frame.pos);
+      crossGroup.quaternion.setFromRotationMatrix(
+        new THREE.Matrix4().makeBasis(frame.binormal, frame.normal, frame.tangent)
+      );
+
+      // 16 high-contrast thermal-plastic zebra crosswalk stripes spanning the road width
+      const stripeCount = 16;
+      const span = this.roadWidth * 0.90;
+      const stripeWidth = 1.15;
+      const stripeLength = 4.8;
+      const stripeThickness = 0.035;
+      const stripeGeo = new THREE.BoxGeometry(stripeWidth, stripeThickness, stripeLength);
+
+      for (let s = 0; s < stripeCount; s++) {
+        const offset = -span * 0.5 + (s / (stripeCount - 1)) * span;
+        const stripe = new THREE.Mesh(stripeGeo, stripeMat);
+        stripe.position.set(offset, 0.08, 0);
+        crossGroup.add(stripe);
+      }
+
+      // Yellow Pedestrian Safety Endcaps
+      [-span * 0.52, span * 0.52].forEach(ex => {
+        const borderGeo = new THREE.BoxGeometry(0.35, stripeThickness, stripeLength);
+        const border = new THREE.Mesh(borderGeo, borderMat);
+        border.position.set(ex, 0.08, 0);
+        crossGroup.add(border);
+      });
+
+      // Stop Line 3.4m before zebra crossing
+      const stopLineGeo = new THREE.BoxGeometry(span, stripeThickness, 0.55);
+      const stopLine = new THREE.Mesh(stopLineGeo, stripeMat);
+      stopLine.position.set(0, 0.08, -3.4);
+      crossGroup.add(stopLine);
+
+      this.zebraCrossingsGroup.add(crossGroup);
+    });
+  }
+
+  generateTrafficLightGantries() {
+    // Located right at the zebra crossings / highway intersections
+    const gantryUValues = [0.018, 0.158, 0.238, 0.423, 0.698, 0.928];
+
+    const steelMat = new THREE.MeshStandardMaterial({
+      color: 0x161c28,
+      metalness: 0.92,
+      roughness: 0.25
+    });
+    const redMat = new THREE.MeshBasicMaterial({ color: 0xFF1E28 });
+    const amberMat = new THREE.MeshBasicMaterial({ color: 0xFFA500 });
+    const greenMat = new THREE.MeshBasicMaterial({ color: 0x00FF66 });
+
+    gantryUValues.forEach((u) => {
+      const frame = this.getFrameAt(u);
+      const gantryGroup = new THREE.Group();
+      gantryGroup.position.copy(frame.pos);
+      gantryGroup.quaternion.setFromRotationMatrix(
+        new THREE.Matrix4().makeBasis(frame.binormal, frame.normal, frame.tangent)
+      );
+
+      const span = this.roadWidth + 12; // 40m span ensures pylons sit 6m+ clear of barriers
+      const height = 14.5; // 14.5m clearance guarantees high-speed vehicles never intersect overhead truss
+
+      // Vertical Support Truss Pylons on both curbs
+      [-span * 0.48, span * 0.48].forEach(px => {
+        const pylonGeo = new THREE.BoxGeometry(0.65, height, 0.65);
+        const pylon = new THREE.Mesh(pylonGeo, steelMat);
+        pylon.position.set(px, height * 0.5, 0);
+        gantryGroup.add(pylon);
+      });
+
+      // Overhead Horizontal Bridge Truss
+      const trussGeo = new THREE.BoxGeometry(span, 0.75, 0.75);
+      const truss = new THREE.Mesh(trussGeo, steelMat);
+      truss.position.set(0, height, 0);
+      gantryGroup.add(truss);
+
+      // 4 Suspended 3-Aspect Traffic Signals hanging over road lanes
+      const laneOffsets = [-span * 0.32, -span * 0.11, span * 0.11, span * 0.32];
+      laneOffsets.forEach(lx => {
+        const sigGroup = new THREE.Group();
+        sigGroup.position.set(lx, height - 1.1, 0);
+
+        // Hanger Arm
+        const hangerGeo = new THREE.CylinderGeometry(0.04, 0.04, 0.9, 8);
+        const hanger = new THREE.Mesh(hangerGeo, steelMat);
+        hanger.position.y = 0.65;
+        sigGroup.add(hanger);
+
+        // Signal Housing Box
+        const houseGeo = new THREE.BoxGeometry(0.5, 1.45, 0.38);
+        const house = new THREE.Mesh(houseGeo, steelMat);
+        sigGroup.add(house);
+
+        // Sun Visor Backplate
+        const plateGeo = new THREE.BoxGeometry(0.65, 1.6, 0.04);
+        const plate = new THREE.Mesh(plateGeo, new THREE.MeshStandardMaterial({ color: 0x0a0d12 }));
+        plate.position.z = -0.18;
+        sigGroup.add(plate);
+
+        // 3 Circular Signal Lenses (Red, Amber, Green) with Visors
+        const lensGeo = new THREE.CylinderGeometry(0.12, 0.12, 0.08, 16);
+        lensGeo.rotateX(Math.PI * 0.5);
+
+        // Top: Red
+        const redLens = new THREE.Mesh(lensGeo, redMat);
+        redLens.position.set(0, 0.42, 0.16);
+        sigGroup.add(redLens);
+
+        // Middle: Amber
+        const ambLens = new THREE.Mesh(lensGeo, amberMat);
+        ambLens.position.set(0, 0.0, 0.16);
+        sigGroup.add(ambLens);
+
+        // Bottom: Green (illuminated)
+        const grnLens = new THREE.Mesh(lensGeo, greenMat);
+        grnLens.position.set(0, -0.42, 0.16);
+        sigGroup.add(grnLens);
+
+        gantryGroup.add(sigGroup);
+      });
+
+      // Digital Overhead Speed & Highway Info Sign
+      const signGeo = new THREE.PlaneGeometry(8.0, 1.4);
+      let signTex = null;
+      if (typeof document !== 'undefined') {
+        const c = document.createElement('canvas');
+        c.width = 512;
+        c.height = 128;
+        const ctx = c.getContext('2d');
+        ctx.fillStyle = '#060A14';
+        ctx.fillRect(0, 0, 512, 128);
+        ctx.strokeStyle = '#00F0FF';
+        ctx.lineWidth = 6;
+        ctx.strokeRect(4, 4, 504, 120);
+        ctx.fillStyle = '#00FF66';
+        ctx.font = 'bold 36px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText('SPEED LIMIT 420 KM/H', 256, 52);
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = 'bold 24px monospace';
+        ctx.fillText('◄ PEDESTRIAN CROSSING AHEAD ►', 256, 96);
+        signTex = new THREE.CanvasTexture(c);
+      }
+      const signMat = new THREE.MeshBasicMaterial({ map: signTex, side: THREE.DoubleSide });
+      const sign = new THREE.Mesh(signGeo, signMat);
+      sign.position.set(0, height + 1.2, 0);
+      gantryGroup.add(sign);
+
+      this.trafficLightsGroup.add(gantryGroup);
+    });
+  }
+
+  generateStreetlights() {
+    // Streetlights placed along the highway every ~0.025 U on open-air sections
+    const poleGeo = new THREE.CylinderGeometry(0.12, 0.18, 9.5, 8);
+    const armGeo = new THREE.CylinderGeometry(0.08, 0.08, 4.2, 8);
+    armGeo.rotateZ(Math.PI * 0.42);
+    const headGeo = new THREE.BoxGeometry(0.55, 0.18, 1.1);
+    const luminaireGeo = new THREE.PlaneGeometry(0.48, 0.95);
+    luminaireGeo.rotateX(Math.PI * 0.5);
+
+    const metalMat = new THREE.MeshStandardMaterial({ color: 0x1a2130, metalness: 0.9, roughness: 0.3 });
+    const lampGlowMat = new THREE.MeshBasicMaterial({ color: 0xE8F6FF });
+
+    for (let i = 0; i < 40; i++) {
+      const u = (i / 40.0) % 1.0;
+      if (isInsideTunnel(u)) continue; // Tunnels feature integrated architectural LED guide tracks, no streetlights
+      const frame = this.getFrameAt(u);
+      const isRight = (i % 2 === 0);
+      const sideOffset = isRight ? (this.roadWidth * 0.5 + 3.2) : -(this.roadWidth * 0.5 + 3.2);
+
+      const lightGroup = new THREE.Group();
+      lightGroup.position.copy(frame.pos).addScaledVector(frame.binormal, sideOffset);
+      lightGroup.quaternion.setFromRotationMatrix(
+        new THREE.Matrix4().makeBasis(frame.binormal, frame.normal, frame.tangent)
+      );
+
+      // Vertical Pole
+      const pole = new THREE.Mesh(poleGeo, metalMat);
+      pole.position.y = 4.75;
+      lightGroup.add(pole);
+
+      // Overhanging Arm
+      const arm = new THREE.Mesh(armGeo, metalMat);
+      arm.position.set(isRight ? -1.8 : 1.8, 9.2, 0);
+      lightGroup.add(arm);
+
+      // Cobra Lamp Head
+      const head = new THREE.Mesh(headGeo, metalMat);
+      head.position.set(isRight ? -3.4 : 3.4, 9.0, 0);
+      lightGroup.add(head);
+
+      // Glowing LED Luminaire
+      const luminaire = new THREE.Mesh(luminaireGeo, lampGlowMat);
+      luminaire.position.set(isRight ? -3.4 : 3.4, 8.9, 0);
+      lightGroup.add(luminaire);
+
+      this.streetlightsGroup.add(lightGroup);
+    }
+  }
+
+  getInterpolatedFrame(u) {
+    const normU = ((u % 1.0) + 1.0) % 1.0;
+    if (!this.samples || this.samples.length === 0) return null;
+    const floatIdx = normU * this.segments;
+    const i0 = Math.floor(floatIdx) % this.segments;
+    const i1 = (i0 + 1) % this.segments;
+    const alpha = floatIdx - Math.floor(floatIdx);
+
+    const s0 = this.samples[i0];
+    const s1 = this.samples[i1];
+    if (!s0) return this.samples[0];
+    if (!s1 || alpha < 0.0001) return s0;
+
+    _interpFrame.u = normU;
+    _interpFrame.pos.lerpVectors(s0.pos, s1.pos, alpha);
+    _interpFrame.tangent.lerpVectors(s0.tangent, s1.tangent, alpha).normalize();
+    _interpFrame.normal.lerpVectors(s0.normal, s1.normal, alpha).normalize();
+    _interpFrame.binormal.lerpVectors(s0.binormal, s1.binormal, alpha).normalize();
+    _interpFrame.curvature = THREE.MathUtils.lerp(s0.curvature || 0, s1.curvature || 0, alpha);
+    _interpFrame.bank = THREE.MathUtils.lerp(s0.bank || 0, s1.bank || 0, alpha);
+    _interpFrame.district = s0.district;
+    return _interpFrame;
+  }
+
+  getFrameAt(u, smooth = false) {
+    if (smooth) return this.getInterpolatedFrame(u);
     const normU = ((u % 1.0) + 1.0) % 1.0;
     const index = Math.floor(normU * this.segments);
     return this.samples[index] || this.samples[0];
   }
 
-  getClosestFrame(worldPos) {
+  getClosestFrame(worldPos, hintU = -1) {
     let closestFrame = this.samples[0];
     let minDistSq = Infinity;
-    const step = 4; // Fast coarse search
 
+    // Fast path: if a hint position along track is provided, search localized window first!
+    if (hintU >= 0 && hintU <= 1.0) {
+      const centerIdx = Math.floor(hintU * this.segments);
+      const searchRadius = 24;
+      for (let offset = -searchRadius; offset <= searchRadius; offset++) {
+        const idx = ((centerIdx + offset) % this.segments + this.segments) % this.segments;
+        const dSq = this.samples[idx].pos.distanceToSquared(worldPos);
+        if (dSq < minDistSq) {
+          minDistSq = dSq;
+          closestFrame = this.samples[idx];
+        }
+      }
+      if (minDistSq < 1600) { // Found within 40m
+        _scratchDeltaVec.copy(worldPos).sub(closestFrame.pos);
+        _closestResult.frame = closestFrame;
+        _closestResult.u = closestFrame.u;
+        _closestResult.lateralOffset = _scratchDeltaVec.dot(closestFrame.binormal);
+        _closestResult.trackWidth = this.roadWidth;
+        _closestResult.distance = Math.sqrt(minDistSq);
+        return _closestResult;
+      }
+    }
+
+    const step = 6; // Fast coarse search
     for (let i = 0; i < this.segments; i += step) {
       const dSq = this.samples[i].pos.distanceToSquared(worldPos);
       if (dSq < minDistSq) {
@@ -674,26 +1148,94 @@ export class CityCircuit {
       }
     }
 
-    // Compute lateral offset from track centerline
-    const delta = worldPos.clone().sub(closestFrame.pos);
-    const lateralOffset = delta.dot(closestFrame.binormal);
+    // Compute lateral offset from track centerline (zero allocation)
+    _scratchDeltaVec.copy(worldPos).sub(closestFrame.pos);
+    const lateralOffset = _scratchDeltaVec.dot(closestFrame.binormal);
 
-    return {
-      frame: closestFrame,
-      u: closestFrame.u,
-      lateralOffset,
-      trackWidth: this.roadWidth,
-      distance: Math.sqrt(minDistSq)
-    };
+    _closestResult.frame = closestFrame;
+    _closestResult.u = closestFrame.u;
+    _closestResult.lateralOffset = lateralOffset;
+    _closestResult.trackWidth = this.roadWidth;
+    _closestResult.distance = Math.sqrt(minDistSq);
+    return _closestResult;
+  }
+
+  setLap(lap) {
+    this.currentLap = lap;
+    // Dynamic elimination hazard escalation (PDF Section 5 & 15)
+    if (this.checkpointGatesGroup) {
+      this.checkpointGatesGroup.children.forEach((gate, idx) => {
+        // Find gate light materials
+        gate.traverse(child => {
+          if (child.isMesh && child.material && child.material.color) {
+            if (lap >= 3) {
+              // Critical elimination state: Emergency warning red
+              if (child.material.emissive) {
+                child.material.emissive.setHex(0xFF0033);
+                child.material.emissiveIntensity = 1.8;
+              }
+            } else if (lap === 2) {
+              // Escalating state: Warning amber
+              if (child.material.emissive) {
+                child.material.emissive.setHex(0xFFAA00);
+                child.material.emissiveIntensity = 1.2;
+              }
+            }
+          }
+        });
+      });
+    }
   }
 
   update(delta) {
-    // Pulse boost pads and holographic gates
     const t = performance.now() * 0.003;
-    if (this.boostPadsGroup) {
-      this.boostPadsGroup.children.forEach((mesh, idx) => {
-        mesh.material.opacity = 0.75 + Math.sin(t * 3.0 + idx) * 0.25;
-      });
+    if (this.boostPadsGroup && this.boostPadsGroup.children.length > 0) {
+      const padMesh = this.boostPadsGroup.children[0];
+      if (padMesh && padMesh.material) {
+        padMesh.material.opacity = 0.75 + Math.sin(t * 3.0) * 0.25;
+      }
     }
+  }
+
+  setVisible(visible) {
+    if (this.trackMesh) this.trackMesh.visible = visible;
+    if (this.substructureMesh) this.substructureMesh.visible = visible;
+    if (this.barrierMesh) this.barrierMesh.visible = visible;
+    if (this.leftRailMesh) this.leftRailMesh.visible = visible;
+    if (this.rightRailMesh) this.rightRailMesh.visible = visible;
+    if (this.racingLineMesh) this.racingLineMesh.visible = visible;
+    if (this.curveIndicatorsGroup) this.curveIndicatorsGroup.visible = visible;
+    if (this.boostPadsGroup) this.boostPadsGroup.visible = visible;
+    if (this.checkpointGatesGroup) this.checkpointGatesGroup.visible = visible;
+    if (this.stuntRampsGroup) this.stuntRampsGroup.visible = visible;
+    if (this.startFinishGantry) this.startFinishGantry.visible = visible;
+    if (this.zebraCrossingsGroup) this.zebraCrossingsGroup.visible = visible;
+    if (this.trafficLightsGroup) this.trafficLightsGroup.visible = visible;
+    if (this.streetlightsGroup) this.streetlightsGroup.visible = visible;
+  }
+
+  dispose() {
+    const items = [
+      this.trackMesh,
+      this.substructureMesh,
+      this.barrierMesh,
+      this.leftRailMesh,
+      this.rightRailMesh,
+      this.racingLineMesh,
+      this.curveIndicatorsGroup,
+      this.boostPadsGroup,
+      this.checkpointGatesGroup,
+      this.stuntRampsGroup,
+      this.startFinishGantry,
+      this.zebraCrossingsGroup,
+      this.trafficLightsGroup,
+      this.streetlightsGroup
+    ];
+    items.forEach(item => {
+      if (item) {
+        if (item.parent) item.parent.remove(item);
+        if (item.geometry) item.geometry.dispose();
+      }
+    });
   }
 }

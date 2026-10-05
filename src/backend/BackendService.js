@@ -134,26 +134,35 @@ export class BackendService {
     }
   }
 
-  getLocalFallbackLeaderboard() {
+  getLocalFallbackLeaderboard(trackId = 'shinjuku') {
+    const trackNames = {
+      shinjuku: 'NEO-SHINJUKU RIFT // SECTOR 07',
+      fuji: 'FUJI SKYWAY // HIGHWAY PASS',
+      district: 'NIGHT DISTRICT // ELIMINATION',
+      coastline: 'COASTLINE // S-CLASS EXPRESSWAY'
+    };
+
+    const pilots = [
+      { rank: 1, pilotName: 'RANJEET', callsign: 'NIGHT_COMMANDER', vehicleName: 'F-8000 // NIGHTRIFT', lapTime: 48.214, lapTimeFormatted: '00:48.214', topSpeed: 438, driftScore: 18450, badge: 'DEV_RECORD', track: 'shinjuku', date: '2089-10-12' },
+      { rank: 2, pilotName: 'RYUKI', callsign: 'APEX_PREDATOR', vehicleName: 'NX-R01 // VORTEX', lapTime: 49.320, lapTimeFormatted: '00:49.320', topSpeed: 431, driftScore: 16800, badge: 'AI_LEGEND', track: 'shinjuku', date: '2089-10-12' },
+      { rank: 3, pilotName: 'KAITO', callsign: 'DRIFT_TITAN', vehicleName: 'V-720 // PHANTOM', lapTime: 49.850, lapTimeFormatted: '00:49.850', topSpeed: 425, driftScore: 17200, badge: 'AI_LEGEND', track: 'shinjuku', date: '2089-10-11' },
+      { rank: 4, pilotName: 'KANE', callsign: 'SHADOW_STALKER', vehicleName: 'K-77 // QUANTUM', lapTime: 50.120, lapTimeFormatted: '00:50.120', topSpeed: 422, driftScore: 15400, badge: 'PRO_PILOT', track: 'shinjuku', date: '2089-10-11' },
+      { rank: 5, pilotName: 'HARUTO', callsign: 'NEON_BLADE', vehicleName: 'X-900 // VELOCITY', lapTime: 50.780, lapTimeFormatted: '00:50.780', topSpeed: 420, driftScore: 14900, badge: 'AI_LEGEND', track: 'shinjuku', date: '2089-10-11' },
+      { rank: 6, pilotName: 'SORA', callsign: 'AERO_PHANTOM', vehicleName: 'A-11 // AETHER', lapTime: 51.240, lapTimeFormatted: '00:51.240', topSpeed: 418, driftScore: 14100, badge: 'PRO_PILOT', track: 'shinjuku', date: '2089-10-10' },
+      { rank: 7, pilotName: 'NYX', callsign: 'VOID_WALKER', vehicleName: 'R-500 // RAZOR', lapTime: 51.890, lapTimeFormatted: '00:51.890', topSpeed: 415, driftScore: 13800, badge: 'PRO_PILOT', track: 'shinjuku', date: '2089-10-10' },
+      { rank: 8, pilotName: 'TANAKA', callsign: 'CYBER_RONIN', vehicleName: 'K-77 // QUANTUM', lapTime: 52.340, lapTimeFormatted: '00:52.340', topSpeed: 412, driftScore: 13200, badge: 'VETERAN', track: 'shinjuku', date: '2089-10-10' },
+      { rank: 9, pilotName: 'MIKA', callsign: 'ION_VIXEN', vehicleName: 'F-8000 // NIGHTRIFT', lapTime: 52.910, lapTimeFormatted: '00:52.910', topSpeed: 408, driftScore: 12700, badge: 'VETERAN', track: 'shinjuku', date: '2089-10-09' },
+      { rank: 10, pilotName: 'KENJI', callsign: 'MIDNIGHT_HAWK', vehicleName: 'V-720 // PHANTOM', lapTime: 53.450, lapTimeFormatted: '00:53.450', topSpeed: 402, driftScore: 12100, badge: 'CADET', track: 'shinjuku', date: '2089-10-09' },
+      { rank: 11, pilotName: 'ZEPHYR', callsign: 'GRAV_RIDER', vehicleName: 'NX-R01 // VORTEX', lapTime: 53.980, lapTimeFormatted: '00:53.980', topSpeed: 398, driftScore: 11500, badge: 'CADET', track: 'shinjuku', date: '2089-10-08' },
+      { rank: 12, pilotName: 'VORTEX', callsign: 'SOLARIS_PRIME', vehicleName: 'A-11 // AETHER', lapTime: 54.620, lapTimeFormatted: '00:54.620', topSpeed: 392, driftScore: 10900, badge: 'CADET', track: 'shinjuku', date: '2089-10-08' }
+    ];
+
     return {
       success: true,
-      track: 'SECTOR 07 // AETHER SKYWAY',
-      totalEntries: 5,
-      worldRecord: {
-        rank: 1,
-        pilotName: 'RANJEET',
-        vehicleName: 'F-8000 // NIGHTRIFT',
-        lapTimeFormatted: '00:48.214',
-        topSpeed: 438,
-        driftScore: 18450
-      },
-      leaderboard: [
-        { rank: 1, pilotName: 'RANJEET', vehicleName: 'F-8000 // NIGHTRIFT', lapTimeFormatted: '00:48.214', topSpeed: 438, driftScore: 18450, badge: 'DEV_RECORD' },
-        { rank: 2, pilotName: 'KANE', vehicleName: 'V-720 // PHANTOM', lapTimeFormatted: '00:49.850', topSpeed: 425, driftScore: 15200, badge: 'AI_LEGEND' },
-        { rank: 3, pilotName: 'NYX', vehicleName: 'X-900 // VELOCITY', lapTimeFormatted: '00:50.120', topSpeed: 418, driftScore: 14800, badge: 'PRO_PILOT' },
-        { rank: 4, pilotName: 'ZEPHYR', vehicleName: 'K-77 // QUANTUM', lapTimeFormatted: '00:51.340', topSpeed: 432, driftScore: 13100, badge: 'PRO_PILOT' },
-        { rank: 5, pilotName: 'VORTEX', vehicleName: 'R-500 // RAZOR', lapTimeFormatted: '00:52.010', topSpeed: 412, driftScore: 12900, badge: 'VETERAN' }
-      ]
+      track: trackNames[trackId] || 'SECTOR 07 // AETHER SKYWAY',
+      totalEntries: pilots.length,
+      worldRecord: pilots[0],
+      leaderboard: pilots
     };
   }
 }

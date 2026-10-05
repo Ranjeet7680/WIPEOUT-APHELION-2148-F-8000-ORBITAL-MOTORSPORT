@@ -25,7 +25,7 @@ export class GameState {
 
     // Countdown timer (3.. 2.. 1.. GO!)
     this.countdownTime = 3.0;
-    this.countdownInt = 3;
+    this.countdownInt = 4;
 
     // Race progress
     this.currentLap = 1;
@@ -34,6 +34,7 @@ export class GameState {
     this.displayPosition = 1;
     this.positionChangeTimer = 0;
     this.totalRacers = 5;
+    this.onLapAdvance = null;
 
     // Timers
     this.raceTime = 0.0;
@@ -55,9 +56,16 @@ export class GameState {
     this.zoneSpeedMultiplier = 1.0;
     this.zoneColor = '#00F0FF';
 
-    // Spline tracking
+    // Spline tracking & Checkpoints
     this.playerTotalDistance = 0;
     this.lastPlayerU = 0;
+    this.totalCheckpoints = 8;
+    this.currentCheckpointIndex = 0;
+    this.checkpointsPassedInLap = 0;
+    this.checkpointUList = [0.12, 0.25, 0.38, 0.50, 0.65, 0.78, 0.88, 0.98];
+    this.lastCheckpointU = 0.0;
+    this.isWrongWay = false;
+    this.wrongWayTimer = 0.0;
   }
 
   getSectorLabel() {
@@ -67,17 +75,29 @@ export class GameState {
   startCountdown() {
     this.status = RACE_STATUS.COUNTDOWN;
     this.countdownTime = 3.0;
-    this.countdownInt = 3;
+    this.countdownInt = 4;
     this.raceTime = 0;
     this.currentLap = 1;
     this.lapStartTime = 0;
     this.currentLapTime = 0;
     this.playerTotalDistance = 0;
     this.currentSector = 0;
+    this.lastPlayerU = 0.0;
     this.sectorStartTime = 0;
     this.sectorTimes = [];
     this.lapDeltaToPersonalBest = null;
     this.deltaDisplayTimer = 0.0;
+    this.bestLapTime = null;
+    this.lapHistory = [];
+    this.bestSectorTimes = [null, null, null];
+    this.currentPosition = 1;
+    this.displayPosition = 1;
+    this.positionChangeTimer = 0;
+    this.currentCheckpointIndex = 0;
+    this.checkpointsPassedInLap = 0;
+    this.lastCheckpointU = 0.0;
+    this.isWrongWay = false;
+    this.wrongWayTimer = 0.0;
   }
 
   update(delta, playerU, speedKmh, aiRacers = []) {
@@ -115,7 +135,19 @@ export class GameState {
       }
     }
 
-    // 3. Track Sectors
+    // 3. Track Checkpoints & Sectors
+    for (let i = 0; i < this.checkpointUList.length; i++) {
+      const cpU = this.checkpointUList[i];
+      if ((this.lastPlayerU <= cpU && playerU >= cpU) || (Math.abs(playerU - cpU) < 0.025)) {
+        if (i === this.currentCheckpointIndex) {
+          this.currentCheckpointIndex = (this.currentCheckpointIndex + 1) % this.totalCheckpoints;
+          this.checkpointsPassedInLap++;
+          this.lastCheckpointU = cpU;
+          if (this.sound && this.sound.playCheckpointChime) this.sound.playCheckpointChime();
+        }
+      }
+    }
+
     const sector1Threshold = 0.333;
     const sector2Threshold = 0.666;
 
@@ -133,7 +165,30 @@ export class GameState {
       this.onLapCompleted();
       this.currentSector = 0;
       this.sectorStartTime = performance.now();
+      this.checkpointsPassedInLap = 0;
+      this.currentCheckpointIndex = 0;
+      this.lastCheckpointU = 0.0;
     }
+
+    // Wrong-way driving detection
+    if (speedKmh > 25.0) {
+      const isWrapping = (this.lastPlayerU > 0.85 && playerU < 0.15);
+      if (!isWrapping && (this.lastPlayerU - playerU > 0.0012)) {
+        this.wrongWayTimer += delta;
+        if (this.wrongWayTimer > 0.3) {
+          this.isWrongWay = true;
+        }
+      } else {
+        this.wrongWayTimer = Math.max(0.0, this.wrongWayTimer - delta * 2.0);
+        if (this.wrongWayTimer <= 0) {
+          this.isWrongWay = false;
+        }
+      }
+    } else {
+      this.isWrongWay = false;
+      this.wrongWayTimer = 0.0;
+    }
+
     this.lastPlayerU = playerU;
 
     // Accumulate total distance
@@ -207,18 +262,42 @@ export class GameState {
     if (this.sound) this.sound.playLapChime();
 
     if (this.currentLap >= this.maxLaps && this.mode === GAME_MODES.GRAND_PRIX) {
+      this.displayPosition = this.currentPosition;
       this.status = RACE_STATUS.FINISHED;
     } else {
       this.currentLap++;
       this.currentLapTime = 0.0;
+      if (this.onLapAdvance) {
+        this.onLapAdvance(this.currentLap);
+      }
     }
   }
 
   formatTime(seconds) {
     if (seconds === null || isNaN(seconds)) return '--:--.---';
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    const millis = Math.floor((seconds % 1) * 1000);
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${millis.toString().padStart(3, '0')}`;
+    const sign = seconds < 0 ? '-' : '';
+    const absSec = Math.abs(seconds);
+    const mins = Math.floor(absSec / 60);
+    const secs = Math.floor(absSec % 60);
+    const millis = Math.floor((absSec % 1) * 1000);
+    return `${sign}${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${millis.toString().padStart(3, '0')}`;
+  }
+
+  getCheckpointProgress() {
+    return `${Math.min(this.totalCheckpoints, this.checkpointsPassedInLap + 1)} / ${this.totalCheckpoints}`;
+  }
+
+  getCurrentCheckpointName() {
+    const cpNames = [
+      'CP 01 // NEON GATE',
+      'CP 02 // SKYWAY SUMMIT',
+      'CP 03 // CRYO-TRENCH',
+      'CP 04 // OLD ALLEY',
+      'CP 05 // UNDERCITY EXIT',
+      'CP 06 // LAUNCH PYLON',
+      'CP 07 // MEGA TOWER SWEEP',
+      'CP 08 // GANTRY APPROACH'
+    ];
+    return cpNames[this.currentCheckpointIndex] || 'CP 01';
   }
 }

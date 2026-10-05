@@ -1,9 +1,12 @@
 import * as THREE from 'three';
+import { JapanCityPanorama } from './JapanCityPanorama.js';
 
 // ============================================================================
-// 3D VICTORY PODIUM SCENE
-// 3-Tiered Neon Pedestals, Top 3 Vehicles, Spotlight Beams, Confetti Particles,
-// Floating Holographic Banners, Orbiting Camera & Celebration Animations
+// 3D AI-GENERATED STYLE VICTORY CHAMPIONSHIP PODIUM & FINISH LOBBY
+// Surrounding 360° Illuminated Neo-Tokyo Skyline, Sweeping Searchlights,
+// Holographic AI-Generated Victory Arch, 3-Tier Neon Pedestals, Top 3 Vehicles,
+// Cascading Confetti Particles, and 360° Orbiting Celebration Camera
+// Developed by Ranjeet Kumar
 // ============================================================================
 
 export class PodiumScene {
@@ -17,8 +20,14 @@ export class PodiumScene {
     this.confettiParticles = null;
     this.spotlights = [];
     this.orbitAngle = 0;
+    this.animTime = 0;
+
+    // 360 Panoramic Japan City with Sweeping Victory Searchlights
+    this.panorama = new JapanCityPanorama({ victoryMode: true });
+    this.group.add(this.panorama.group);
 
     this.buildPodiumArchitecture();
+    this.buildAIVictoryArch();
     this.buildConfettiParticles();
   }
 
@@ -77,7 +86,7 @@ export class PodiumScene {
       this.group.add(edge);
 
       // Spotlights for each pedestal
-      const spot = new THREE.SpotLight(t.color, 5.0, 30, Math.PI * 0.3, 0.4);
+      const spot = new THREE.SpotLight(t.color, 4.0, 30, Math.PI * 0.3, 0.4);
       spot.position.set(t.pos.x, 15, t.pos.z + 4);
       spot.target.position.set(t.pos.x, t.pos.y + t.h * 0.5, t.pos.z);
       this.group.add(spot);
@@ -85,34 +94,92 @@ export class PodiumScene {
       this.spotlights.push(spot);
     });
 
-    // 3. Floating Backdrop Hologram
-    const bannerCanvas = document.createElement('canvas');
-    bannerCanvas.width = 1024;
-    bannerCanvas.height = 256;
-    const bctx = bannerCanvas.getContext('2d');
-    bctx.fillStyle = '#060914';
-    bctx.fillRect(0, 0, 1024, 256);
-    bctx.strokeStyle = '#FFD700';
-    bctx.lineWidth = 8;
-    bctx.strokeRect(10, 10, 1004, 236);
-    bctx.fillStyle = '#FFD700';
-    bctx.font = 'bold 72px monospace';
-    bctx.textAlign = 'center';
-    bctx.fillText('◄◄ CHAMPIONSHIP PODIUM ►►', 512, 105);
-    bctx.fillStyle = '#00F0FF';
-    bctx.font = 'bold 40px monospace';
-    bctx.fillText('NEO-SHINJUKU RIFT // AETHER-9', 512, 185);
+    // 3. Floating Backdrop Hologram Banner
+    if (typeof document !== 'undefined') {
+      const bannerCanvas = document.createElement('canvas');
+      bannerCanvas.width = 1024;
+      bannerCanvas.height = 256;
+      const bctx = bannerCanvas.getContext('2d');
+      bctx.fillStyle = '#060914';
+      bctx.fillRect(0, 0, 1024, 256);
+      bctx.strokeStyle = '#FFD700';
+      bctx.lineWidth = 8;
+      bctx.strokeRect(10, 10, 1004, 236);
+      bctx.fillStyle = '#FFD700';
+      bctx.font = 'bold 72px monospace';
+      bctx.textAlign = 'center';
+      bctx.fillText('◄◄ CHAMPIONSHIP PODIUM ►►', 512, 105);
+      bctx.fillStyle = '#00F0FF';
+      bctx.font = 'bold 40px monospace';
+      bctx.fillText('NEO-SHINJUKU RIFT // AETHER-9', 512, 185);
 
-    const bannerTex = new THREE.CanvasTexture(bannerCanvas);
-    const bannerMat = new THREE.MeshBasicMaterial({
-      map: bannerTex,
-      transparent: true,
-      opacity: 0.9,
-      side: THREE.DoubleSide
-    });
-    const bannerMesh = new THREE.Mesh(new THREE.PlaneGeometry(16, 4.0), bannerMat);
-    bannerMesh.position.set(0, 8.5, -8.0);
-    this.group.add(bannerMesh);
+      const bannerTex = new THREE.CanvasTexture(bannerCanvas);
+      const bannerMat = new THREE.MeshBasicMaterial({
+        map: bannerTex,
+        transparent: true,
+        opacity: 0.9,
+        side: THREE.DoubleSide
+      });
+      const bannerMesh = new THREE.Mesh(new THREE.PlaneGeometry(16, 4.0), bannerMat);
+      bannerMesh.position.set(0, 8.5, -8.0);
+      this.group.add(bannerMesh);
+    }
+  }
+
+  buildAIVictoryArch() {
+    // Holographic Futuristic AI-Generated Victory Arch over the podium
+    const archGroup = new THREE.Group();
+    archGroup.position.set(0, 0, 0);
+
+    // Glowing Neon Portal Torus Arc
+    const arcRadius = 11.5;
+    const arcGeo = new THREE.TorusGeometry(arcRadius, 0.18, 16, 64, Math.PI);
+    const arcMat = new THREE.MeshBasicMaterial({ color: 0xFFD700 });
+    const arcMesh = new THREE.Mesh(arcGeo, arcMat);
+    arcMesh.position.set(0, 2.0, -1.0);
+    archGroup.add(arcMesh);
+
+    // Outer Cyan Chevron Ring
+    const arcGeo2 = new THREE.TorusGeometry(arcRadius + 1.2, 0.12, 12, 48, Math.PI);
+    const arcMat2 = new THREE.MeshBasicMaterial({ color: 0x00F0FF });
+    const arcMesh2 = new THREE.Mesh(arcGeo2, arcMat2);
+    arcMesh2.position.set(0, 2.0, -1.0);
+    archGroup.add(arcMesh2);
+
+    // AI Victory Hologram Crown in Center Apex
+    if (typeof document !== 'undefined') {
+      const crownCanvas = document.createElement('canvas');
+      crownCanvas.width = 512;
+      crownCanvas.height = 128;
+      const cctx = crownCanvas.getContext('2d');
+      cctx.fillStyle = '#0a1020';
+      cctx.fillRect(0, 0, 512, 128);
+      cctx.strokeStyle = '#00F0FF';
+      cctx.lineWidth = 4;
+      cctx.strokeRect(4, 4, 504, 120);
+
+      cctx.fillStyle = '#FFD700';
+      cctx.font = 'bold 36px monospace';
+      cctx.textAlign = 'center';
+      cctx.fillText('★ AI VICTORY ARENA ★', 256, 52);
+
+      cctx.fillStyle = '#00FF88';
+      cctx.font = 'bold 22px monospace';
+      cctx.fillText('NEO RACING WORLD TOUR', 256, 95);
+
+      const crownTex = new THREE.CanvasTexture(crownCanvas);
+      const crownMat = new THREE.MeshBasicMaterial({
+        map: crownTex,
+        transparent: true,
+        opacity: 0.92,
+        side: THREE.DoubleSide
+      });
+      const crownMesh = new THREE.Mesh(new THREE.PlaneGeometry(6.5, 1.8), crownMat);
+      crownMesh.position.set(0, 13.8, -1.0);
+      archGroup.add(crownMesh);
+    }
+
+    this.group.add(archGroup);
   }
 
   buildConfettiParticles() {
@@ -154,8 +221,8 @@ export class PodiumScene {
   setupPodiumVehicles(firstCraft, secondCraft, thirdCraft) {
     // Clear previously mounted vehicles
     this.vehicles.forEach(v => {
-      if (v && v.group && v.group.parent) {
-        v.group.parent.remove(v.group);
+      if (v && v.craft && v.craft.group && v.craft.group.parent) {
+        v.craft.group.parent.remove(v.craft.group);
       }
     });
     this.vehicles = [];
@@ -200,7 +267,14 @@ export class PodiumScene {
   update(delta, camera) {
     if (!this.group.visible) return;
 
-    // Orbit camera smoothly around podium
+    this.animTime += delta;
+
+    // Update 360 Japan city panoramic animations & searchlights
+    if (this.panorama) {
+      this.panorama.update(delta);
+    }
+
+    // Orbit camera smoothly around podium (full 360° view of Japan city and celebration)
     this.orbitAngle += delta * 0.22;
     const r = 16.0;
     camera.position.set(

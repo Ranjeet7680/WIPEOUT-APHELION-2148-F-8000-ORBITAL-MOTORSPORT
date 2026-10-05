@@ -1,3 +1,4 @@
+import * as THREE from 'three';
 import { VEHICLE_CATALOG } from '../craft/FuturisticVehicle.js';
 import { RIVAL_ROSTER } from '../ai/RivalRacersSystem.js';
 import { saveManager } from '../game/SaveManager.js';
@@ -11,6 +12,10 @@ import { backendService } from '../backend/BackendService.js';
 // High-tech HUD, Pause, Results, 3D Victory Podium, Winning Lobby,
 // Global Cloud Leaderboard & Realtime Ghost Telemetry Replay
 // ============================================================================
+
+export const TPP_CAMERA_SVG = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="cam-svg-logo"><polygon points="12 2 19 11 5 11" fill="currentColor" fill-opacity="0.25"/><line x1="12" y1="11" x2="12" y2="16"/><rect x="8" y="16" width="8" height="6" rx="1.5"/><circle cx="12" cy="19" r="1.2" fill="currentColor"/><line x1="5" y1="11" x2="19" y2="11"/></svg>`;
+
+export const FPP_CAMERA_SVG = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="cam-svg-logo"><path d="M3 8 C6 4 18 4 21 8"/><circle cx="12" cy="12" r="4" stroke-dasharray="3 1.5"/><line x1="12" y1="5" x2="12" y2="9"/><line x1="12" y1="15" x2="12" y2="19"/><line x1="5" y1="12" x2="9" y2="12"/><line x1="15" y1="12" x2="19" y2="12"/><circle cx="12" cy="12" r="1" fill="currentColor"/><path d="M7 21 C9 18 15 18 17 21" stroke-width="2.2"/></svg>`;
 
 // ============================================================================
 // 8 WORLD TOUR REGIONS DEFINITION (Reference: Neon World Tour Racing Map)
@@ -227,6 +232,29 @@ export const WORLD_REGIONS = [
   }
 ];
 
+export const ROYAL_PASS_SEASON_1_TIERS = [
+  { tier: 1, title: 'GENESIS CYAN LIVERY', icon: '🎨', reward: { credits: 5000, tokens: 50, item: 'Livery: Genesis Cyan' }, type: 'free' },
+  { tier: 2, title: '+10,000 CREDITS', icon: 'Ȼ', reward: { credits: 10000, tokens: 0 }, type: 'free' },
+  { tier: 3, title: 'ION DRIFT BOOSTERS', icon: '⚡', reward: { credits: 12000, tokens: 50, item: 'Part: Ion Boosters' }, type: 'elite' },
+  { tier: 4, title: 'NEON UNDERGLOW: VIOLET', icon: '💜', reward: { credits: 15000, tokens: 100, item: 'Neon Underglow' }, type: 'elite' },
+  { tier: 5, title: '+250 PREMIUM TOKENS', icon: '◈', reward: { credits: 0, tokens: 250 }, type: 'free' },
+  { tier: 6, title: 'CONFORMAL ION SHIELD V2', icon: '🛡️', reward: { credits: 20000, tokens: 50, item: 'Shield V2' }, type: 'elite' },
+  { tier: 7, title: '+25,000 CREDITS', icon: 'Ȼ', reward: { credits: 25000, tokens: 0 }, type: 'free' },
+  { tier: 8, title: 'TITANIUM AERO WING', icon: '🚀', reward: { credits: 15000, tokens: 100, item: 'Part: Aero Wing' }, type: 'elite' },
+  { tier: 9, title: 'VORTEX NITRO EXHAUST', icon: '🔥', reward: { credits: 20000, tokens: 50, item: 'VFX: Vortex Exhaust' }, type: 'elite' },
+  { tier: 10, title: '+350 PREMIUM TOKENS', icon: '◈', reward: { credits: 0, tokens: 350 }, type: 'free' },
+  { tier: 11, title: 'S-CLASS ENGINE TUNING', icon: '💎', reward: { credits: 30000, tokens: 100, item: 'Part: S-Class ECU' }, type: 'elite' },
+  { tier: 12, title: '+40,000 CREDITS', icon: 'Ȼ', reward: { credits: 40000, tokens: 0 }, type: 'free' },
+  { tier: 13, title: 'SPECTRA CHAMELEON PAINT', icon: '🎨', reward: { credits: 20000, tokens: 150, item: 'Paint: Chameleon' }, type: 'elite' },
+  { tier: 14, title: 'QUANTUM OVERDRIVE CORE', icon: '⚡', reward: { credits: 35000, tokens: 100, item: 'Part: Overdrive Core' }, type: 'elite' },
+  { tier: 15, title: '+500 PREMIUM TOKENS', icon: '◈', reward: { credits: 0, tokens: 500 }, type: 'free' },
+  { tier: 16, title: 'APHELION ELITE PILOT SUIT', icon: '🏆', reward: { credits: 40000, tokens: 200, item: 'Suit: Aphelion Elite' }, type: 'elite' },
+  { tier: 17, title: '+60,000 CREDITS', icon: 'Ȼ', reward: { credits: 60000, tokens: 0 }, type: 'free' },
+  { tier: 18, title: 'CARBON MONOCOQUE CHASSIS', icon: '🚀', reward: { credits: 50000, tokens: 250, item: 'Chassis: Carbon Monocoque' }, type: 'elite' },
+  { tier: 19, title: '+750 PREMIUM TOKENS', icon: '◈', reward: { credits: 0, tokens: 750 }, type: 'free' },
+  { tier: 20, title: '24K GOLDEN HYPERCAR', icon: '👑', reward: { credits: 100000, tokens: 1000, item: 'Vehicle: 24K Golden Hypercar Prototype' }, type: 'elite', isPinnacle: true }
+];
+
 export class CinematicUI {
   constructor(gameManager) {
     this.game = gameManager;
@@ -245,21 +273,31 @@ export class CinematicUI {
       'PRESS [E] FOR KINETIC ENERGY BRAKE BEFORE TIGHT HAIRPIN APEXES.'
     ];
 
-    // Safe DOM helpers
+    // High-performance cached DOM helpers (prevents DOM layout thrashing & repeat queries)
+    this._domCache = new Map();
+    const getEl = (id) => {
+      let el = this._domCache.get(id);
+      if (!el || !el.isConnected) {
+        el = document.getElementById(id) || (this.container ? this.container.querySelector('#' + id) : null);
+        if (el) this._domCache.set(id, el);
+      }
+      return el;
+    };
+
     this.safeSetText = (id, text) => {
-      const el = document.getElementById(id) || this.container.querySelector('#' + id);
-      if (el) el.textContent = text;
+      const el = getEl(id);
+      if (el && el.textContent !== text) el.textContent = text;
     };
     this.safeSetHTML = (id, html) => {
-      const el = document.getElementById(id) || this.container.querySelector('#' + id);
-      if (el) el.innerHTML = html;
+      const el = getEl(id);
+      if (el && el.innerHTML !== html) el.innerHTML = html;
     };
     this.safeSetWidth = (id, width) => {
-      const el = document.getElementById(id) || this.container.querySelector('#' + id);
-      if (el) el.style.width = width;
+      const el = getEl(id);
+      if (el && el.style.width !== width) el.style.width = width;
     };
     this.safeBind = (id, event, handler) => {
-      const el = document.getElementById(id) || this.container.querySelector('#' + id);
+      const el = getEl(id);
       if (el) el.addEventListener(event, handler);
     };
 
@@ -283,6 +321,13 @@ export class CinematicUI {
     this.actionTimeout = null;
     this.cachedLeaderboard = null;
     this.rainAnimFrame = null;
+    this.dailyClaimed = false;
+
+    // Leaderboard & Royal Pass State
+    this.leaderboardTrack = 'shinjuku';
+    this.leaderboardFilter = 'all';
+    this.leaderboardSearch = '';
+    this.royalPassViewTrack = 'elite';
 
     this.buildAllDOM();
     this.setupEventListeners();
@@ -291,6 +336,23 @@ export class CinematicUI {
 
   buildAllDOM() {
     this.container.innerHTML = `
+      <!-- OMNIPRESENT REAL-TIME CYBERPUNK FPS & TELEMETRY HUD (Active across all screens) -->
+      <div id="perf-fps-meter-overlay" class="perf-fps-meter-overlay" style="display: none;" title="Toggle FPS Meter [F3]">
+        <div class="perf-fps-badge">
+          <span class="perf-dot" id="perf-status-dot"></span>
+          <span class="perf-val-bold" id="perf-global-fps">60</span>
+          <span class="perf-unit-label">FPS</span>
+          <span class="perf-pipe">|</span>
+          <span class="perf-ms-text" id="perf-global-ms">16.6ms</span>
+          <span class="perf-pipe">|</span>
+          <span class="perf-min-label">MIN</span>
+          <span class="perf-min-val" id="perf-global-min">58</span>
+          <span class="perf-pipe">|</span>
+          <span class="perf-quality-chip" id="perf-global-quality">HIGH</span>
+          <span class="perf-f3-tag">[F3]</span>
+        </div>
+      </div>
+
       <!-- 1. DEVELOPER CREDIT -->
       <div id="screen-dev-credit" class="ui-screen dev-credit-overlay" style="cursor: pointer;">
         <div class="dev-credit-box">
@@ -414,14 +476,14 @@ export class CinematicUI {
           </div>
 
           <div class="lobby-nav-pills">
-            <button class="top-nav-btn active" data-tab="lobby">LOBBY</button>
-            <button class="top-nav-btn" data-tab="race">RACE</button>
-            <button class="top-nav-btn" data-tab="cars">CARS</button>
+            <button class="top-nav-btn active" data-tab="race">RACE</button>
             <button class="top-nav-btn" data-tab="garage">GARAGE</button>
-            <button class="top-nav-btn" data-tab="map">MAP</button>
-            <button class="top-nav-btn" data-tab="shop">SHOP</button>
+            <button class="top-nav-btn" data-tab="cars">CARS</button>
+            <button class="top-nav-btn" data-tab="career">CAREER</button>
             <button class="top-nav-btn" data-tab="events">EVENTS</button>
-            <button class="top-nav-btn" data-tab="more">MORE</button>
+            <button class="top-nav-btn" data-tab="leaderboard">LEADERBOARD</button>
+            <button class="top-nav-btn" data-tab="shop">SHOP</button>
+            <button class="top-nav-btn" data-tab="settings">SETTINGS</button>
           </div>
 
           <div class="lobby-top-right">
@@ -445,15 +507,19 @@ export class CinematicUI {
           </div>
         </div>
 
-        <!-- Left Column: Player Profile + Quick Menu -->
+        <!-- Left Column: Player Profile + Main Vehicle Panel -->
         <div class="lobby-left-column">
           <div class="lobby-profile-card">
-            <div class="profile-avatar">RK</div>
+            <div class="profile-avatar-wrap">
+              <div class="profile-avatar">RK</div>
+              <div class="profile-badge-ring"></div>
+            </div>
             <div class="profile-meta">
               <div class="profile-name-row">
                 <strong id="lobby-player-name">RANJEET</strong>
                 <span class="profile-lvl-badge" id="lobby-lvl-badge">LVL 87</span>
               </div>
+              <div class="profile-rank-tag" id="lobby-rank-tag">GRANDMASTER // ORBITAL ELITE</div>
               <div class="profile-xp-bar-track">
                 <div class="profile-xp-fill" id="lobby-xp-fill" style="width: 70%"></div>
               </div>
@@ -461,15 +527,42 @@ export class CinematicUI {
             </div>
           </div>
 
-          <div class="lobby-quick-menu">
-            <button class="lqm-btn active" data-nav="play"><span class="lqm-num">01</span> RACE</button>
-            <button class="lqm-btn" data-nav="cars"><span class="lqm-num">02</span> CARS</button>
-            <button class="lqm-btn" data-nav="garage"><span class="lqm-num">03</span> GARAGE</button>
-            <button class="lqm-btn" data-nav="map"><span class="lqm-num">04</span> WORLD MAP</button>
-            <button class="lqm-btn" data-nav="events"><span class="lqm-num">05</span> EVENTS</button>
-            <button class="lqm-btn" data-nav="leaderboard"><span class="lqm-num">06</span> MULTIPLAYER</button>
-            <button class="lqm-btn" data-nav="rewards" id="btn-quick-rewards"><span class="lqm-num">07</span> REWARDS</button>
-            <button class="lqm-btn" data-nav="settings"><span class="lqm-num">08</span> SETTINGS</button>
+          <!-- Main Vehicle Panel -->
+          <div class="lobby-main-vehicle-panel" id="lobby-main-vehicle-panel">
+            <div class="lmv-header">
+              <div class="lmv-badge-row">
+                <span class="lmv-rarity pinnacle" id="lobby-v-rarity">PINNACLE</span>
+                <span class="lmv-class" id="lobby-v-class">S-CLASS HYPERCAR</span>
+                <span class="lmv-pr" id="lobby-v-pr">PR 955</span>
+              </div>
+              <h3 class="lmv-name" id="lobby-v-name">F-8000 // NIGHTRIFT</h3>
+            </div>
+            <div class="lmv-stats-bars">
+              <div class="lmv-bar-row">
+                <span class="lmv-lbl">TOP SPEED</span>
+                <div class="lmv-track"><div class="lmv-fill spd" id="lobby-sbf-spd" style="width: 94%"></div></div>
+                <strong class="lmv-val" id="lobby-sb-spd">420 KM/H</strong>
+              </div>
+              <div class="lmv-bar-row">
+                <span class="lmv-lbl">ACCEL</span>
+                <div class="lmv-track"><div class="lmv-fill acc" id="lobby-sbf-acc" style="width: 96%"></div></div>
+                <strong class="lmv-val" id="lobby-sb-acc">9.6</strong>
+              </div>
+              <div class="lmv-bar-row">
+                <span class="lmv-lbl">HANDLING</span>
+                <div class="lmv-track"><div class="lmv-fill hnd" id="lobby-sbf-hnd" style="width: 88%"></div></div>
+                <strong class="lmv-val" id="lobby-sb-hnd">8.8</strong>
+              </div>
+              <div class="lmv-bar-row">
+                <span class="lmv-lbl">BOOST</span>
+                <div class="lmv-track"><div class="lmv-fill bst" id="lobby-sbf-bst" style="width: 94%"></div></div>
+                <strong class="lmv-val" id="lobby-sb-bst">9.4</strong>
+              </div>
+            </div>
+            <div class="lmv-actions">
+              <button class="btn-lobby-vaction" id="btn-lobby-quick-customize">⚙ CUSTOMIZE</button>
+              <button class="btn-lobby-vaction" id="btn-lobby-quick-cars">◄► CHANGE FLEET</button>
+            </div>
           </div>
         </div>
 
@@ -486,26 +579,55 @@ export class CinematicUI {
           <div class="lobby-drag-hint">◄ DRAG MOUSE / TOUCH TO ROTATE VEHICLE // SCROLL TO ZOOM ►</div>
         </div>
 
-        <!-- Right Column: Season 07 & Live Events & Daily Rewards -->
+        <!-- Right Column: Compact Next Event Panel + Season 01 & Daily Rewards -->
         <div class="lobby-right-column">
-          <div class="lobby-season-card">
-            <span class="lsc-tag">CURRENT SEASON</span>
-            <h3>SEASON 07</h3>
-            <div class="lsc-sub">AETHER SKYWAY</div>
-            <p>Compete in Sector 07 and unlock the Apex Prototype Chassis.</p>
-            <button class="btn-season-view" id="btn-season-view">VIEW SEASON ►</button>
+          <!-- Compact Next Event Panel -->
+          <div class="lobby-next-event-panel" id="lobby-next-event-panel">
+            <div class="lne-header">
+              <span class="pulse-marker red"></span>
+              <strong>NEXT EVENT</strong>
+              <span class="lne-timer" id="lne-timer">00:04:32</span>
+            </div>
+            <div class="lne-body">
+              <div class="lne-title-wrap">
+                <h4>NEO-SHINJUKU MIDNIGHT CUP</h4>
+                <small class="lne-track-sub">NEO-SHINJUKU RIFT // SECTOR 07</small>
+              </div>
+              <div class="lne-meta-chips">
+                <span class="lne-chip diff">RANKED S-CLASS</span>
+                <span class="lne-chip reward">25,000 Ȼ + 2,500 XP</span>
+              </div>
+              <div class="lne-preview-thumb">
+                <img src="/images/event_midnight_cup.jpg" alt="Neo-Shinjuku Midnight Cup Poster" class="lne-poster-img" />
+                <div class="lne-scan-line"></div>
+                <div class="lne-thumb-grid"></div>
+                <div class="lne-poster-overlay">
+                  <span class="lne-thumb-tag"><span class="pulse-marker red"></span> CIRCUIT PREVIEW</span>
+                  <span class="lne-circuit-badge">SECTOR 07 // MIDNIGHT CUP</span>
+                </div>
+              </div>
+              <button class="btn-next-event-play" id="btn-next-event-play">ENTER EVENT ►</button>
+            </div>
           </div>
 
-          <div class="lobby-live-events-card">
-            <div class="lle-header">
-              <span class="pulse-marker red"></span>
-              <strong>LIVE EVENTS</strong>
-              <span class="lle-timer" id="lle-timer">02:14:38</span>
+          <div class="lobby-season-card" id="card-season-pass">
+            <div class="lsc-top-row">
+              <span class="lsc-tag">CURRENT SEASON</span>
+              <span class="lsc-live-badge"><span class="pulse-marker green"></span> LIVE</span>
             </div>
-            <div class="lle-body">
-              <h4>MIDNIGHT TOKYO SHAKEDOWN</h4>
-              <small>Limited Time // 35,000 Ȼ + Rare Decal</small>
+            <h3>SEASON 01</h3>
+            <div class="lsc-sub">ROYAL PASS // 360 GOLDEN CAR</div>
+            <div class="lsc-xp-bar-wrap">
+              <div class="lsc-xp-bar">
+                <div class="lsc-xp-fill" id="lsc-xp-fill" style="width: 58%"></div>
+              </div>
+              <div class="lsc-xp-labels">
+                <span id="lsc-tier-text">TIER 12 / 25</span>
+                <span id="lsc-xp-text">1,450 / 2,000 XP</span>
+              </div>
             </div>
+            <p>Compete in Sector 07 and showcase the exclusive 24K Golden Hypercar.</p>
+            <button class="btn-season-view" id="btn-season-view">👑 ROYAL PASS 360 ►</button>
           </div>
 
           <div class="lobby-daily-reward-card" id="card-daily-rewards">
@@ -515,6 +637,7 @@ export class CinematicUI {
                 <strong>DAILY REWARDS</strong>
                 <small id="ldr-status">READY TO CLAIM</small>
               </div>
+              <span class="ldr-streak-pill" id="ldr-streak-pill">DAY 3 STREAK 🔥</span>
             </div>
             <button class="btn-claim-reward" id="btn-claim-daily">CLAIM NOW (+1,500 Ȼ)</button>
           </div>
@@ -524,35 +647,79 @@ export class CinematicUI {
         <div class="lobby-bottom-bar">
           <div class="track-carousel" id="lobby-track-carousel">
             <div class="track-card active" data-track="shinjuku">
-              <div class="tc-thumb tc-shinjuku"></div>
+              <div class="tc-thumb tc-shinjuku">
+                <span class="tc-weather-badge">NIGHT // CYBERPUNK</span>
+                <span class="tc-diff-badge easy">NORMAL</span>
+              </div>
               <div class="tc-info">
-                <span class="tc-type">URBAN SPRINT</span>
+                <span class="tc-type">SECTOR 01 // HIGHWAY RIFT</span>
                 <strong>NEO-SHINJUKU</strong>
-                <small>3.8 KM // 2 LAPS</small>
+                <div class="tc-stats-row">
+                  <span>3.8 KM • 2 LAPS</span>
+                  <span>EST. 02:24</span>
+                  <span>8 RACERS</span>
+                </div>
+                <div class="tc-detail-row">
+                  <span class="tc-reward">REWARD: 12,500 Ȼ + 1,200 XP</span>
+                  <span class="tc-rival">RIVAL: RYUKI</span>
+                </div>
               </div>
             </div>
             <div class="track-card" data-track="fuji">
-              <div class="tc-thumb tc-fuji"></div>
+              <div class="tc-thumb tc-fuji">
+                <span class="tc-weather-badge">ALPINE // CLEAR</span>
+                <span class="tc-diff-badge medium">CLASS A</span>
+              </div>
               <div class="tc-info">
-                <span class="tc-type">MOUNTAIN DRIFT</span>
+                <span class="tc-type">SECTOR 03 // MOUNTAIN DRIFT</span>
                 <strong>FUJI SKYWAY</strong>
-                <small>4.5 KM // CLASS A</small>
+                <div class="tc-stats-row">
+                  <span>4.5 KM • 2 LAPS</span>
+                  <span>EST. 02:45</span>
+                  <span>8 RACERS</span>
+                </div>
+                <div class="tc-detail-row">
+                  <span class="tc-reward">REWARD: 14,000 Ȼ + 1,400 XP</span>
+                  <span class="tc-rival">RIVAL: KAITO</span>
+                </div>
               </div>
             </div>
             <div class="track-card" data-track="district">
-              <div class="tc-thumb tc-district"></div>
+              <div class="tc-thumb tc-district">
+                <span class="tc-weather-badge">DUSK // NEON RAIN</span>
+                <span class="tc-diff-badge hard">HARD</span>
+              </div>
               <div class="tc-info">
-                <span class="tc-type">ELIMINATION</span>
+                <span class="tc-type">SECTOR 05 // ELIMINATION</span>
                 <strong>NIGHT DISTRICT</strong>
-                <small>5.0 KM // CLASS S</small>
+                <div class="tc-stats-row">
+                  <span>5.0 KM • 3 LAPS</span>
+                  <span>EST. 03:10</span>
+                  <span>8 RACERS</span>
+                </div>
+                <div class="tc-detail-row">
+                  <span class="tc-reward">REWARD: 16,500 Ȼ + 1,650 XP</span>
+                  <span class="tc-rival">RIVAL: HARUTO</span>
+                </div>
               </div>
             </div>
             <div class="track-card" data-track="coastline">
-              <div class="tc-thumb tc-coastline"></div>
+              <div class="tc-thumb tc-coastline">
+                <span class="tc-weather-badge">OCEAN // STORM</span>
+                <span class="tc-diff-badge extreme">EXTREME</span>
+              </div>
               <div class="tc-info">
-                <span class="tc-type">OCEAN HIGHWAY</span>
+                <span class="tc-type">SECTOR 02 // HYPERWAY</span>
                 <strong>COASTLINE</strong>
-                <small>5.4 KM // S-CLASS</small>
+                <div class="tc-stats-row">
+                  <span>5.4 KM • 3 LAPS</span>
+                  <span>EST. 02:50</span>
+                  <span>8 RACERS</span>
+                </div>
+                <div class="tc-detail-row">
+                  <span class="tc-reward">REWARD: 18,000 Ȼ + 1,800 XP</span>
+                  <span class="tc-rival">RIVAL: SORA</span>
+                </div>
               </div>
             </div>
           </div>
@@ -561,8 +728,78 @@ export class CinematicUI {
           <div class="lobby-play-cta">
             <button id="btn-lobby-play" class="btn-primary-glow">
               <span class="cta-subtitle">SECTOR 07 // AETHER SKYWAY</span>
-              <strong class="cta-title">PLAY RACE ►</strong>
+              <strong class="cta-title">RACE NOW ►</strong>
             </button>
+          </div>
+
+          <!-- Bottom Subtle Navigation Hints Bar -->
+          <div class="lobby-bottom-hints" id="lobby-bottom-hints">
+            <button class="lbh-item" data-hint="garage">GARAGE</button>
+            <span class="lbh-dot">•</span>
+            <button class="lbh-item" data-hint="customize">CUSTOMIZE</button>
+            <span class="lbh-dot">•</span>
+            <button class="lbh-item" data-hint="cars">CHANGE VEHICLE</button>
+            <span class="lbh-dot">•</span>
+            <button class="lbh-item" data-hint="profile">PROFILE</button>
+            <span class="lbh-dot">•</span>
+            <button class="lbh-item" data-hint="settings">SETTINGS</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5.4 ROYAL PASS 360 GOLDEN CAR SHOWCASE LOBBY -->
+      <div id="screen-royal-pass" class="ui-screen" style="display: none;">
+        <div class="royal-pass-header-bar">
+          <div class="rph-title-group">
+            <span class="rph-crown-icon">👑</span>
+            <div>
+              <h2>ROYAL PASS // SEASON 01 [GENESIS ELITE]</h2>
+              <small>EXCLUSIVE 24K GOLD PROTOTYPE HYPERCAR // 360° SHOWROOM</small>
+            </div>
+          </div>
+          <div class="rph-stats-group">
+            <div class="rph-stat">
+              <span>SEASON LEVEL:</span>
+              <strong id="rp-stat-tier">TIER 12 / 25</strong>
+            </div>
+            <div class="rph-stat">
+              <span>PRESTIGE XP:</span>
+              <strong class="gold-text" id="rp-stat-xp">1,450 / 2,000 XP</strong>
+            </div>
+          </div>
+          <div class="rph-header-actions">
+            <button class="btn-rp-boost" id="btn-rp-test-boost">⚡ +500 SEASON XP</button>
+            <button class="btn-royal-back" id="btn-royal-pass-back">◄ BACK TO MAIN LOBBY</button>
+          </div>
+        </div>
+
+        <div class="royal-pass-center-hint">
+          <div class="rph-gold-badge">★ 24K MIRROR GOLD EDITION // 360° ROTATION ★</div>
+          <div class="rp-showroom-controls">
+            <span class="rp-cam-label">CAMERA:</span>
+            <button class="rp-cam-btn active" data-cam="FRONT">FRONT</button>
+            <button class="rp-cam-btn" data-cam="SIDE">SIDE</button>
+            <button class="rp-cam-btn" data-cam="REAR">REAR</button>
+            <button class="rp-cam-btn" data-cam="TOP">TOP</button>
+            <button class="rp-cam-btn" data-cam="LOW ANGLE">LOW</button>
+          </div>
+          <div class="rph-drag-hint">◄ DRAG MOUSE / TOUCH TO ROTATE 360° // SCROLL TO ZOOM ►</div>
+        </div>
+
+        <div class="royal-pass-bottom-track">
+          <div class="rp-track-header">
+            <div class="rp-pass-type-toggle">
+              <button class="rp-pill free" id="btn-rp-tab-free">FREE PASS</button>
+              <button class="rp-pill elite active" id="btn-rp-tab-elite">👑 ELITE PASS [ACTIVE]</button>
+            </div>
+            <div class="rp-actions-right">
+              <span class="rp-ready-count-badge" id="rp-ready-count-badge">0 REWARDS READY</span>
+              <button class="btn-claim-all-rp" id="btn-claim-royal-rewards">🎁 CLAIM ALL UNLOCKED REWARDS</button>
+            </div>
+          </div>
+
+          <div class="rp-tiers-scroll" id="rp-tiers-scroll">
+            <!-- Dynamically populated by renderRoyalPassTiers() -->
           </div>
         </div>
       </div>
@@ -902,69 +1139,148 @@ export class CinematicUI {
         </div>
       </div>
 
-      <!-- PRE-RACE TRACK LOADING SCREEN (VERSUS & SCHEMATIC) -->
+      <!-- PRE-RACE TRACK LOADING SCREEN (AAA CINEMATIC 3D TRACK FLY-THROUGH) -->
       <div id="screen-pre-race-loading" class="ui-screen" style="display: none; pointer-events: auto;">
-        <div class="pre-race-backdrop">
-          <img src="/images/loading_pre_race.jpg" class="pre-race-bg-img" alt="Pre-Race Loading Circuit" />
-          <div class="pre-race-tint"></div>
+        <div class="pre-race-backdrop live-3d-backdrop">
+          <div class="pr-scanline-grid"></div>
+          <div class="pr-vignette"></div>
+          <div class="pr-hud-flicker"></div>
         </div>
         <div class="pre-race-content">
-          <div class="pre-race-top-bar">
-            <div class="pr-title-box">
-              <span class="pr-sub">ORBITAL GRAND PRIX // PRE-RACE BRIEFING</span>
-              <h2 class="pr-title">NEO-SHINJUKU RIFT CIRCUIT</h2>
+          <!-- Top Loading Status Bar -->
+          <div class="pr-top-status-bar">
+            <div class="pr-status-badge">
+              <span class="pulse-marker cyan"></span>
+              <strong class="pr-status-tag">RACE INITIALIZING</strong>
+              <span class="pr-badge-pipe">|</span>
+              <span class="pr-sub-grid-status">ORBITAL GRID SYNCHRONIZED</span>
             </div>
-            <div class="pr-specs-box">
-              <div class="pr-spec-pill">LENGTH: <strong>5.4 KM</strong></div>
-              <div class="pr-spec-pill">TURNS: <strong>8 GATES</strong></div>
-              <div class="pr-spec-pill">ELEVATION: <strong>+140M</strong></div>
+            <div class="pr-tech-indicator">
+              <span class="pr-radar-spin"></span>
+              <span id="pr-feed-fps">TELEMETRY LINK: 120 FPS // 18ms</span>
             </div>
           </div>
-          <div class="pre-race-versus-container">
+
+          <!-- Center Loading Information -->
+          <div class="pr-center-info-hero">
+            <div class="pr-track-sub-tag">CIRCUIT SECTOR BRIEFING</div>
+            <h1 class="pr-hero-track-name" id="pr-hero-track-name">NEON HORIZON</h1>
+            <div class="pr-hero-location" id="pr-hero-location">MEGACITY SECTOR 07</div>
+            <div class="pr-hero-sub-stats" id="pr-hero-sub-stats">
+              <span>LAP 03</span> • <span>8.4 KM</span> • <span>NIGHT</span> • <span>RANKED RACE</span>
+            </div>
+          </div>
+
+          <!-- Small Vehicle Cards: Player vs Opponent -->
+          <div class="pr-versus-container compact">
             <div class="pr-versus-card player-side">
-              <span class="pr-card-badge">LEAD PILOT</span>
+              <div class="pr-card-badge">★ PLAYER ★</div>
               <div class="pr-pilot-info">
-                <h3>RANJEET</h3>
-                <span class="pr-team">TEAM APHELION</span>
+                <div class="pr-avatar avatar-you">RK</div>
+                <div class="pr-meta-group">
+                  <h3 id="pr-player-pilot-name">RANJEET</h3>
+                  <span class="pr-team" id="pr-player-team">TEAM APHELION</span>
+                  <div class="pr-stat-chips">
+                    <span class="pr-chip elo" id="pr-player-lvl">LVL 87</span>
+                    <span class="pr-chip record" id="pr-player-rank">RANK #01</span>
+                  </div>
+                </div>
               </div>
               <div class="pr-vehicle-info">
-                <span class="pr-vname">F-8000 // NIGHTRIFT</span>
-                <span class="pr-vclass">S-CLASS 420 KM/H</span>
+                <div class="pr-v-row">
+                  <span class="pr-vname" id="pr-player-veh-name">F-8000 // NIGHTRIFT</span>
+                  <span class="pr-vclass" id="pr-player-veh-class">S-CLASS • PR 940</span>
+                </div>
               </div>
             </div>
-            <div class="pr-versus-badge">VS</div>
+
+            <div class="pr-versus-badge">
+              <span class="vs-text">VS</span>
+              <div class="vs-energy-ring"></div>
+            </div>
+
             <div class="pr-versus-card rival-side">
-              <span class="pr-card-badge red">CHALLENGER</span>
+              <div class="pr-card-badge red">CHALLENGER // OPPONENT</div>
               <div class="pr-pilot-info">
-                <h3>RYUKI</h3>
-                <span class="pr-team">TOKYO KINETICS</span>
+                <div class="pr-avatar avatar-rival">RY</div>
+                <div class="pr-meta-group">
+                  <h3 id="pr-rival-pilot-name">RYUKI</h3>
+                  <span class="pr-team">TOKYO KINETICS</span>
+                  <div class="pr-stat-chips">
+                    <span class="pr-chip elo">LVL 85</span>
+                    <span class="pr-chip record">RANK #02</span>
+                  </div>
+                </div>
               </div>
               <div class="pr-vehicle-info">
-                <span class="pr-vname">AURORA FALCON</span>
-                <span class="pr-vclass">AGGRESSIVE RACER</span>
+                <div class="pr-v-row">
+                  <span class="pr-vname">AURORA FALCON</span>
+                  <span class="pr-vclass">S-CLASS • PR 935</span>
+                </div>
               </div>
             </div>
           </div>
-          <div class="pre-race-loading-footer">
-            <div class="pr-progress-header">
-              <span id="pr-loading-msg">COMPILING WEBGPU GRAPH PIPELINES...</span>
-              <strong id="pr-loading-pct">94%</strong>
+
+          <!-- Futuristic Multi-Stage Progress Bar & Checklist -->
+          <div class="pr-loading-center-block">
+            <div class="pr-stages-checklist" id="pr-stages-checklist">
+              <div class="psc-item done" id="psc-track"><span class="psc-check">✓</span> <span class="psc-label">INITIALIZING TRACK</span></div>
+              <div class="psc-item done" id="psc-veh"><span class="psc-check">✓</span> <span class="psc-label">LOADING VEHICLES</span></div>
+              <div class="psc-item done" id="psc-opp"><span class="psc-check">✓</span> <span class="psc-label">SYNCING OPPONENTS</span></div>
+              <div class="psc-item active" id="psc-grav"><span class="psc-check">...</span> <span class="psc-label">CALIBRATING GRAVITY</span></div>
+              <div class="psc-item pending" id="psc-prep"><span class="psc-check">...</span> <span class="psc-label">PREPARING RACE</span></div>
             </div>
-            <div class="pr-progress-track">
-              <div id="pr-progress-fill" class="pr-progress-fill" style="width: 94%"></div>
+
+            <div class="pre-race-loading-footer">
+              <div class="pr-progress-header">
+                <span id="pr-loading-msg">CALIBRATING GRAVITY FIELDS...</span>
+                <strong id="pr-loading-pct">LOADING 67%</strong>
+              </div>
+              <div class="pr-progress-track">
+                <div id="pr-progress-fill" class="pr-progress-fill" style="width: 67%"></div>
+                <div class="pr-scan-beam" id="pr-scan-beam"></div>
+              </div>
+              <div style="margin-top: 10px; text-align: center;">
+                <button id="btn-pr-skip" class="btn-action-primary" style="padding: 9px 24px; font-size: 12px; letter-spacing: 2px; cursor: pointer;">START RACE NOW [SPACE / ENTER] ►</button>
+              </div>
             </div>
-            <div style="margin-top: 14px; text-align: center;">
-              <button id="btn-pr-skip" class="btn-action-primary" style="padding: 10px 24px; font-size: 13px; letter-spacing: 2px; cursor: pointer;">START RACE NOW [SPACE / ENTER] ►</button>
+          </div>
+
+          <!-- Bottom Telemetry Row: Rotating Racing Tip + System Status -->
+          <div class="pr-bottom-telemetry-row">
+            <div class="pr-tip-box" id="pr-tip-box">
+              <span class="ptb-tag">💡 RACING TIP</span>
+              <p class="ptb-text" id="pr-tip-text">"Use boost after exiting sharp corners for maximum acceleration."</p>
+            </div>
+
+            <div class="pr-sys-status-box">
+              <span class="pssb-tag">SYSTEM STATUS</span>
+              <div class="pssb-grid">
+                <div class="pssb-row"><span>NETWORK</span><strong class="green-text" id="pss-net">ONLINE</strong></div>
+                <div class="pssb-row"><span>PHYSICS</span><strong class="green-text" id="pss-phy">READY</strong></div>
+                <div class="pssb-row"><span>TRACK</span><strong class="green-text" id="pss-trk">READY</strong></div>
+                <div class="pssb-row"><span>VEHICLE</span><strong class="green-text" id="pss-veh">READY</strong></div>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
       <!-- 9. RACE INTRO FLY-THROUGH OVERLAY -->
-      <div id="screen-race-intro" class="ui-screen" style="display: none; pointer-events: auto;">
+      <div id="screen-race-intro" class="ui-screen intro-cinematic-screen" style="display: none; pointer-events: auto;">
+        <div class="intro-letterbox intro-letterbox-top"></div>
+        <div class="intro-letterbox intro-letterbox-bottom"></div>
+
+        <div class="intro-broadcast-badge" id="intro-broadcast-badge">
+          <span class="ibc-rec-dot"></span>
+          <span class="ibc-rec-tag">REC // LIVE BROADCAST</span>
+          <span class="ibc-pipe">|</span>
+          <span class="ibc-shot-id" id="ibc-shot-id">CAM 01 // HERO FASCIA</span>
+        </div>
+
         <div class="intro-top-banner">
           <h2>NEO-SHINJUKU RIFT</h2>
-          <small>GRID INSPECTION SEQUENCE</small>
+          <small id="intro-banner-sub">ORBITAL GRAND PRIX // GRID INSPECTION</small>
         </div>
 
         <div class="intro-bot-card" id="intro-bot-card">
@@ -992,21 +1308,45 @@ export class CinematicUI {
 
       <!-- 10. IN-RACE HUD LAYER (Reference: Neo-Shinjuku Street Race Gameplay HUD) -->
       <div id="screen-racing-hud" class="ui-screen" style="display: none; pointer-events: none;">
+        <!-- OFF-TRACK 3-SECOND AUTOMATIC RESET ALERT OVERLAY -->
+        <div id="hud-offtrack-alert" class="hud-offtrack-alert" style="display: none; pointer-events: auto;">
+          <div class="offtrack-content-box">
+            <div class="ot-header">
+              <span class="ot-warning-icon">⚠️</span>
+              <div class="ot-text-wrap">
+                <strong class="ot-title">OFF-TRACK // BARRIER IMPACT DETECTED</strong>
+                <span class="ot-sub">RESETTING TO TRACK CENTER IN <b id="ot-countdown-timer" class="ot-timer">03.0s</b></span>
+              </div>
+            </div>
+            <div class="ot-progress-bar">
+              <div id="ot-progress-fill" class="ot-progress-fill" style="width: 100%;"></div>
+            </div>
+            <div class="ot-footer-row">
+              <span class="ot-hint">PRESS <kbd>R</kbd> OR TAP BUTTON TO RE-ENGAGE</span>
+              <button class="btn-ot-reset-now" id="btn-ot-reset-now">RESET NOW ↺</button>
+            </div>
+          </div>
+        </div>
+
         <!-- TOP-LEFT PANEL: Pause + POS + LAP + PROGRESS + 8-RACER TOWER LEADERBOARD -->
         <div class="hud-top-left-panel">
           <div class="hud-race-metrics-row">
             <button class="hud-pause-btn" id="btn-pause-ingame" style="pointer-events: auto;" title="Pause Race">||</button>
             <div class="metric-card pos">
               <span class="mc-label">POS.</span>
-              <strong class="mc-val" id="rh-pos">3<small>/8</small></strong>
+              <strong class="mc-val" id="rh-pos">01<small>/08</small></strong>
             </div>
             <div class="metric-card lap">
               <span class="mc-label">LAP</span>
-              <strong class="mc-val" id="rh-lap">1<small>/2</small></strong>
+              <strong class="mc-val" id="rh-lap">01<small>/03</small></strong>
+            </div>
+            <div class="metric-card checkpoint">
+              <span class="mc-label">CHECKPOINT</span>
+              <strong class="mc-val" id="rh-checkpoint-badge">01<small>/08</small></strong>
             </div>
             <div class="metric-card progress">
               <span class="mc-label">PROGRESS</span>
-              <strong class="mc-val" id="rh-progress-badge">42%</strong>
+              <strong class="mc-val" id="rh-progress-badge">0%</strong>
             </div>
           </div>
 
@@ -1023,8 +1363,21 @@ export class CinematicUI {
           </div>
         </div>
 
-        <!-- TOP-CENTER: Dual Yellow/Cyan Progress & Nitro Indicator -->
+        <!-- TOP-CENTER: Turn Guidance, Wrong-Way Alert & Dual Progress/Nitro Gauge -->
         <div class="hud-top-center-panel">
+          <!-- Upcoming Turn Indicator -->
+          <div class="hud-turn-indicator" id="hud-turn-indicator" style="display: none;">
+            <div class="ti-arrow" id="ti-arrow">◄ ◄ ◄</div>
+            <div class="ti-text" id="ti-text">SHARP LEFT TURN</div>
+          </div>
+
+          <!-- Wrong-Way Warning Alert -->
+          <div class="hud-wrong-way-banner" id="hud-wrong-way-banner" style="display: none;">
+            <span class="ww-icon">⚠️</span>
+            <span class="ww-title">WRONG WAY!</span>
+            <span class="ww-sub">TURN AROUND IMMEDIATELY</span>
+          </div>
+
           <div class="hud-dual-gauge">
             <div class="gauge-strip progress-strip">
               <span class="gs-label">CIRCUIT</span>
@@ -1059,6 +1412,7 @@ export class CinematicUI {
           </div>
           <div class="hud-tacho-line">
             <div class="tacho-line-fill" id="rh-tacho-fill" style="width: 65%"></div>
+            <div class="tacho-rpm-readout" id="rh-rpm-readout">6,800 RPM</div>
           </div>
           <div class="hud-right-actions">
             <div id="perf-telemetry-hud" class="perf-telemetry-pill" style="display: none; pointer-events: auto;">
@@ -1070,11 +1424,15 @@ export class CinematicUI {
               <span id="perf-quality-val">HIGH</span>
             </div>
             <button class="btn-touch-toggle" id="btn-touch-toggle" style="pointer-events: auto;">📱 TOUCH</button>
-            <button class="btn-camera-hud" id="btn-camera-hud" style="pointer-events: auto;">🎥 CAM: CHASE</button>
+            <button class="btn-camera-hud" id="btn-camera-hud" style="pointer-events: auto;" title="Perspective: TPP (Chase Cam). Click or press [V] to switch to FPP">
+              <span class="cam-icon-wrap">${TPP_CAMERA_SVG}</span>
+              <span class="cam-perspective-badge">TPP</span>
+              <span class="cam-mode-label">CHASE</span>
+            </button>
           </div>
         </div>
 
-        <!-- RIGHT-SIDE: Floating Stunt & Score Feed (Drift, Near Miss, Perfect Nitro) -->
+        <!-- RIGHT-SIDE: Floating Stunt & Score Feed (Drift, Near Miss, Overtake, Perfect Line, Landing) -->
         <div class="hud-stunt-feed" id="hud-stunt-feed">
           <div class="stunt-entry stunt-drift" id="stunt-drift-entry" style="display: none;">
             <span class="stunt-icon">⚡</span>
@@ -1084,12 +1442,27 @@ export class CinematicUI {
           <div class="stunt-entry stunt-nearmiss" id="stunt-nearmiss-entry" style="display: none;">
             <span class="stunt-icon">⚠️</span>
             <span class="stunt-text" id="stunt-nearmiss-text">NEAR MISS x2</span>
-            <strong class="stunt-pts" id="stunt-nearmiss-pts">+100</strong>
+            <strong class="stunt-pts" id="stunt-nearmiss-pts">+250</strong>
           </div>
           <div class="stunt-entry stunt-nitro" id="stunt-nitro-entry" style="display: none;">
             <span class="stunt-icon">🔥</span>
             <span class="stunt-text" id="stunt-nitro-text">PERFECT NITRO</span>
             <strong class="stunt-pts" id="stunt-nitro-pts">+150</strong>
+          </div>
+          <div class="stunt-entry stunt-overtake" id="stunt-overtake-entry" style="display: none;">
+            <span class="stunt-icon">🏎️</span>
+            <span class="stunt-text" id="stunt-overtake-text">OVERTAKE</span>
+            <strong class="stunt-pts" id="stunt-overtake-pts">+500</strong>
+          </div>
+          <div class="stunt-entry stunt-line" id="stunt-line-entry" style="display: none;">
+            <span class="stunt-icon">📐</span>
+            <span class="stunt-text" id="stunt-line-text">PERFECT LINE</span>
+            <strong class="stunt-pts" id="stunt-line-pts">+400</strong>
+          </div>
+          <div class="stunt-entry stunt-landing" id="stunt-landing-entry" style="display: none;">
+            <span class="stunt-icon">✨</span>
+            <span class="stunt-text" id="stunt-landing-text">CLEAN LANDING</span>
+            <strong class="stunt-pts" id="stunt-landing-pts">+300</strong>
           </div>
           <div class="rh-action-banner" id="rh-action-banner" style="display: none;">
             <div class="action-tag" id="rh-action-tag">+PERFECT LANDING</div>
@@ -1111,14 +1484,17 @@ export class CinematicUI {
           </div>
         </div>
 
-        <!-- BOTTOM-CENTER: Horizontal Nitro Reservoir Gauge -->
+        <!-- BOTTOM-CENTER: Horizontal Segmented Nitro Reservoir Gauge -->
         <div class="hud-bottom-center-panel">
           <div class="nitro-reservoir-box">
             <div class="nrb-header">
               <span class="nrb-label" id="rh-boost-tier-label">NITRO RESERVOIR</span>
               <strong class="nrb-pct" id="rh-boost-pct">100%</strong>
             </div>
-            <div class="nrb-track">
+            <div class="nrb-track segmented">
+              <div class="nrb-segment-divider" style="left: 25%;"></div>
+              <div class="nrb-segment-divider" style="left: 50%;"></div>
+              <div class="nrb-segment-divider" style="left: 75%;"></div>
               <div class="nrb-fill" id="rh-boost-fill" style="width: 100%"></div>
               <div class="nrb-glow-pulse"></div>
             </div>
@@ -1126,10 +1502,16 @@ export class CinematicUI {
           </div>
         </div>
 
+        <!-- Collision Impact Flash Overlay -->
+        <div id="hud-impact-flash" class="hud-impact-flash" style="display: none;"></div>
+
         <!-- BOTTOM-RIGHT: Action Buttons (Nitro, Brake, Gas, Cam) + Desktop Controls Guide -->
         <div class="hud-bottom-right-panel" style="pointer-events: auto;">
           <div class="action-buttons-cluster">
-            <button class="hud-btn-circular cam" id="m-btn-cam" title="Toggle Camera">📹</button>
+            <button class="hud-btn-circular cam" id="m-btn-cam" title="Toggle TPP/FPP Camera">
+              <span class="cam-icon-wrap">${TPP_CAMERA_SVG}</span>
+              <span class="cam-mini-badge">TPP</span>
+            </button>
             <button class="hud-btn-action brake" id="m-btn-brake">BRAKE</button>
             <button class="hud-btn-action throttle" id="m-btn-throttle">DRIVE</button>
             <button class="hud-btn-circular nitro" id="m-btn-boost" title="Nitro Boost">
@@ -1138,11 +1520,12 @@ export class CinematicUI {
             </button>
           </div>
           <div class="rh-controls-guide" id="rh-controls-guide">
-            <span>[W/S] DRIVE/BRAKE</span>
-            <span>[A/D] STEER</span>
-            <span>[SHIFT] DRIFT</span>
-            <span>[SPACE] NITRO</span>
-            <span>[C] CAM</span>
+            <span class="ctrl-chip" id="ctrl-hint-drive"><kbd id="key-w">W</kbd>/<kbd id="key-s">S</kbd> DRIVE</span>
+            <span class="ctrl-chip" id="ctrl-hint-steer"><kbd id="key-a">A</kbd>/<kbd id="key-d">D</kbd> STEER</span>
+            <span class="ctrl-chip" id="ctrl-hint-drift"><kbd id="key-shift">SHIFT</kbd> DRIFT</span>
+            <span class="ctrl-chip" id="ctrl-hint-nitro"><kbd id="key-space">SPACE</kbd> NITRO</span>
+            <span class="ctrl-chip" id="ctrl-hint-cam"><kbd id="key-c">C</kbd> CAM</span>
+            <span class="ctrl-chip reset-chip" id="ctrl-hint-reset" style="cursor: pointer; pointer-events: auto;" title="Instant track re-center"><kbd id="key-r">R</kbd> RE-CENTER</span>
           </div>
         </div>
       </div>
@@ -1369,9 +1752,11 @@ export class CinematicUI {
         <div class="pause-window">
           <h2>RACE PAUSED</h2>
           <div class="pause-menu">
-            <button class="btn-pause-opt" id="btn-pause-resume">RESUME</button>
+            <button class="btn-pause-opt" id="btn-pause-resume">RESUME RACE [ESC]</button>
             <button class="btn-pause-opt" id="btn-pause-restart">RESTART RACE</button>
-            <button class="btn-pause-opt" id="btn-pause-quit">QUIT TO HQ</button>
+            <button class="btn-pause-opt" id="btn-pause-reset" style="color: #00F0FF; border-color: rgba(0,240,255,0.6);">RE-CENTER CRAFT [R]</button>
+            <button class="btn-pause-opt primary" id="btn-pause-finish" style="color: #FFB800; border-color: rgba(255,184,0,0.7); font-weight: bold;">END RACE & GO TO FINISH LOBBY ►</button>
+            <button class="btn-pause-opt" id="btn-pause-quit">RETURN TO MAIN LOBBY</button>
           </div>
         </div>
       </div>
@@ -1392,7 +1777,11 @@ export class CinematicUI {
           <div class="results-stats-table">
             <div class="stat-row"><span>RACE TIME:</span><strong id="res-total-time">02:41.822</strong></div>
             <div class="stat-row"><span>BEST LAP:</span><strong id="res-best-lap">00:52.401</strong></div>
+            <div class="stat-row"><span>POSITION CHANGE:</span><strong id="res-pos-change" class="cyan-text">+2 POS (P3 → P1)</strong></div>
             <div class="stat-row"><span>TOP SPEED:</span><strong id="res-top-speed">421 KM/H</strong></div>
+            <div class="stat-row highlight"><span>XP EARNED:</span><strong id="res-xp-val" class="gold-text">+2,500 XP</strong></div>
+            <div class="stat-row highlight"><span>COINS REWARD:</span><strong id="res-coins-val" class="cyan-text">+15,000 Ȼ</strong></div>
+            <div class="stat-row"><span>REWARD TROPHY:</span><strong class="gold-text">TIER S GOLD TROPHY</strong></div>
             <div class="stat-row"><span>AERIAL STUNTS:</span><strong id="res-stunts">7</strong></div>
             <div class="stat-row"><span>DRIFT DISTANCE:</span><strong id="res-drift">1,240 M</strong></div>
             <div class="stat-row"><span>NEAR MISSES:</span><strong id="res-near-miss">12</strong></div>
@@ -1400,9 +1789,12 @@ export class CinematicUI {
           </div>
 
           <div class="results-actions">
-            <button class="btn-action-primary glow" id="btn-results-upload">UPLOAD TO LEADERBOARD ☁</button>
+            <button class="btn-action-primary glow" id="btn-results-next">NEXT RACE ►</button>
+            <button class="btn-action-secondary" id="btn-results-garage">GARAGE ⚙</button>
+            <button class="btn-action-secondary" id="btn-results-menu">MAIN MENU ◄</button>
+            <button class="btn-action-secondary" id="btn-results-upload">UPLOAD ☁</button>
             <button class="btn-action-primary" id="btn-results-podium">VIEW PODIUM ►</button>
-            <button class="btn-action-secondary" id="btn-results-continue">CONTINUE</button>
+            <button class="btn-action-secondary" id="btn-results-continue" style="display: none;">CONTINUE</button>
           </div>
           <div class="results-upload-status" id="res-upload-status" style="display:none;"></div>
         </div>
@@ -1581,22 +1973,71 @@ export class CinematicUI {
           <div class="leaderboard-header">
             <div class="lh-title-row">
               <button class="btn-back" id="btn-leaderboard-close">◄ BACK TO HQ</button>
-              <h2>GLOBAL PILOT LEADERBOARD // AETHER-9</h2>
+              <div class="lh-title-text-group">
+                <h2>GLOBAL PILOT LEADERBOARD // AETHER-9</h2>
+                <small class="lh-subtitle">ORBITAL QUANTUM SATELLITE TELEMETRY RELAY</small>
+              </div>
               <div class="lh-relay-badge" id="lh-relay-status">
                 <span class="pulse-marker green"></span>
                 <span id="lh-relay-text">EDGE RELAY: TOKYO-01 // 16ms</span>
               </div>
             </div>
+
+            <!-- Track Selector Tabs -->
+            <div class="lb-track-selector-bar">
+              <span class="lb-track-label">CIRCUIT:</span>
+              <button class="lb-track-tab active" data-track="shinjuku">🏁 NEO-SHINJUKU RIFT</button>
+              <button class="lb-track-tab" data-track="fuji">🗻 FUJI SKYWAY</button>
+              <button class="lb-track-tab" data-track="district">🌆 NIGHT DISTRICT</button>
+              <button class="lb-track-tab" data-track="coastline">🌊 COASTLINE EXPRESSWAY</button>
+            </div>
+
+            <!-- World Record Showcase Banner -->
+            <div class="lb-wr-banner" id="lb-wr-banner">
+              <div class="lb-wr-badge">★ CURRENT WORLD RECORD ★</div>
+              <div class="lb-wr-details">
+                <div class="lb-wr-pilot">
+                  <span class="lb-wr-icon">👑</span>
+                  <div>
+                    <strong id="lb-wr-name">RANJEET</strong>
+                    <small id="lb-wr-callsign">CREATOR // NIGHT_COMMANDER</small>
+                  </div>
+                </div>
+                <div class="lb-wr-stat">
+                  <span>RECORD LAP</span>
+                  <strong class="cyan-text" id="lb-wr-time">00:48.214</strong>
+                </div>
+                <div class="lb-wr-stat">
+                  <span>TOP SPEED</span>
+                  <strong id="lb-wr-speed">438 KM/H</strong>
+                </div>
+                <div class="lb-wr-stat">
+                  <span>DRIFT SCORE</span>
+                  <strong id="lb-wr-drift">18,450 PTS</strong>
+                </div>
+                <button class="btn-race-ghost-wr" id="btn-race-wr-ghost">⚡ RACE AGAINST GHOST ►</button>
+              </div>
+            </div>
+
             <div class="lh-filter-row">
-              <button class="lh-filter-btn active" data-filter="all">ALL PILOTS</button>
-              <button class="lh-filter-btn" data-filter="dev">DEV RECORD</button>
-              <button class="lh-filter-btn" data-filter="rivals">AI LEGENDS</button>
+              <div class="lh-filter-tabs">
+                <button class="lh-filter-btn active" data-filter="all">ALL PILOTS</button>
+                <button class="lh-filter-btn" data-filter="rivals">AI RIVALS</button>
+                <button class="lh-filter-btn" data-filter="dev">DEV RECORD</button>
+                <button class="lh-filter-btn" data-filter="my">MY RECORDS</button>
+              </div>
+
+              <div class="lb-search-wrap">
+                <input type="text" id="lb-search-input" placeholder="🔍 SEARCH PILOT OR VEHICLE..." class="lb-search-input" />
+              </div>
+
               <div class="lh-ghost-toggle-wrap">
                 <span>RACE AGAINST GHOST:</span>
                 <button class="btn-toggle active" id="btn-toggle-ghost-lb">ON</button>
               </div>
             </div>
           </div>
+
           <div class="leaderboard-table-container">
             <table class="leaderboard-table">
               <thead>
@@ -1605,15 +2046,32 @@ export class CinematicUI {
                   <th>PILOT CALLSIGN</th>
                   <th>VEHICLE</th>
                   <th>LAP TIME</th>
+                  <th>DELTA</th>
                   <th>TOP SPEED</th>
                   <th>DRIFT PTS</th>
                   <th>STATUS</th>
+                  <th>CHALLENGE</th>
                 </tr>
               </thead>
               <tbody id="leaderboard-rows-body">
-                <tr><td colspan="7" class="lb-loading">CONNECTING TO ORBITAL TELEMETRY RELAY...</td></tr>
+                <tr><td colspan="9" class="lb-loading"><span class="pulse-marker"></span> QUERYING ORBITAL TELEMETRY RELAY...</td></tr>
               </tbody>
             </table>
+          </div>
+
+          <!-- Bottom Player Standing Dock -->
+          <div class="lb-player-dock" id="lb-player-dock">
+            <div class="lb-dock-left">
+              <span class="lb-dock-pill">YOUR STANDING</span>
+              <strong id="lb-dock-pilot">RANJEET</strong>
+              <span class="lb-dock-rank" id="lb-dock-rank">CURRENT RANK: #01 (WORLD RECORD)</span>
+            </div>
+            <div class="lb-dock-stats">
+              <div><span>BEST LAP:</span><strong id="lb-dock-time">00:48.214</strong></div>
+              <div><span>TOP SPEED:</span><strong id="lb-dock-spd">438 KM/H</strong></div>
+              <div><span>DRIFT PTS:</span><strong id="lb-dock-drift">18,450 PTS</strong></div>
+            </div>
+            <button class="btn-upload-dock" id="btn-leaderboard-refresh">🔄 SYNC TELEMETRY</button>
           </div>
         </div>
       </div>
@@ -1628,21 +2086,33 @@ export class CinematicUI {
 
     // 1. Top Navbar Pills Navigation
     this.container.querySelectorAll('.top-nav-btn').forEach(btn => {
+      btn.addEventListener('mouseenter', () => {
+        if (this.game.sound && this.game.sound.playUIHover) this.game.sound.playUIHover();
+      });
       btn.addEventListener('click', () => {
         this.container.querySelectorAll('.top-nav-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         const tab = btn.dataset.tab;
         if (this.game.sound) this.game.sound.playMenuClick();
 
+        if (tab === 'royalpass') this.showRoyalPassScreen();
         if (tab === 'lobby') this.showScreen('LOBBY');
-        if (tab === 'race') this.game.startMatchmaking();
+        if (tab === 'race') this.triggerPlayRaceFlow();
         if (tab === 'cars') this.showScreen('CAR_SELECT');
         if (tab === 'garage') this.showScreen('GARAGE');
-        if (tab === 'map') this.showWorldMap();
+        if (tab === 'career' || tab === 'map') this.showWorldMap();
         if (tab === 'shop') this.showScreen('GARAGE');
         if (tab === 'events') this.showWorldMap();
+        if (tab === 'leaderboard') this.showLeaderboardModal();
         if (tab === 'more' || tab === 'settings') this.showSettingsModal();
       });
+    });
+
+    // Brand badge click returns to 3D Showroom
+    safeBind('lobby-brand-badge', 'click', () => {
+      if (this.game.sound) this.game.sound.playMenuClick();
+      this.showScreen('LOBBY');
+      if (this.game.returnToLobby) this.game.returnToLobby();
     });
 
     // 2. Left Quick Menu Navigation
@@ -1672,6 +2142,10 @@ export class CinematicUI {
         this.selectedTrackId = card.dataset.track;
         if (this.game.sound) this.game.sound.playMenuClick();
 
+        if (this.game && this.game.loadSector) {
+          this.game.loadSector(this.selectedTrackId);
+        }
+
         const trackNames = {
           shinjuku: 'NEO-SHINJUKU // URBAN CIRCUIT',
           fuji: 'FUJI SKYWAY // HIGHWAY PASS',
@@ -1692,10 +2166,46 @@ export class CinematicUI {
     safeBind('btn-claim-daily', 'click', claimDailyHandler);
     safeBind('btn-quick-rewards', 'click', claimDailyHandler);
 
-    // 5. Season View button
+    // 5. Royal Pass Season 01 View & Action buttons
     safeBind('btn-season-view', 'click', () => {
       if (this.game.sound) this.game.sound.playMenuClick();
-      this.showWorldMap();
+      this.showRoyalPassScreen();
+    });
+    safeBind('btn-royal-pass-back', 'click', () => {
+      if (this.game.sound) this.game.sound.playMenuClick();
+      this.hideRoyalPassScreen();
+    });
+    safeBind('btn-claim-royal-rewards', 'click', () => {
+      this.claimRoyalPassRewards();
+    });
+    safeBind('btn-rp-test-boost', 'click', () => {
+      this.boostRoyalPassXP(500);
+    });
+    safeBind('btn-rp-tab-free', 'click', () => {
+      this.switchRoyalPassTrack('free');
+    });
+    safeBind('btn-rp-tab-elite', 'click', () => {
+      this.switchRoyalPassTrack('elite');
+    });
+
+    // Royal Pass 360 Showroom camera angles
+    this.container.querySelectorAll('.rp-cam-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        this.container.querySelectorAll('.rp-cam-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const preset = btn.dataset.cam;
+        if (this.game && this.game.garageLobby) {
+          this.game.garageLobby.setCameraAnglePreset(preset);
+        }
+        if (this.game.sound) this.game.sound.playMenuClick();
+      });
+    });
+
+    // Off-track manual reset button
+    safeBind('btn-ot-reset-now', 'click', () => {
+      if (this.game && this.game.physics) {
+        this.game.physics.resetToTrackCenter();
+      }
     });
 
     // 6. Settings cog in top right
@@ -1724,50 +2234,93 @@ export class CinematicUI {
 
     // 10. Event Select Start Race & Choose Car
     safeBind('btn-event-start-race', 'click', () => {
-      if (this.game.sound) this.game.sound.playMenuClick();
+      if (this.game.sound) {
+        this.game.sound.resume();
+        this.game.sound.playMenuClick();
+      }
       this.game.startMatchmaking();
     });
 
     safeBind('btn-event-choose-car', 'click', () => {
-      if (this.game.sound) this.game.sound.playMenuClick();
+      if (this.game.sound) {
+        this.game.sound.resume();
+        this.game.sound.playMenuClick();
+      }
       this.showScreen('CAR_SELECT');
     });
 
-    // 11. In-game HUD Virtual Controls
+    // 11. In-game HUD Virtual Controls (TPP / FPP Camera Toggle)
     safeBind('m-btn-cam', 'click', () => {
       if (this.game.cameraController) {
-        const nextMode = this.game.cameraController.cycleMode();
+        const nextMode = this.game.cameraController.togglePerspective();
         if (this.game.sound && this.game.sound.playCameraSwitchSound) {
           this.game.sound.playCameraSwitchSound();
         }
         this.updateCameraBadge(nextMode);
       }
+      if (this.game && this.game.ensureGameFocus) {
+        this.game.ensureGameFocus();
+      }
     });
 
-    const bindTouchAction = (id, onDown, onUp) => {
-      const el = document.getElementById(id) || this.container.querySelector(`#${id}`);
-      if (!el) return;
-      el.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        onDown();
-      }, { passive: false });
-      el.addEventListener('touchend', (e) => { e.preventDefault(); onUp(); }, { passive: false });
-      el.addEventListener('touchcancel', (e) => { e.preventDefault(); onUp(); }, { passive: false });
-      el.addEventListener('mousedown', () => onDown());
-      el.addEventListener('mouseup', () => onUp());
-      el.addEventListener('mouseleave', () => onUp());
-    };
-
-    bindTouchAction('m-btn-left', () => this.game.setTouch('steer', -1.0), () => this.game.setTouch('steer', 0));
-    bindTouchAction('m-btn-right', () => this.game.setTouch('steer', 1.0), () => this.game.setTouch('steer', 0));
-    bindTouchAction('m-btn-throttle', () => this.game.setTouch('throttle', 1.0), () => this.game.setTouch('throttle', 0));
-    bindTouchAction('m-btn-brake', () => this.game.setTouch('brake', 1.0), () => this.game.setTouch('brake', 0));
-    bindTouchAction('m-btn-boost', () => this.game.setTouch('boost', true), () => this.game.setTouch('boost', false));
+    // Touch and pointer controls are centrally configured in setupMobileTouchControls()
 
     // Lobby Play CTA
     safeBind('btn-lobby-play', 'click', () => {
+      this.triggerPlayRaceFlow();
+    });
+
+    // Lobby Quick Vehicle Actions & Next Event CTA
+    safeBind('btn-lobby-quick-customize', 'click', () => {
+      this.showScreen('GARAGE');
+      this.switchGarageTab('body');
       if (this.game.sound) this.game.sound.playMenuClick();
-      this.game.startMatchmaking();
+    });
+
+    safeBind('btn-lobby-quick-cars', 'click', () => {
+      this.showScreen('CAR_SELECT');
+      if (this.game.sound) this.game.sound.playMenuClick();
+    });
+
+    safeBind('btn-next-event-play', 'click', () => {
+      this.selectedTrackId = 'fuji';
+      if (this.game && this.game.loadSector) {
+        this.game.loadSector(this.selectedTrackId);
+      }
+      if (this.game && this.game.sound) this.game.sound.playCountdownBeep(true);
+      if (this.game && this.game.ensureGameFocus) this.game.ensureGameFocus();
+      this.triggerPlayRaceFlow();
+    });
+
+    const lneThumb = this.container.querySelector('.lne-preview-thumb');
+    if (lneThumb) {
+      lneThumb.addEventListener('click', () => {
+        this.selectedTrackId = 'fuji';
+        if (this.game && this.game.loadSector) {
+          this.game.loadSector(this.selectedTrackId);
+        }
+        if (this.game && this.game.sound) this.game.sound.playMenuClick();
+        if (this.game && this.game.ensureGameFocus) this.game.ensureGameFocus();
+        this.triggerPlayRaceFlow();
+      });
+    }
+
+    // Bottom Subtle Navigation Hints
+    this.container.querySelectorAll('.lbh-item').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const hint = btn.dataset.hint;
+        if (this.game.sound) this.game.sound.playMenuClick();
+        if (hint === 'garage') {
+          this.showScreen('GARAGE');
+        } else if (hint === 'customize') {
+          this.showScreen('GARAGE');
+          this.switchGarageTab('body');
+        } else if (hint === 'cars') {
+          this.showScreen('CAR_SELECT');
+        } else if (hint === 'profile' || hint === 'settings') {
+          this.showScreen('SETTINGS');
+        }
+      });
     });
 
     // Camera preset buttons
@@ -1992,22 +2545,34 @@ export class CinematicUI {
 
     // 5b. Matchmaking instant launch
     safeBind('btn-match-launch-now', 'click', () => {
-      if (this.game.sound) this.game.sound.playMenuClick();
+      if (this.game.sound) {
+        this.game.sound.resume();
+        this.game.sound.playMenuClick();
+      }
       if (this.game.skipMatchmaking) {
         this.game.skipMatchmaking();
       }
     });
 
-    // 5c. Pre-race loading instant launch
+    // 5c. Pre-race loading instant launch / Start Race Now
     safeBind('btn-pr-skip', 'click', () => {
-      if (this.game.sound) this.game.sound.playMenuClick();
-      if (this.game.skipPreRaceLoading) {
+      if (this.game.sound) {
+        this.game.sound.resume();
+        this.game.sound.playMenuClick();
+      }
+      if (this.game.state === 'RACE_INTRO') {
+        this.game.skipRaceIntro();
+      } else if (this.game.skipPreRaceLoading) {
         this.game.skipPreRaceLoading();
       }
     });
 
     // 6. Skip race intro
     safeBind('btn-skip-intro', 'click', () => {
+      if (this.game.sound) {
+        this.game.sound.resume();
+        this.game.sound.playMenuClick();
+      }
       this.game.skipRaceIntro();
     });
 
@@ -2017,21 +2582,58 @@ export class CinematicUI {
     });
 
     safeBind('btn-pause-resume', 'click', () => {
+      if (this.game.sound) this.game.sound.playMenuClick();
       this.game.togglePause();
     });
 
     safeBind('btn-pause-restart', 'click', () => {
-      this.game.togglePause();
+      if (this.game.sound) this.game.sound.playMenuClick();
       this.game.restartRace();
     });
 
-    safeBind('btn-pause-quit', 'click', () => {
+    safeBind('btn-pause-reset', 'click', () => {
+      if (this.game.sound) this.game.sound.playMenuClick();
+      if (this.game.physics && this.game.physics.resetToTrackCenter) {
+        this.game.physics.resetToTrackCenter(this.game.physics.currentU);
+      }
       this.game.togglePause();
-      this.showScreen('LOBBY');
+    });
+
+    safeBind('btn-pause-finish', 'click', () => {
+      if (this.game.sound) this.game.sound.playMenuClick();
+      this.game.triggerRaceFinish();
+    });
+
+    safeBind('btn-pause-quit', 'click', () => {
+      if (this.game.sound) this.game.sound.playMenuClick();
       this.game.returnToLobby();
     });
 
+    safeBind('ctrl-hint-reset', 'click', () => {
+      if (this.game.physics && this.game.physics.resetToTrackCenter) {
+        this.game.physics.resetToTrackCenter(this.game.physics.currentU);
+      }
+      if (this.game && this.game.ensureGameFocus) {
+        this.game.ensureGameFocus();
+      }
+    });
+
     // 8. Results modal buttons
+    safeBind('btn-results-next', 'click', () => {
+      if (this.game.sound) this.game.sound.playMenuClick();
+      this.game.startMatchmaking();
+    });
+
+    safeBind('btn-results-garage', 'click', () => {
+      if (this.game.sound) this.game.sound.playMenuClick();
+      this.showScreen('GARAGE');
+    });
+
+    safeBind('btn-results-menu', 'click', () => {
+      if (this.game.sound) this.game.sound.playMenuClick();
+      this.game.returnToLobby();
+    });
+
     safeBind('btn-results-podium', 'click', () => {
       this.game.showPodiumSequence();
     });
@@ -2142,6 +2744,15 @@ export class CinematicUI {
       });
     }
 
+    // Omnipresent FPS Overlay quick toggle
+    const globalFpsOverlay = document.getElementById('perf-fps-meter-overlay') || this.container.querySelector('#perf-fps-meter-overlay');
+    if (globalFpsOverlay) {
+      globalFpsOverlay.addEventListener('click', () => {
+        this.game.toggleFpsCounter();
+        if (this.game.sound) this.game.sound.playMenuClick();
+      });
+    }
+
     // Control Scheme selector chips
     this.container.querySelectorAll('.btn-control-chip').forEach(chip => {
       chip.addEventListener('click', () => {
@@ -2180,10 +2791,10 @@ export class CinematicUI {
       });
     }
 
-    // In-game HUD Camera button
+    // In-game HUD Camera button (TPP / FPP Camera Toggle)
     safeBind('btn-camera-hud', 'click', () => {
       if (this.game.cameraController) {
-        const nextMode = this.game.cameraController.cycleMode();
+        const nextMode = this.game.cameraController.togglePerspective();
         if (this.game.sound && this.game.sound.playCameraSwitchSound) {
           this.game.sound.playCameraSwitchSound();
         }
@@ -2280,21 +2891,60 @@ export class CinematicUI {
       }
     });
 
-    // 14. Leaderboard Modal Buttons & Filters
+    // 14. Leaderboard Modal Buttons, Track Tabs, Search & Filters
     safeBind('btn-leaderboard-close', 'click', () => {
       this.showScreen('LOBBY');
       if (this.game.garageLobby) this.game.garageLobby.setCameraAnglePreset('FRONT');
       if (this.game.sound) this.game.sound.playMenuClick();
     });
 
+    this.container.querySelectorAll('.lb-track-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        this.container.querySelectorAll('.lb-track-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        this.leaderboardTrack = tab.dataset.track;
+        if (this.game.sound) this.game.sound.playMenuClick();
+        this.fetchAndRenderLeaderboard();
+      });
+    });
+
     this.container.querySelectorAll('.lh-filter-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         this.container.querySelectorAll('.lh-filter-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
+        this.leaderboardFilter = btn.dataset.filter;
         if (this.game.sound) this.game.sound.playMenuClick();
-        this.renderLeaderboardRows(btn.dataset.filter);
+        this.renderLeaderboardRows(this.leaderboardFilter, this.leaderboardSearch);
       });
     });
+
+    const searchInput = document.getElementById('lb-search-input');
+    if (searchInput) {
+      searchInput.addEventListener('input', (e) => {
+        this.leaderboardSearch = e.target.value.trim().toLowerCase();
+        this.renderLeaderboardRows(this.leaderboardFilter, this.leaderboardSearch);
+      });
+    }
+
+    safeBind('btn-race-wr-ghost', 'click', () => {
+      this.challengeWorldRecordGhost();
+    });
+
+    safeBind('btn-leaderboard-refresh', 'click', async () => {
+      if (this.game.sound) this.game.sound.playMenuClick();
+      await this.fetchAndRenderLeaderboard(true);
+    });
+
+    const ghostBtn = document.getElementById('btn-toggle-ghost-lb');
+    if (ghostBtn) {
+      ghostBtn.addEventListener('click', () => {
+        const isActive = ghostBtn.classList.toggle('active');
+        ghostBtn.textContent = isActive ? 'ON' : 'OFF';
+        saveManager.data.settings.ghostEnabled = isActive;
+        saveManager.save();
+        if (this.game.sound) this.game.sound.playMenuClick();
+      });
+    }
 
     // 15. Race Results Upload Button
     safeBind('btn-results-upload', 'click', async () => {
@@ -2349,20 +2999,44 @@ export class CinematicUI {
 
   setupMobileTouchControls() {
     const bindTouch = (id, onDown, onUp) => {
-      const el = document.getElementById(id);
+      const el = document.getElementById(id) || (this.container && this.container.querySelector(`#${id}`));
       if (!el) return;
-      el.addEventListener('touchstart', (e) => {
-        e.preventDefault();
+
+      let isPressed = false;
+
+      const handlePressStart = (e) => {
+        if (e && e.cancelable && e.type.startsWith('touch')) {
+          e.preventDefault();
+        }
+        if (isPressed) return;
+        isPressed = true;
         if (navigator.vibrate) {
           try { navigator.vibrate(15); } catch {}
         }
         onDown();
-      }, { passive: false });
-      el.addEventListener('touchend', (e) => { e.preventDefault(); onUp(); }, { passive: false });
-      el.addEventListener('touchcancel', (e) => { e.preventDefault(); onUp(); }, { passive: false });
-      el.addEventListener('mousedown', () => onDown());
-      el.addEventListener('mouseup', () => onUp());
-      el.addEventListener('mouseleave', () => onUp());
+      };
+
+      const handlePressEnd = (e) => {
+        if (!isPressed) return;
+        isPressed = false;
+        onUp();
+      };
+
+      // Pointer events (modern unified input)
+      el.addEventListener('pointerdown', handlePressStart);
+      el.addEventListener('pointerup', handlePressEnd);
+      el.addEventListener('pointercancel', handlePressEnd);
+      el.addEventListener('pointerleave', handlePressEnd);
+
+      // Mobile Touch events fallback
+      el.addEventListener('touchstart', handlePressStart, { passive: false });
+      el.addEventListener('touchend', handlePressEnd, { passive: false });
+      el.addEventListener('touchcancel', handlePressEnd, { passive: false });
+
+      // Desktop Mouse events fallback
+      el.addEventListener('mousedown', handlePressStart);
+      el.addEventListener('mouseup', handlePressEnd);
+      el.addEventListener('mouseleave', handlePressEnd);
     };
 
     bindTouch('m-btn-left', () => this.game.setTouch('steer', -1.0), () => this.game.setTouch('steer', 0));
@@ -2425,7 +3099,8 @@ export class CinematicUI {
       'screen-pubg-rewards',
       'screen-win-lobby',
       'screen-leaderboard',
-      'screen-countdown-overlay'
+      'screen-countdown-overlay',
+      'screen-royal-pass'
     ];
 
     screens.forEach(id => {
@@ -2438,6 +3113,7 @@ export class CinematicUI {
       'WELCOME_FIRST': 'screen-welcome-first',
       'CINEMATIC_INTRO': 'screen-cinematic-intro',
       'LOBBY': 'screen-lobby',
+      'ROYAL_PASS': 'screen-royal-pass',
       'WORLD_MAP': 'screen-world-map',
       'EVENT_SELECT': 'screen-event-select',
       'CAR_SELECT': 'screen-car-select',
@@ -2464,8 +3140,26 @@ export class CinematicUI {
       if (el) el.style.display = 'flex';
     }
 
+    if (screenName !== 'ROYAL_PASS') {
+      if (this.game && this.game.garageLobby && this.game.garageLobby.isGoldenMode) {
+        this.game.garageLobby.setGoldenCarMode(false);
+      }
+      if (this.game && this.game.playerVehicle && this.game.playerVehicle.setGoldenCarMode) {
+        this.game.playerVehicle.setGoldenCarMode(false);
+      }
+    }
+
     if (screenName === 'LOBBY') {
       this.updateLobbyHeader();
+      this.updateLobbyVehiclePanel();
+      this.updateLobbySeasonCard();
+    }
+
+    if (screenName === 'PRE_RACE_LOADING') {
+      this.startPreRaceLoadingEffects();
+    } else if (this._prTipTimer) {
+      clearInterval(this._prTipTimer);
+      this._prTipTimer = null;
     }
 
     if (screenName === 'RACING') {
@@ -2484,6 +3178,262 @@ export class CinematicUI {
     if (screenName === 'EVENT_SELECT') {
       this.renderRegionEvents(WORLD_REGIONS[this.selectedRegionIndex]);
     }
+  }
+
+  showRoyalPassScreen() {
+    this.showScreen('ROYAL_PASS');
+    if (this.game && this.game.garageLobby) {
+      this.game.garageLobby.setGoldenCarMode(true);
+      this.game.garageLobby.setCameraAnglePreset('FRONT');
+    }
+    if (this.game && this.game.playerVehicle && this.game.playerVehicle.setGoldenCarMode) {
+      this.game.playerVehicle.setGoldenCarMode(true);
+    }
+    this.updateRoyalPassHeader();
+    this.renderRoyalPassTiers();
+  }
+
+  hideRoyalPassScreen() {
+    if (this.game && this.game.garageLobby) {
+      this.game.garageLobby.setGoldenCarMode(false);
+      this.game.garageLobby.setCameraAnglePreset('FRONT');
+    }
+    if (this.game && this.game.playerVehicle && this.game.playerVehicle.setGoldenCarMode) {
+      this.game.playerVehicle.setGoldenCarMode(false);
+    }
+    this.showScreen('LOBBY');
+    this.updateLobbySeasonCard();
+  }
+
+  updateRoyalPassHeader() {
+    const rp = saveManager.getRoyalPass();
+    this.safeSetText('rp-stat-tier', `TIER ${rp.level} / ${ROYAL_PASS_SEASON_1_TIERS.length}`);
+    this.safeSetText('rp-stat-xp', `${rp.xp.toLocaleString()} / ${rp.xpNext.toLocaleString()} XP`);
+
+    // Count ready tiers
+    const readyTiers = ROYAL_PASS_SEASON_1_TIERS.filter(t => rp.level >= t.tier && !rp.claimedTiers.includes(t.tier));
+    const badge = document.getElementById('rp-ready-count-badge');
+    if (badge) {
+      badge.textContent = `${readyTiers.length} REWARD${readyTiers.length === 1 ? '' : 'S'} READY`;
+      badge.style.display = readyTiers.length > 0 ? 'inline-block' : 'none';
+    }
+
+    const claimAllBtn = document.getElementById('btn-claim-royal-rewards');
+    if (claimAllBtn) {
+      if (readyTiers.length > 0) {
+        claimAllBtn.textContent = `🎁 CLAIM ALL (${readyTiers.length}) REWARDS`;
+        claimAllBtn.style.opacity = '1';
+        claimAllBtn.style.pointerEvents = 'auto';
+      } else {
+        claimAllBtn.textContent = '✓ ALL REWARDS CLAIMED';
+        claimAllBtn.style.opacity = '0.6';
+        claimAllBtn.style.pointerEvents = 'none';
+      }
+    }
+
+    this.updateLobbySeasonCard();
+  }
+
+  updateLobbySeasonCard() {
+    const rp = saveManager.getRoyalPass();
+    this.safeSetText('lsc-tier-text', `TIER ${rp.level} / ${ROYAL_PASS_SEASON_1_TIERS.length}`);
+    this.safeSetText('lsc-xp-text', `${rp.xp.toLocaleString()} / ${rp.xpNext.toLocaleString()} XP`);
+    const pct = Math.min(100, Math.round((rp.xp / rp.xpNext) * 100));
+    const fill = document.getElementById('lsc-xp-fill');
+    if (fill) fill.style.width = `${pct}%`;
+  }
+
+  renderRoyalPassTiers() {
+    const scrollContainer = document.getElementById('rp-tiers-scroll');
+    if (!scrollContainer) return;
+
+    const rp = saveManager.getRoyalPass();
+    const viewTrack = this.royalPassViewTrack || 'elite';
+
+    scrollContainer.innerHTML = ROYAL_PASS_SEASON_1_TIERS.map(item => {
+      const isClaimed = rp.claimedTiers.includes(item.tier);
+      const isReady = rp.level >= item.tier && !isClaimed;
+      const isLocked = rp.level < item.tier;
+
+      let cardClass = 'rp-tier-card';
+      if (isClaimed) cardClass += ' claimed';
+      else if (isReady) cardClass += ' ready glow';
+      else if (isLocked) cardClass += ' locked';
+      if (item.isPinnacle) cardClass += ' pinnacle glow';
+
+      const trackBadge = `<span class="tier-pass-type-tag ${item.type}">${item.type.toUpperCase()}</span>`;
+
+      let statusHtml = '';
+      if (isClaimed) {
+        statusHtml = `<span class="claimed-tag">CLAIMED ✓</span>`;
+      } else if (isReady) {
+        statusHtml = `<button class="btn-claim-tier" data-tier="${item.tier}">CLAIM</button>`;
+      } else {
+        statusHtml = `<small>LOCKED (TIER ${item.tier})</small>`;
+      }
+
+      if (item.isPinnacle && !isClaimed) {
+        statusHtml += `<span class="pinnacle-tag">GRAND REWARD</span>`;
+      }
+
+      let rewardText = '';
+      if (item.reward.credits) rewardText += `+${item.reward.credits.toLocaleString()} Ȼ `;
+      if (item.reward.tokens) rewardText += `+${item.reward.tokens.toLocaleString()} ◈`;
+
+      return `
+        <div class="${cardClass}" data-tier="${item.tier}">
+          ${trackBadge}
+          <span class="rpt-num">TIER 0${item.tier}</span>
+          <span class="rpt-icon">${item.icon}</span>
+          <strong>${item.title}</strong>
+          ${rewardText ? `<span class="tier-reward-pill">${rewardText}</span>` : ''}
+          ${statusHtml}
+        </div>
+      `;
+    }).join('');
+
+    // Bind individual claim buttons
+    scrollContainer.querySelectorAll('.btn-claim-tier').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const tier = parseInt(btn.dataset.tier, 10);
+        this.claimRoyalPassTier(tier);
+      });
+    });
+
+    // Allow clicking ready cards directly
+    scrollContainer.querySelectorAll('.rp-tier-card.ready').forEach(card => {
+      card.addEventListener('click', () => {
+        const tier = parseInt(card.dataset.tier, 10);
+        this.claimRoyalPassTier(tier);
+      });
+    });
+  }
+
+  claimRoyalPassTier(tierNumber) {
+    const tier = ROYAL_PASS_SEASON_1_TIERS.find(t => t.tier === tierNumber);
+    if (!tier) return;
+
+    const claimed = saveManager.claimRoyalPassTier(tierNumber, tier.reward);
+    if (!claimed) return;
+
+    if (this.game && this.game.sound) this.game.sound.playUpgradeSound();
+
+    let rewardDesc = '';
+    if (tier.reward.credits) rewardDesc += `+${tier.reward.credits.toLocaleString()} Ȼ CREDITS `;
+    if (tier.reward.tokens) rewardDesc += `+${tier.reward.tokens.toLocaleString()} ◈ TOKENS `;
+    if (tier.reward.item) rewardDesc += `// UNLOCKED: ${tier.reward.item}`;
+
+    this.showCyberpunkToast(
+      `👑 ROYAL PASS TIER ${tierNumber} CLAIMED!`,
+      rewardDesc || tier.title,
+      tier.icon || '🎁',
+      tier.isPinnacle ? 'gold' : 'cyan'
+    );
+
+    this.updateLobbyHeader();
+    this.updateRoyalPassHeader();
+    this.renderRoyalPassTiers();
+  }
+
+  claimRoyalPassRewards() {
+    const rp = saveManager.getRoyalPass();
+    const readyTiers = ROYAL_PASS_SEASON_1_TIERS.filter(t => rp.level >= t.tier && !rp.claimedTiers.includes(t.tier));
+
+    if (readyTiers.length === 0) {
+      this.showCyberpunkToast(
+        'ROYAL PASS UP TO DATE',
+        'ALL UNLOCKED SEASON 01 REWARDS HAVE BEEN CLAIMED.',
+        '✓',
+        'cyan'
+      );
+      return;
+    }
+
+    const res = saveManager.claimAllRoyalPassTiers(readyTiers);
+    if (this.game && this.game.sound) this.game.sound.playVictorySting();
+
+    this.showCyberpunkToast(
+      `★ ALL (${res.count}) REWARDS CLAIMED! ★`,
+      `+${res.totalCredits.toLocaleString()} Ȼ CREDITS | +${res.totalTokens.toLocaleString()} ◈ PREMIUM TOKENS`,
+      '👑',
+      'gold'
+    );
+
+    this.updateLobbyHeader();
+    this.updateRoyalPassHeader();
+    this.renderRoyalPassTiers();
+  }
+
+  boostRoyalPassXP(amount = 500) {
+    const result = saveManager.addRoyalPassXP(amount);
+    if (this.game && this.game.sound) {
+      if (result.leveledUp) {
+        this.game.sound.playVictorySting();
+      } else {
+        this.game.sound.playUpgradeSound();
+      }
+    }
+
+    if (result.leveledUp) {
+      this.showCyberpunkToast(
+        `⚡ SEASON 01 TIER LEVEL UP!`,
+        `ADVANCED TO ROYAL PASS TIER ${result.rp.level}! NEW REWARDS UNLOCKED!`,
+        '⭐',
+        'gold'
+      );
+    } else {
+      this.showCyberpunkToast(
+        `+${amount} SEASON XP EARNED`,
+        `CURRENT PROGRESS: ${result.rp.xp} / ${result.rp.xpNext} XP (TIER ${result.rp.level})`,
+        '⚡',
+        'cyan'
+      );
+    }
+
+    this.updateRoyalPassHeader();
+    this.renderRoyalPassTiers();
+  }
+
+  switchRoyalPassTrack(trackType) {
+    this.royalPassViewTrack = trackType;
+    const freeBtn = document.getElementById('btn-rp-tab-free');
+    const eliteBtn = document.getElementById('btn-rp-tab-elite');
+    if (freeBtn && eliteBtn) {
+      if (trackType === 'free') {
+        freeBtn.className = 'rp-pill free active';
+        eliteBtn.className = 'rp-pill elite';
+      } else {
+        freeBtn.className = 'rp-pill free';
+        eliteBtn.className = 'rp-pill elite active';
+      }
+    }
+    if (this.game && this.game.sound) this.game.sound.playMenuClick();
+    this.renderRoyalPassTiers();
+  }
+
+  showCyberpunkToast(title, message, icon = '✨', type = 'cyan') {
+    let toast = document.getElementById('cyberpunk-toast-notification');
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.id = 'cyberpunk-toast-notification';
+      toast.className = 'cyberpunk-toast-notification';
+      document.body.appendChild(toast);
+    }
+
+    toast.className = `cyberpunk-toast-notification ${type === 'gold' ? 'gold' : ''} active`;
+    toast.innerHTML = `
+      <span class="cpt-icon">${icon}</span>
+      <div class="cpt-content">
+        <strong>${title}</strong>
+        <p>${message}</p>
+      </div>
+    `;
+
+    if (this._toastTimer) clearTimeout(this._toastTimer);
+    this._toastTimer = setTimeout(() => {
+      toast.classList.remove('active');
+    }, 3800);
   }
 
   showWorldMap() {
@@ -2628,6 +3578,16 @@ export class CinematicUI {
 
   showEventSelect(regionIdx = 0) {
     this.selectedRegionIndex = regionIdx;
+    const region = WORLD_REGIONS[this.selectedRegionIndex];
+    if (region) {
+      if (region.id === 'coastline') this.selectedTrackId = 'coastline';
+      else if (region.id === 'snow_peaks') this.selectedTrackId = 'fuji';
+      else this.selectedTrackId = 'district';
+
+      if (this.game && this.game.loadSector) {
+        this.game.loadSector(this.selectedTrackId);
+      }
+    }
     this.showScreen('EVENT_SELECT');
     if (this.game.sound) this.game.sound.playMenuClick();
   }
@@ -2681,6 +3641,14 @@ export class CinematicUI {
     if (!region || !region.events) return;
     const evt = region.events[idx] || region.events[0];
 
+    if (region.id === 'coastline') this.selectedTrackId = 'coastline';
+    else if (region.id === 'snow_peaks') this.selectedTrackId = 'fuji';
+    else this.selectedTrackId = 'district';
+
+    if (this.game && this.game.loadSector) {
+      this.game.loadSector(this.selectedTrackId);
+    }
+
     this.safeSetText('ses-type', `${evt.type} RACE`);
     this.safeSetText('ses-title', evt.name);
     this.safeSetText('ses-meta', `${evt.dist} // ${evt.laps} ${evt.laps > 1 ? 'LAPS' : 'LAP'} // RECOMMENDED: ${evt.classReq} // REWARD: ${evt.rewardCr.toLocaleString()} CREDITS, ${evt.rewardXp} XP`);
@@ -2688,15 +3656,22 @@ export class CinematicUI {
 
   claimDailyReward() {
     if (this.dailyClaimed) {
-      alert('DAILY REWARD ALREADY CLAIMED FOR TODAY! CHECK BACK TOMORROW.');
+      this.showCyberpunkToast(
+        'DAILY REWARD ALREADY CLAIMED',
+        'REWARD ALREADY CLAIMED FOR TODAY! CHECK BACK TOMORROW AT 00:00 UTC.',
+        '✓',
+        'cyan'
+      );
       return;
     }
     this.dailyClaimed = true;
     saveManager.data.player.credits = (saveManager.data.player.credits || 45200) + 1500;
+    saveManager.data.player.tokens = (saveManager.data.player.tokens || 350) + 50;
     saveManager.save();
 
     this.safeSetText('lobby-credits', saveManager.data.player.credits.toLocaleString());
-    this.safeSetText('ldr-status', 'CLAIMED ✓ (+1,500 Ȼ)');
+    this.safeSetText('lobby-tokens', saveManager.data.player.tokens.toLocaleString());
+    this.safeSetText('ldr-status', 'CLAIMED ✓ (+1,500 Ȼ, +50 ◈)');
     const btn = document.getElementById('btn-claim-daily');
     if (btn) {
       btn.textContent = 'CLAIMED ✓';
@@ -2705,7 +3680,12 @@ export class CinematicUI {
     }
 
     if (this.game.sound) this.game.sound.playVictorySting();
-    this.showActionPopup('DAILY REWARD CLAIMED', 1500, 1);
+    this.showCyberpunkToast(
+      '🎁 DAILY LOGIN REWARD CLAIMED!',
+      '+1,500 Ȼ CREDITS | +50 ◈ TOKENS // 3-DAY STREAK MAINTAINED 🔥',
+      '🎁',
+      'gold'
+    );
   }
 
   startLoadingRainEffect() {
@@ -3011,14 +3991,40 @@ export class CinematicUI {
     });
   }
 
-  updateFpsCounter(fps, ms, quality, isVisible) {
+  updateFpsCounter(fps, ms, quality, isVisible, minFps = null) {
+    const globalOverlay = document.getElementById('perf-fps-meter-overlay');
     const hudPill = document.getElementById('perf-telemetry-hud');
     const lobbyPill = document.getElementById('lobby-perf-badge');
 
     if (!isVisible) {
+      if (globalOverlay) globalOverlay.style.display = 'none';
       if (hudPill) hudPill.style.display = 'none';
       if (lobbyPill) lobbyPill.style.display = 'none';
       return;
+    }
+
+    if (globalOverlay) {
+      globalOverlay.style.display = 'flex';
+      this.safeSetText('perf-global-fps', fps.toString());
+      this.safeSetText('perf-global-ms', `${ms}ms`);
+      const minFpsDisplay = (minFps !== null && minFps !== undefined) ? minFps.toString() : Math.max(1, fps - 3).toString();
+      this.safeSetText('perf-global-min', minFpsDisplay);
+      this.safeSetText('perf-global-quality', quality);
+
+      const statusDot = document.getElementById('perf-status-dot');
+      const fpsNum = document.getElementById('perf-global-fps');
+      if (statusDot) {
+        if (fps >= 55) {
+          statusDot.className = 'perf-dot green';
+          if (fpsNum) fpsNum.style.color = '#00FF88';
+        } else if (fps >= 30) {
+          statusDot.className = 'perf-dot yellow';
+          if (fpsNum) fpsNum.style.color = '#FFB800';
+        } else {
+          statusDot.className = 'perf-dot red';
+          if (fpsNum) fpsNum.style.color = '#FF1E28';
+        }
+      }
     }
 
     if (hudPill) {
@@ -3035,10 +4041,19 @@ export class CinematicUI {
   }
 
   setFpsCounterVisible(visible) {
+    const globalOverlay = document.getElementById('perf-fps-meter-overlay');
     const hudPill = document.getElementById('perf-telemetry-hud');
     const lobbyPill = document.getElementById('lobby-perf-badge');
+    if (globalOverlay) globalOverlay.style.display = visible ? 'flex' : 'none';
     if (hudPill) hudPill.style.display = visible ? 'flex' : 'none';
     if (lobbyPill) lobbyPill.style.display = visible ? 'flex' : 'none';
+
+    // Synchronize settings button state
+    const fpsBtn = document.getElementById('btn-toggle-fps') || (this.container ? this.container.querySelector('#btn-toggle-fps') : null);
+    if (fpsBtn) {
+      fpsBtn.textContent = visible ? 'ON' : 'OFF';
+      fpsBtn.className = `btn-toggle ${visible ? 'active' : ''}`;
+    }
   }
 
   updateLoadingProgress(pct, statusText) {
@@ -3064,6 +4079,87 @@ export class CinematicUI {
     }
   }
 
+  triggerPlayRaceFlow() {
+    const btn = document.getElementById('btn-lobby-play') || this.container.querySelector('#btn-lobby-play');
+    if (!btn || btn.dataset.busy === 'true') return;
+    btn.dataset.busy = 'true';
+
+    if (this.game.sound) {
+      this.game.sound.resume();
+      this.game.sound.playMenuClick();
+    }
+
+    btn.classList.add('btn-pressed');
+    if (btn && btn.blur) btn.blur();
+    if (typeof document !== 'undefined' && document.activeElement && document.activeElement.blur) {
+      document.activeElement.blur();
+    }
+    if (this.game && this.game.ensureGameFocus) {
+      this.game.ensureGameFocus();
+    }
+    this.spawnButtonParticleBurst(btn);
+
+    // Camera cinematic push towards vehicle
+    if (this.game && this.game.garageLobby && this.game.garageLobby.triggerLaunchPush) {
+      this.game.garageLobby.triggerLaunchPush();
+    }
+
+    // Transform into SEARCHING...
+    btn.innerHTML = `
+      <span class="cta-subtitle"><span class="pulse-marker cyan"></span> CONNECTING TO ORBITAL GRID...</span>
+      <strong class="cta-title">SEARCHING...</strong>
+    `;
+
+    setTimeout(() => {
+      btn.classList.remove('btn-pressed');
+      btn.classList.add('btn-found');
+      if (this.game.sound && this.game.sound.playRaceFound) {
+        this.game.sound.playRaceFound();
+      }
+      btn.innerHTML = `
+        <span class="cta-subtitle"><span class="pulse-marker green"></span> GRID LOCKED // 8 PILOTS</span>
+        <strong class="cta-title">MATCH FOUND</strong>
+      `;
+
+      setTimeout(() => {
+        btn.dataset.busy = 'false';
+        btn.classList.remove('btn-found');
+        const trackNames = {
+          shinjuku: 'NEO-SHINJUKU // URBAN CIRCUIT',
+          fuji: 'FUJI SKYWAY // HIGHWAY PASS',
+          district: 'NIGHT DISTRICT // ELIMINATION',
+          coastline: 'COASTLINE // S-CLASS EXPRESSWAY'
+        };
+        const subText = trackNames[this.selectedTrackId] || 'SECTOR // CIRCUIT';
+        btn.innerHTML = `
+          <span class="cta-subtitle">${subText}</span>
+          <strong class="cta-title">RACE NOW ►</strong>
+        `;
+        this.game.startMatchmaking(this.selectedTrackId);
+      }, 360);
+    }, 400);
+  }
+
+  spawnButtonParticleBurst(btn) {
+    if (typeof document === 'undefined') return;
+    const rect = btn.getBoundingClientRect();
+    const count = 14;
+    for (let i = 0; i < count; i++) {
+      const p = document.createElement('div');
+      p.className = 'btn-burst-particle';
+      const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.4;
+      const dist = 32 + Math.random() * 48;
+      const tx = Math.cos(angle) * dist;
+      const ty = Math.sin(angle) * dist;
+      p.style.setProperty('--tx', `${tx}px`);
+      p.style.setProperty('--ty', `${ty}px`);
+      p.style.left = `${rect.left + rect.width * 0.5}px`;
+      p.style.top = `${rect.top + rect.height * 0.5}px`;
+      document.body.appendChild(p);
+      setTimeout(() => p.remove(), 550);
+    }
+  }
+
   renderCarSelectCards() {
     const strip = document.getElementById('car-cards-strip') || this.container.querySelector('#car-cards-strip');
     if (!strip) return;
@@ -3074,20 +4170,60 @@ export class CinematicUI {
     strip.innerHTML = filtered.map(({ v, originalIdx }) => {
       const isSelected = originalIdx === this.selectedCarIndex;
       const colorHex = '#' + (v.primaryColor || 0x00F0FF).toString(16).padStart(6, '0');
+      const rarity = ['f8000', 'nxr01', 'v720'].includes(v.id) ? 'PINNACLE' : ['x900', 'k77'].includes(v.id) ? 'LEGENDARY' : 'EPIC';
+      const pr = Math.round((v.maxSpeedKmh * 0.9) + (v.stats.accel * 3.6) + (v.stats.handling * 2.4) + ((v.stats.boost || 90) * 1.2));
+      const spdPct = Math.min(100, Math.round(v.maxSpeedKmh / 4.5));
+      const accPct = Math.min(100, v.stats.accel >= 10 ? v.stats.accel : v.stats.accel * 10);
+      const hndPct = Math.min(100, v.stats.handling >= 10 ? v.stats.handling : v.stats.handling * 10);
+      const bstPct = Math.min(100, (v.stats.nitro ? v.stats.nitro * 10 : (v.stats.boost || 90)));
+
       return `
         <div class="mcc-card ${isSelected ? 'active' : ''}" data-index="${originalIdx}">
           <div class="mcc-accent-bar" style="background:${colorHex}"></div>
-          <div class="mcc-header">
-            <span class="mcc-cat">${v.category || 'HYPERCAR'}</span>
-            <span class="mcc-spd">${v.maxSpeedKmh} KM/H</span>
+          <div class="mcc-top-badge-row">
+            <span class="mcc-rarity ${rarity.toLowerCase()}">${rarity}</span>
+            <span class="mcc-pr">PR ${pr}</span>
           </div>
-          <strong class="mcc-name">${v.name.split('//')[0].trim()}</strong>
+          <div class="mcc-card-preview">
+            <div class="mcc-preview-glow" style="background:radial-gradient(circle, ${colorHex}55 0%, transparent 70%)"></div>
+            <span class="mcc-silhouette">${v.name.split('//')[0].trim()}</span>
+          </div>
+          <div class="mcc-header">
+            <strong class="mcc-name">${v.name.split('//')[0].trim()}</strong>
+            <span class="mcc-cat">${v.category || 'HYPERCAR'}</span>
+          </div>
           <small class="mcc-class">${v.classType}</small>
+
+          <div class="mcc-mini-bars">
+            <div class="mcc-bar-row">
+              <span class="mbr-label">SPD</span>
+              <div class="mbr-track"><div class="mbr-fill" style="width: ${spdPct}%"></div></div>
+              <span class="mbr-val">${v.maxSpeedKmh}</span>
+            </div>
+            <div class="mcc-bar-row">
+              <span class="mbr-label">ACC</span>
+              <div class="mbr-track"><div class="mbr-fill acc" style="width: ${accPct}%"></div></div>
+              <span class="mbr-val">${(v.stats.accel >= 10 ? (v.stats.accel / 10).toFixed(1) : v.stats.accel.toFixed(1))}</span>
+            </div>
+            <div class="mcc-bar-row">
+              <span class="mbr-label">HND</span>
+              <div class="mbr-track"><div class="mbr-fill hnd" style="width: ${hndPct}%"></div></div>
+              <span class="mbr-val">${(v.stats.handling >= 10 ? (v.stats.handling / 10).toFixed(1) : v.stats.handling.toFixed(1))}</span>
+            </div>
+            <div class="mcc-bar-row">
+              <span class="mbr-label">BST</span>
+              <div class="mbr-track"><div class="mbr-fill bst" style="width: ${bstPct}%"></div></div>
+              <span class="mbr-val">${(v.stats.boost >= 10 ? (v.stats.boost / 10).toFixed(1) : (v.stats.boost || 90))}</span>
+            </div>
+          </div>
         </div>
       `;
     }).join('');
 
     strip.querySelectorAll('.mcc-card').forEach(card => {
+      card.addEventListener('mouseenter', () => {
+        if (this.game.sound && this.game.sound.playUIHover) this.game.sound.playUIHover();
+      });
       card.addEventListener('click', () => {
         const idx = parseInt(card.dataset.index, 10);
         this.selectedCarIndex = idx;
@@ -3246,30 +4382,61 @@ export class CinematicUI {
     }
   }
 
-  updateRaceIntroCard(racerIndex, totalRacers = 8) {
+  updateRaceIntroCard(racerIndex, totalRacers = 8, introProgress = 0.0) {
     const card = document.getElementById('intro-bot-card') || this.container.querySelector('#intro-bot-card');
     if (!card) return;
 
-    if (racerIndex === 0) {
-      this.safeSetText('ibc-pos', `RACER 01 / 0${totalRacers}`);
+    const playerName = (this.game && this.game.playerVehicle && this.game.playerVehicle.spec)
+      ? this.game.playerVehicle.spec.name
+      : 'F-8000 // NIGHTRIFT';
+
+    if (introProgress < 0.25) {
+      this.safeSetText('ibc-shot-id', 'CAM 01 // HERO FASCIA & AERO');
+      this.safeSetText('ibc-pos', 'POLE POSITION // 01');
       this.safeSetText('ibc-name', 'RANJEET');
-      this.safeSetText('ibc-vehicle', this.game.playerVehicle ? this.game.playerVehicle.spec.name : 'F-8000 // NIGHTRIFT');
-      this.safeSetText('ibc-style', 'PLAYER CONTROLLER');
-    } else {
-      const rivals = this.game.rivals ? this.game.rivals.rivals : [];
-      const rival = rivals[racerIndex - 1];
-      if (rival) {
-        this.safeSetText('ibc-pos', `RACER 0${racerIndex + 1} / 0${totalRacers}`);
-        this.safeSetText('ibc-name', rival.name);
-        this.safeSetText('ibc-vehicle', rival.spec.vehicleName);
-        this.safeSetText('ibc-style', rival.spec.style);
+      this.safeSetText('ibc-vehicle', playerName);
+      this.safeSetText('ibc-style', 'TITANIUM CHASSIS // ACTIVE DOWNFORCE');
+    } else if (introProgress < 0.50) {
+      this.safeSetText('ibc-shot-id', 'CAM 02 // PROPULSION & EXHAUST');
+      this.safeSetText('ibc-pos', 'PROPULSION TELEMETRY');
+      this.safeSetText('ibc-name', 'TURBINE ENGAGED');
+      this.safeSetText('ibc-vehicle', playerName);
+      this.safeSetText('ibc-style', 'NITROUS RESEED // OVERDRIVE READY');
+    } else if (introProgress < 0.72) {
+      this.safeSetText('ibc-shot-id', 'CAM 03 // GRID LINEUP & TELEMETRY');
+      if (racerIndex === 0) {
+        this.safeSetText('ibc-pos', `RACER 01 / 0${totalRacers}`);
+        this.safeSetText('ibc-name', 'RANJEET');
+        this.safeSetText('ibc-vehicle', playerName);
+        this.safeSetText('ibc-style', 'PLAYER CONTROLLER');
+      } else {
+        const rivals = this.game.rivals ? this.game.rivals.rivals : [];
+        const rival = rivals[racerIndex - 1];
+        if (rival) {
+          this.safeSetText('ibc-pos', `RACER 0${racerIndex + 1} / 0${totalRacers}`);
+          this.safeSetText('ibc-name', rival.name);
+          this.safeSetText('ibc-vehicle', rival.spec.vehicleName);
+          this.safeSetText('ibc-style', rival.spec.style);
+        }
       }
+    } else {
+      this.safeSetText('ibc-shot-id', 'CAM 04 // LAUNCH GANTRY TOUCHDOWN');
+      this.safeSetText('ibc-pos', 'GRID STANDING: P1');
+      this.safeSetText('ibc-name', 'RANJEET');
+      this.safeSetText('ibc-vehicle', playerName);
+      this.safeSetText('ibc-style', 'SYSTEM READY FOR GREEN LIGHT');
     }
   }
 
   showCountdownOverlay() {
+    this._countdownGoTriggered = false;
+    if (this._countdownHideTimeout) {
+      clearTimeout(this._countdownHideTimeout);
+      this._countdownHideTimeout = null;
+    }
     const el = document.getElementById('screen-countdown-overlay');
     if (el) {
+      el.classList.remove('flash-go');
       el.style.display = 'flex';
       el.style.opacity = '1';
     }
@@ -3277,6 +4444,10 @@ export class CinematicUI {
     if (num) {
       num.textContent = '3';
       num.className = 'countdown-number-hero';
+    }
+    const sub = document.getElementById('countdown-sub');
+    if (sub) {
+      sub.textContent = 'SYSTEM CHARGE // 33%';
     }
     const l1 = document.getElementById('glight-1');
     const l2 = document.getElementById('glight-2');
@@ -3290,15 +4461,25 @@ export class CinematicUI {
     const el = document.getElementById('screen-countdown-overlay');
     if (el) {
       el.style.opacity = '0';
-      setTimeout(() => {
-        el.style.display = 'none';
-      }, 400);
+      el.style.display = 'none';
+      el.classList.remove('flash-go');
+    }
+    if (this._countdownHideTimeout) {
+      clearTimeout(this._countdownHideTimeout);
+      this._countdownHideTimeout = null;
     }
   }
 
   updateCountdown(timeRemaining, countInt) {
     const el = document.getElementById('screen-countdown-overlay');
     if (!el) return;
+
+    // When countdown completes or is zero, transition to GO immediately
+    if (timeRemaining <= 0) {
+      this.triggerCountdownGo();
+      return;
+    }
+
     if (el.style.display !== 'flex') {
       el.style.display = 'flex';
       el.style.opacity = '1';
@@ -3317,8 +4498,10 @@ export class CinematicUI {
       if (l3) l3.className = 'gantry-light';
       if (num.textContent !== '3') {
         num.textContent = '3';
-        num.className = 'countdown-number-hero pulse';
-        setTimeout(() => { if (num) num.className = 'countdown-number-hero'; }, 150);
+        num.className = 'countdown-number-hero slam pulse';
+        if (this.game.sound && this.game.sound.playCountdownPip) this.game.sound.playCountdownPip(false);
+        if (this.game.cameraController && this.game.cameraController.addShake) this.game.cameraController.addShake(0.08);
+        setTimeout(() => { if (num) num.className = 'countdown-number-hero'; }, 180);
       }
       if (sub) sub.textContent = 'SYSTEM CHARGE // 33%';
     } else if (timeRemaining > 1.0) {
@@ -3327,8 +4510,10 @@ export class CinematicUI {
       if (l3) l3.className = 'gantry-light';
       if (num.textContent !== '2') {
         num.textContent = '2';
-        num.className = 'countdown-number-hero pulse';
-        setTimeout(() => { if (num) num.className = 'countdown-number-hero'; }, 150);
+        num.className = 'countdown-number-hero slam pulse';
+        if (this.game.sound && this.game.sound.playCountdownPip) this.game.sound.playCountdownPip(false);
+        if (this.game.cameraController && this.game.cameraController.addShake) this.game.cameraController.addShake(0.08);
+        setTimeout(() => { if (num) num.className = 'countdown-number-hero'; }, 180);
       }
       if (sub) sub.textContent = 'SYSTEM CHARGE // 66%';
     } else if (timeRemaining > 0.0) {
@@ -3337,19 +4522,25 @@ export class CinematicUI {
       if (l3) l3.className = 'gantry-light red-on';
       if (num.textContent !== '1') {
         num.textContent = '1';
-        num.className = 'countdown-number-hero pulse';
-        setTimeout(() => { if (num) num.className = 'countdown-number-hero'; }, 150);
+        num.className = 'countdown-number-hero slam pulse';
+        if (this.game.sound && this.game.sound.playCountdownPip) this.game.sound.playCountdownPip(false);
+        if (this.game.cameraController && this.game.cameraController.addShake) this.game.cameraController.addShake(0.08);
+        setTimeout(() => { if (num) num.className = 'countdown-number-hero'; }, 180);
       }
       if (sub) sub.textContent = 'SYSTEM CHARGE // 100%';
     }
   }
 
   triggerCountdownGo() {
+    if (this._countdownGoTriggered) return;
+    this._countdownGoTriggered = true;
+
     const l1 = document.getElementById('glight-1');
     const l2 = document.getElementById('glight-2');
     const l3 = document.getElementById('glight-3');
     const num = document.getElementById('countdown-num');
     const sub = document.getElementById('countdown-sub');
+    const el = document.getElementById('screen-countdown-overlay');
 
     if (l1) l1.className = 'gantry-light green-on';
     if (l2) l2.className = 'gantry-light green-on';
@@ -3357,15 +4548,29 @@ export class CinematicUI {
 
     if (num) {
       num.textContent = 'GO!';
-      num.className = 'countdown-number-hero go pulse';
+      num.className = 'countdown-number-hero go slam pulse';
     }
     if (sub) {
       sub.textContent = 'ENGAGE // HYPER DRIVE ACTIVE';
     }
 
-    setTimeout(() => {
+    if (el) {
+      el.classList.add('flash-go');
+    }
+
+    if (this.game && this.game.sound) {
+      if (this.game.sound.playCountdownPip) this.game.sound.playCountdownPip(true);
+      if (this.game.sound.playOverdriveBurstSound) this.game.sound.playOverdriveBurstSound();
+    }
+
+    if (this.game && this.game.cameraController && this.game.cameraController.addShake) {
+      this.game.cameraController.addShake(0.28);
+    }
+
+    if (this._countdownHideTimeout) clearTimeout(this._countdownHideTimeout);
+    this._countdownHideTimeout = setTimeout(() => {
       this.hideCountdownOverlay();
-    }, 700);
+    }, 650);
   }
 
   showActionPopup(name, points, combo = 1) {
@@ -3419,6 +4624,42 @@ export class CinematicUI {
         clearTimeout(this.nitroStuntTimeout);
         this.nitroStuntTimeout = setTimeout(() => { el.style.display = 'none'; }, 2200);
       }
+    } else if (upperName.includes('OVERTAKE')) {
+      const el = document.getElementById('stunt-overtake-entry');
+      const textEl = document.getElementById('stunt-overtake-text');
+      const ptsEl = document.getElementById('stunt-overtake-pts');
+      if (el) {
+        if (textEl) textEl.textContent = 'OVERTAKE';
+        if (ptsEl) ptsEl.textContent = `+${points || 500}`;
+        el.style.display = 'flex';
+        el.classList.add('stunt-pop');
+        clearTimeout(this.overtakeStuntTimeout);
+        this.overtakeStuntTimeout = setTimeout(() => { el.style.display = 'none'; }, 2200);
+      }
+    } else if (upperName.includes('PERFECT LINE') || upperName.includes('CORNER')) {
+      const el = document.getElementById('stunt-line-entry');
+      const textEl = document.getElementById('stunt-line-text');
+      const ptsEl = document.getElementById('stunt-line-pts');
+      if (el) {
+        if (textEl) textEl.textContent = 'PERFECT LINE';
+        if (ptsEl) ptsEl.textContent = `+${points || 400}`;
+        el.style.display = 'flex';
+        el.classList.add('stunt-pop');
+        clearTimeout(this.lineStuntTimeout);
+        this.lineStuntTimeout = setTimeout(() => { el.style.display = 'none'; }, 2200);
+      }
+    } else if (upperName.includes('CLEAN LANDING') || upperName.includes('LANDING')) {
+      const el = document.getElementById('stunt-landing-entry');
+      const textEl = document.getElementById('stunt-landing-text');
+      const ptsEl = document.getElementById('stunt-landing-pts');
+      if (el) {
+        if (textEl) textEl.textContent = upperName.includes('PERFECT') ? 'PERFECT LANDING' : 'CLEAN LANDING';
+        if (ptsEl) ptsEl.textContent = `+${points || 300}`;
+        el.style.display = 'flex';
+        el.classList.add('stunt-pop');
+        clearTimeout(this.landingStuntTimeout);
+        this.landingStuntTimeout = setTimeout(() => { el.style.display = 'none'; }, 2200);
+      }
     }
 
     clearTimeout(this.actionTimeout);
@@ -3427,24 +4668,97 @@ export class CinematicUI {
     }, 1800);
   }
 
+  updateActiveControlsHUD(states) {
+    if (!states) return;
+    if (!this.ctrlElements) {
+      this.ctrlElements = {
+        keyW: document.getElementById('key-w'),
+        keyS: document.getElementById('key-s'),
+        keyA: document.getElementById('key-a'),
+        keyD: document.getElementById('key-d'),
+        keyShift: document.getElementById('key-shift'),
+        keySpace: document.getElementById('key-space'),
+        chipDrive: document.getElementById('ctrl-hint-drive'),
+        chipSteer: document.getElementById('ctrl-hint-steer'),
+        chipDrift: document.getElementById('ctrl-hint-drift'),
+        chipNitro: document.getElementById('ctrl-hint-nitro')
+      };
+    }
+    const e = this.ctrlElements;
+    if (!e.keyW) return;
+
+    if (states.throttle) { e.keyW.classList.add('active'); if (e.chipDrive) e.chipDrive.classList.add('active'); }
+    else { e.keyW.classList.remove('active'); }
+
+    if (states.brake) { e.keyS.classList.add('active'); if (e.chipDrive) e.chipDrive.classList.add('active'); }
+    else { e.keyS.classList.remove('active'); }
+    if (!states.throttle && !states.brake && e.chipDrive) { e.chipDrive.classList.remove('active'); }
+
+    if (states.steerLeft) { e.keyA.classList.add('active'); if (e.chipSteer) e.chipSteer.classList.add('active'); }
+    else { e.keyA.classList.remove('active'); }
+
+    if (states.steerRight) { e.keyD.classList.add('active'); if (e.chipSteer) e.chipSteer.classList.add('active'); }
+    else { e.keyD.classList.remove('active'); }
+    if (!states.steerLeft && !states.steerRight && e.chipSteer) { e.chipSteer.classList.remove('active'); }
+
+    if (states.drift) { if (e.keyShift) e.keyShift.classList.add('active'); if (e.chipDrift) e.chipDrift.classList.add('active'); }
+    else { if (e.keyShift) e.keyShift.classList.remove('active'); if (e.chipDrift) e.chipDrift.classList.remove('active'); }
+
+    if (states.boost) { if (e.keySpace) e.keySpace.classList.add('active'); if (e.chipNitro) e.chipNitro.classList.add('active'); }
+    else { if (e.keySpace) e.keySpace.classList.remove('active'); if (e.chipNitro) e.chipNitro.classList.remove('active'); }
+  }
+
   updateHUD(physics, gameState) {
     if (!physics || !gameState) return;
 
-    const speed = Math.floor(physics.getSpeedKmh());
+    // Smooth animated digital speed transition
+    const rawSpeed = physics.getSpeedKmh();
+    this._displaySpeed = this._displaySpeed !== undefined ? this._displaySpeed : rawSpeed;
+    this._displaySpeed = THREE.MathUtils.lerp(this._displaySpeed, rawSpeed, 0.35);
+    const speed = Math.floor(this._displaySpeed);
     this.safeSetText('rh-speed', speed.toString().padStart(3, '0'));
 
-    // Dynamic Gear Indicator (Gears 1 to 7 based on propulsion velocity)
+    // Dynamic Gear Indicator (Gears 1 to 7 based on propulsion velocity) with tactile 60 FPS shift pop
     const gear = speed < 25 ? 1 : speed < 80 ? 2 : speed < 160 ? 3 : speed < 240 ? 4 : speed < 320 ? 5 : speed < 400 ? 6 : 7;
-    this.safeSetText('rh-gear', `GEAR ${gear}`);
+    const gearEl = document.getElementById('rh-gear') || this.container.querySelector('#rh-gear');
+    if (gearEl) {
+      if (this._lastHudGear !== undefined && this._lastHudGear !== gear && speed > 20) {
+        gearEl.classList.remove('gear-shift-pop');
+        void gearEl.offsetWidth; // Trigger reflow to restart CSS pop animation
+        gearEl.classList.add('gear-shift-pop');
+      }
+      gearEl.textContent = `GEAR ${gear}`;
+    }
+    this._lastHudGear = gear;
 
     // Pink Time Badge
     const timeFormatted = gameState.formatTime(gameState.currentLapTime || gameState.raceTime || 0);
     this.safeSetText('rh-lap-time', `TIME: ${timeFormatted}`);
 
-    // Tachometer fill bar
+    // Visual RPM tachometer calculation and readout
+    const gearMinSpeed = [0, 0, 25, 80, 160, 240, 320, 400][gear] || 0;
+    const gearMaxSpeed = [0, 25, 80, 160, 240, 320, 400, 440][gear] || 440;
+    const gearSpan = Math.max(1, gearMaxSpeed - gearMinSpeed);
+    const gearRatio = Math.min(1.0, Math.max(0.0, (speed - gearMinSpeed) / gearSpan));
+    const rpm = Math.floor(3400 + gearRatio * 6200);
+
     const tachoRatio = Math.min(speed / 430.0, 1.0);
     const tachoFill = document.getElementById('rh-tacho-fill') || this.container.querySelector('#rh-tacho-fill');
-    if (tachoFill) tachoFill.style.width = `${Math.round(tachoRatio * 100)}%`;
+    if (tachoFill) {
+      tachoFill.style.width = `${Math.round(tachoRatio * 100)}%`;
+      if (rpm > 8800) {
+        tachoFill.style.background = 'linear-gradient(90deg, #FFB800, #FF1E3C)';
+      } else {
+        tachoFill.style.background = '';
+      }
+    }
+
+    const rpmEl = document.getElementById('rh-rpm-readout') || this.container.querySelector('#rh-rpm-readout');
+    if (rpmEl) {
+      rpmEl.textContent = `${rpm.toLocaleString()} RPM`;
+      if (rpm > 8800) rpmEl.classList.add('redline');
+      else rpmEl.classList.remove('redline');
+    }
 
     // Position & Lap (use smoothed displayPosition if available)
     const displayPos = gameState.displayPosition !== undefined ? gameState.displayPosition : gameState.currentPosition;
@@ -3454,10 +4768,11 @@ export class CinematicUI {
       if (displayPos === 1) posEl.classList.add('pos-first');
       else posEl.classList.remove('pos-first');
     }
-    this.safeSetHTML('rh-lap', `${gameState.currentLap.toString().padStart(2, '0')}<small>/02</small>`);
+    const maxLapsStr = (gameState.maxLaps || 3).toString().padStart(2, '0');
+    this.safeSetHTML('rh-lap', `${gameState.currentLap.toString().padStart(2, '0')}<small>/${maxLapsStr}</small>`);
 
     // Race Progress %
-    const totalCircuitLaps = 2.0;
+    const totalCircuitLaps = (gameState.maxLaps || 3.0);
     const progressPct = Math.min(100, Math.max(0, Math.floor(((gameState.currentLap - 1 + (physics.currentU || 0)) / totalCircuitLaps) * 100)));
     this.safeSetText('rh-progress-badge', `${progressPct}%`);
     this.safeSetWidth('hud-dual-progress-fill', `${progressPct}%`);
@@ -3502,22 +4817,32 @@ export class CinematicUI {
       }
     }
 
-    // Live 8-Pilot Leaderboard Tower Update
-    if (this.game.rivals) {
+    // Live 8-Pilot Leaderboard Tower Update with live opponent distance
+    this._lastTowerUpdate = this._lastTowerUpdate || 0;
+    const nowTowerTime = performance.now();
+    if (this.game.rivals && (nowTowerTime - this._lastTowerUpdate > 100)) {
+      this._lastTowerUpdate = nowTowerTime;
       const standings = this.game.rivals.getStandings(physics.totalDistance, 'RANJEET');
       const towerEl = document.getElementById('hud-leaderboard-tower');
       if (towerEl && standings && standings.length >= 8) {
-        towerEl.innerHTML = standings.slice(0, 8).map((racer, idx) => {
-          const pos = idx + 1;
-          const isPlayer = racer.isPlayer;
-          return `
-            <div class="lbt-item ${isPlayer ? 'player active' : ''}" data-pilot="${racer.name.toLowerCase()}">
-              <span class="lbt-pos">${pos}</span>
-              <span class="lbt-name">${racer.name}</span>
-              ${isPlayer ? '<span class="lbt-you">YOU</span>' : ''}
-            </div>
-          `;
-        }).join('');
+        let orderKey = '';
+        for (let i = 0; i < 8; i++) orderKey += standings[i].name[0] + (standings[i].isPlayer ? 'P' : '');
+        if (this._lastTowerKey !== orderKey || !towerEl.children.length) {
+          this._lastTowerKey = orderKey;
+          towerEl.innerHTML = standings.slice(0, 8).map((racer, idx) => {
+            const pos = idx + 1;
+            const isPlayer = racer.isPlayer;
+            const deltaM = Math.abs(Math.round(racer.dist - physics.totalDistance));
+            const deltaLabel = isPlayer ? 'YOU' : `${racer.dist > physics.totalDistance ? '+' : '-'}${deltaM}m`;
+            return `
+              <div class="lbt-item ${isPlayer ? 'player active' : ''}" data-pilot="${racer.name.toLowerCase()}">
+                <span class="lbt-pos">${pos}</span>
+                <span class="lbt-name">${racer.name}</span>
+                <span class="lbt-you ${isPlayer ? '' : 'delta'}">${deltaLabel}</span>
+              </div>
+            `;
+          }).join('');
+        }
       }
     }
 
@@ -3539,6 +4864,78 @@ export class CinematicUI {
     if (slipstreamBanner) {
       slipstreamBanner.style.display = physics.isSlipstreaming ? 'flex' : 'none';
     }
+
+    // Checkpoint progress update
+    if (gameState.getCheckpointProgress) {
+      this.safeSetHTML('rh-checkpoint-badge', `${gameState.getCheckpointProgress()}`);
+    }
+
+    // Wrong-Way HUD Alert Banner
+    const wrongWayBanner = document.getElementById('hud-wrong-way-banner');
+    if (wrongWayBanner) {
+      wrongWayBanner.style.display = gameState.isWrongWay ? 'flex' : 'none';
+    }
+
+    // Upcoming Turn Indicator with Distance Countdown
+    const turnIndicator = document.getElementById('hud-turn-indicator');
+    if (turnIndicator && this.game && this.game.circuit) {
+      let sharpTurnU = null;
+      let sharpTurnBank = 0;
+      for (let scan = 0.008; scan <= 0.035; scan += 0.006) {
+        const testU = (physics.currentU + scan) % 1.0;
+        const testFrame = this.game.circuit.getFrameAt(testU);
+        if (testFrame && (testFrame.curvature > 0.40 || Math.abs(testFrame.bank || 0) > 0.04)) {
+          sharpTurnU = scan;
+          sharpTurnBank = testFrame.bank || 0;
+          break;
+        }
+      }
+
+      if (sharpTurnU !== null) {
+        const isLeft = sharpTurnBank > 0;
+        const distM = Math.max(15, Math.floor(sharpTurnU * 5400));
+        turnIndicator.style.display = 'flex';
+        this.safeSetText('ti-arrow', isLeft ? '◄ ◄ ◄' : '► ► ►');
+        this.safeSetText('ti-text', isLeft ? `SHARP LEFT // ${distM}M` : `SHARP RIGHT // ${distM}M`);
+      } else {
+        turnIndicator.style.display = 'none';
+      }
+    }
+
+    // Collision Impact Flash trigger
+    const impactFlashEl = document.getElementById('hud-impact-flash');
+    if (impactFlashEl && physics.impactFlash) {
+      impactFlashEl.style.display = 'block';
+      clearTimeout(this._impactFlashTimeout);
+      this._impactFlashTimeout = setTimeout(() => {
+        impactFlashEl.style.display = 'none';
+      }, 220);
+    }
+
+    // Off-Track 3-Second Automatic Reset HUD Alert
+    const otAlert = document.getElementById('hud-offtrack-alert');
+    if (otAlert) {
+      if (physics.isOffTrack) {
+        otAlert.style.display = 'block';
+        const cd = Math.max(0.0, physics.offTrackCountdown !== undefined ? physics.offTrackCountdown : 0.0);
+        this.safeSetText('ot-countdown-timer', `0${cd.toFixed(1)}s`);
+        const otFill = document.getElementById('ot-progress-fill');
+        if (otFill) {
+          const fillPct = Math.max(0, Math.min(100, (cd / 3.0) * 100));
+          otFill.style.width = `${fillPct}%`;
+        }
+      } else {
+        otAlert.style.display = 'none';
+      }
+    }
+
+    // Safety guard: Guarantee countdown overlay is NEVER stuck on screen while racing
+    if (gameState && (gameState.status === 'RACING' || (gameState.raceTime && gameState.raceTime > 0.4))) {
+      const cdEl = document.getElementById('screen-countdown-overlay');
+      if (cdEl && cdEl.style.display !== 'none' && (gameState.raceTime > 0.7 || !this._countdownHideTimeout)) {
+        this.hideCountdownOverlay();
+      }
+    }
   }
 
   updateDistrictHUD(district) {
@@ -3559,9 +4956,52 @@ export class CinematicUI {
   }
 
   updateCameraBadge(mode) {
-    const btn = document.getElementById('btn-camera-hud') || this.container.querySelector('#btn-camera-hud');
+    const isFpp = (mode === 'COCKPIT' || mode === 'HOOD' || mode === 'BUMPER');
+    const badgeText = isFpp ? 'FPP' : 'TPP';
+    const subLabel = mode || (isFpp ? 'COCKPIT' : 'CHASE');
+
+    // 1. Top HUD Button
+    const btn = document.getElementById('btn-camera-hud') || (this.container && this.container.querySelector('#btn-camera-hud'));
     if (btn) {
-      btn.textContent = `🎥 CAM: ${mode}`;
+      if (isFpp) {
+        btn.classList.add('fpp-active');
+        btn.setAttribute('title', 'Perspective: FPP (First-Person Cockpit). Click or press [V] to switch to TPP');
+      } else {
+        btn.classList.remove('fpp-active');
+        btn.setAttribute('title', 'Perspective: TPP (Third-Person Chase). Click or press [V] to switch to FPP');
+      }
+      const iconWrap = btn.querySelector('.cam-icon-wrap');
+      if (iconWrap) {
+        iconWrap.innerHTML = isFpp ? FPP_CAMERA_SVG : TPP_CAMERA_SVG;
+      }
+      const badgeEl = btn.querySelector('.cam-perspective-badge');
+      if (badgeEl) {
+        badgeEl.textContent = badgeText;
+      }
+      const modeEl = btn.querySelector('.cam-mode-label');
+      if (modeEl) {
+        modeEl.textContent = subLabel;
+      }
+    }
+
+    // 2. Mobile Circular HUD Button
+    const mBtn = document.getElementById('m-btn-cam') || (this.container && this.container.querySelector('#m-btn-cam'));
+    if (mBtn) {
+      if (isFpp) {
+        mBtn.classList.add('fpp-active');
+        mBtn.setAttribute('title', 'Perspective: FPP. Tap to switch to TPP');
+      } else {
+        mBtn.classList.remove('fpp-active');
+        mBtn.setAttribute('title', 'Perspective: TPP. Tap to switch to FPP');
+      }
+      const iconWrap = mBtn.querySelector('.cam-icon-wrap');
+      if (iconWrap) {
+        iconWrap.innerHTML = isFpp ? FPP_CAMERA_SVG : TPP_CAMERA_SVG;
+      }
+      const badgeEl = mBtn.querySelector('.cam-mini-badge');
+      if (badgeEl) {
+        badgeEl.textContent = badgeText;
+      }
     }
   }
 
@@ -3581,6 +5021,49 @@ export class CinematicUI {
       if (boostContainer && boostContainer.parentElement) {
         boostContainer.parentElement.style.borderColor = zoneColor;
       }
+    }
+  }
+
+  // Update track briefing, HUD names, and sector stats dynamically
+  updateTrackInfo(sectorDef) {
+    if (!sectorDef) return;
+    this.currentSectorDef = sectorDef;
+
+    // Update Pre-Race Hero Screen
+    const heroName = document.getElementById('pr-hero-track-name');
+    if (heroName) heroName.textContent = sectorDef.name || 'NEON HORIZON';
+
+    const heroLoc = document.getElementById('pr-hero-location');
+    if (heroLoc) heroLoc.textContent = `${sectorDef.sectorNum || 'SECTOR'} // ${sectorDef.subtitle || 'HIGHWAY RIFT'}`;
+
+    const heroStats = document.getElementById('pr-hero-sub-stats');
+    if (heroStats) {
+      heroStats.innerHTML = `<span>${sectorDef.laps || 3} LAPS</span> • <span>${sectorDef.lengthKm || 5.0} KM</span> • <span>${sectorDef.difficulty || 'CLASS-A'}</span> • <span>RANKED RACE</span>`;
+    }
+
+    // Update Lobby CTA Subtitle
+    const ctaSub = document.querySelector('.cta-subtitle');
+    if (ctaSub) {
+      ctaSub.textContent = `${sectorDef.sectorNum || 'SECTOR'} // ${sectorDef.name || 'CIRCUIT'}`;
+    }
+
+    // Update Results Subtitle
+    const resSub = document.querySelector('.res-sub');
+    if (resSub) {
+      resSub.textContent = `${sectorDef.name || 'CIRCUIT'} // ${sectorDef.sectorNum || 'SECTOR'}`;
+    }
+
+    // Update Win Subtitle
+    const winTitle = document.querySelector('.win-champion-header h2');
+    if (winTitle) {
+      winTitle.textContent = `CHAMPION // ${sectorDef.sectorNum || 'SECTOR'} COMPLETE`;
+    }
+
+    // Update In-Game Lap Display Target
+    const lapEl = document.getElementById('rh-lap');
+    if (lapEl) {
+      const maxLapsStr = (sectorDef.laps || 3).toString().padStart(2, '0');
+      lapEl.innerHTML = `01<small>/${maxLapsStr}</small>`;
     }
   }
 
@@ -3645,6 +5128,43 @@ export class CinematicUI {
     this.safeSetText('res-near-miss', physics.totalNearMisses.toString());
     this.safeSetText('res-score', `${physics.totalScore.toLocaleString()} PTS`);
 
+    const posChange = pos <= 2 ? `+${3 - pos} POS (P3 → P${pos})` : `P${pos} FINISH`;
+    this.safeSetText('res-pos-change', posChange);
+
+    // Roll up animated reward numbers
+    const targetCoins = pos === 1 ? 15000 : (pos === 2 ? 10000 : 7500);
+    const targetXp = pos === 1 ? 2500 : (pos === 2 ? 1800 : 1200);
+    const duration = 1200;
+    const startTime = performance.now();
+    const animInterval = setInterval(() => {
+      const now = performance.now();
+      const progress = Math.min(1.0, (now - startTime) / duration);
+      const ease = 1 - Math.pow(1 - progress, 3);
+      const curCoins = Math.round(ease * targetCoins);
+      const curXp = Math.round(ease * targetXp);
+      this.safeSetText('res-coins-val', `+${curCoins.toLocaleString()} Ȼ`);
+      this.safeSetText('res-xp-val', `+${curXp.toLocaleString()} XP`);
+      if (this.game.sound && this.game.sound.playRewardRoll && Math.random() < 0.3) {
+        this.game.sound.playRewardRoll();
+      }
+      if (progress >= 1.0) {
+        clearInterval(animInterval);
+        if (this.game.sound && this.game.sound.playConfirmation) {
+          this.game.sound.playConfirmation();
+        }
+        if (gameState.bestLapTime > 0) {
+          saveManager.recordPersonalBest(
+            this.selectedTrackId,
+            gameState.bestLapTime,
+            Math.floor(physics.maxSpeedKmh),
+            Math.floor(physics.totalScore || 0)
+          );
+        }
+        saveManager.addRoyalPassXP(pos === 1 ? 500 : (pos === 2 ? 350 : 250));
+        this.updateLobbySeasonCard();
+      }
+    }, 40);
+
     const statusEl = document.getElementById('res-upload-status') || this.container.querySelector('#res-upload-status');
     if (statusEl) statusEl.style.display = 'none';
   }
@@ -3681,47 +5201,149 @@ export class CinematicUI {
     if (this.game.garageLobby) {
       this.game.garageLobby.setCameraAnglePreset('MODAL');
     }
+    await this.fetchAndRenderLeaderboard();
+  }
+
+  async fetchAndRenderLeaderboard(forceRefresh = false) {
     const tbody = document.getElementById('leaderboard-rows-body') || this.container.querySelector('#leaderboard-rows-body');
-    if (tbody) {
-      tbody.innerHTML = `<tr><td colspan="7" class="lb-loading"><span class="pulse-marker"></span> QUERYING ORBITAL TELEMETRY RELAY...</td></tr>`;
+    if (tbody && (!this.cachedLeaderboard || forceRefresh)) {
+      tbody.innerHTML = `<tr><td colspan="9" class="lb-loading"><span class="pulse-marker"></span> QUERYING ORBITAL TELEMETRY RELAY...</td></tr>`;
     }
 
     try {
-      // Ping check
       const status = await backendService.checkStatus();
       this.updateCloudStatusBadge(status.online, status.ping);
 
       const data = await backendService.getLeaderboard(50);
-      this.cachedLeaderboard = data;
-      this.renderLeaderboardRows('all');
+      let list = [];
+      if (Array.isArray(data)) {
+        list = data;
+      } else if (data && Array.isArray(data.leaderboard)) {
+        list = data.leaderboard;
+      }
+
+      // Always merge fallback data if list is short or empty
+      const fallback = backendService.getLocalFallbackLeaderboard(this.leaderboardTrack);
+      if (list.length === 0) {
+        list = fallback.leaderboard;
+      }
+
+      // Merge player's real personal best if available
+      const pb = saveManager.data.personalBests?.[this.leaderboardTrack];
+      if (pb) {
+        const playerPilot = {
+          rank: 1,
+          pilotName: saveManager.data.player.name || 'RANJEET',
+          callsign: 'CREATOR // PILOT',
+          vehicleName: 'F-8000 // NIGHTRIFT',
+          lapTime: pb.lapTime,
+          lapTimeFormatted: this.formatLeaderboardTime(pb.lapTime),
+          topSpeed: pb.topSpeed || 438,
+          driftScore: pb.driftScore || 18450,
+          badge: 'DEV_RECORD',
+          isPlayer: true
+        };
+        const existingIdx = list.findIndex(e => e.pilotName === playerPilot.pilotName);
+        if (existingIdx >= 0) {
+          list[existingIdx] = playerPilot;
+        } else {
+          list.push(playerPilot);
+        }
+      }
+
+      list.sort((a, b) => a.lapTime - b.lapTime);
+      list.forEach((item, idx) => { item.rank = idx + 1; });
+
+      this.cachedLeaderboard = {
+        success: true,
+        track: this.leaderboardTrack,
+        worldRecord: list[0],
+        leaderboard: list
+      };
+
+      this.updateLeaderboardShowcase(list);
+      this.renderLeaderboardRows(this.leaderboardFilter, this.leaderboardSearch);
     } catch (err) {
       console.warn('[Leaderboard] Network error, utilizing local telemetry cache:', err);
-      this.cachedLeaderboard = backendService.getLocalFallbackLeaderboard();
-      this.renderLeaderboardRows('all');
+      const fallback = backendService.getLocalFallbackLeaderboard(this.leaderboardTrack);
+      this.cachedLeaderboard = fallback;
+      this.updateLeaderboardShowcase(fallback.leaderboard);
+      this.renderLeaderboardRows(this.leaderboardFilter, this.leaderboardSearch);
     }
   }
 
-  renderLeaderboardRows(filter = 'all') {
-    const tbody = document.getElementById('leaderboard-rows-body') || this.container.querySelector('#leaderboard-rows-body');
-    if (!tbody || !this.cachedLeaderboard) return;
+  updateLeaderboardShowcase(entries) {
+    if (!entries || entries.length === 0) return;
+    const wr = entries[0];
+    this.safeSetText('lb-wr-name', wr.pilotName);
+    this.safeSetText('lb-wr-callsign', wr.callsign || 'WORLD RECORD HOLDER');
+    this.safeSetText('lb-wr-time', wr.lapTimeFormatted);
+    this.safeSetText('lb-wr-speed', `${wr.topSpeed} KM/H`);
+    this.safeSetText('lb-wr-drift', `${(wr.driftScore || 0).toLocaleString()} PTS`);
 
-    let entries = this.cachedLeaderboard.leaderboard || [];
+    // Update bottom dock
+    const playerName = saveManager.data.player.name || 'RANJEET';
+    const playerEntry = entries.find(e => e.pilotName === playerName) || wr;
+    this.safeSetText('lb-dock-pilot', playerName);
+    this.safeSetText('lb-dock-rank', `CURRENT RANK: #${playerEntry.rank.toString().padStart(2, '0')}${playerEntry.rank === 1 ? ' (WORLD RECORD)' : ''}`);
+    this.safeSetText('lb-dock-time', playerEntry.lapTimeFormatted);
+    this.safeSetText('lb-dock-spd', `${playerEntry.topSpeed} KM/H`);
+    this.safeSetText('lb-dock-drift', `${(playerEntry.driftScore || 0).toLocaleString()} PTS`);
+  }
+
+  renderLeaderboardRows(filter = 'all', searchQuery = '') {
+    const tbody = document.getElementById('leaderboard-rows-body') || this.container.querySelector('#leaderboard-rows-body');
+    if (!tbody) return;
+
+    if (!this.cachedLeaderboard || !this.cachedLeaderboard.leaderboard) {
+      this.cachedLeaderboard = backendService.getLocalFallbackLeaderboard(this.leaderboardTrack);
+    }
+
+    let entries = [...this.cachedLeaderboard.leaderboard];
+    const topLap = entries[0] ? entries[0].lapTime : 48.214;
+    const playerName = saveManager.data.player.name || 'RANJEET';
 
     if (filter === 'dev') {
-      entries = entries.filter(e => e.pilotName === 'RANJEET' || e.badge === 'DEV_RECORD');
+      entries = entries.filter(e => e.pilotName === playerName || e.badge === 'DEV_RECORD');
     } else if (filter === 'rivals') {
-      entries = entries.filter(e => e.badge === 'AI_LEGEND' || e.badge === 'PRO_PILOT');
+      entries = entries.filter(e => e.badge === 'AI_LEGEND' || e.badge === 'PRO_PILOT' || e.badge === 'VETERAN');
+    } else if (filter === 'my') {
+      entries = entries.filter(e => e.pilotName === playerName || e.isPlayer);
+      if (entries.length === 0) {
+        entries = [{
+          rank: 1,
+          pilotName: playerName,
+          callsign: 'CREATOR // PILOT',
+          vehicleName: 'F-8000 // NIGHTRIFT',
+          lapTime: 48.214,
+          lapTimeFormatted: '00:48.214',
+          topSpeed: 438,
+          driftScore: 18450,
+          badge: 'DEV_RECORD',
+          isPlayer: true
+        }];
+      }
+    }
+
+    if (searchQuery) {
+      entries = entries.filter(e => 
+        e.pilotName.toLowerCase().includes(searchQuery) || 
+        (e.vehicleName && e.vehicleName.toLowerCase().includes(searchQuery)) ||
+        (e.callsign && e.callsign.toLowerCase().includes(searchQuery))
+      );
     }
 
     if (entries.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="7" class="lb-empty">NO TELEMETRY MATCHING FILTER</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="9" class="lb-empty">NO TELEMETRY MATCHING "${searchQuery.toUpperCase()}"</td></tr>`;
       return;
     }
 
     tbody.innerHTML = entries.map((item, idx) => {
-      const isPlayer = item.pilotName === 'RANJEET';
+      const isPlayer = item.pilotName === playerName || item.isPlayer;
       const rankBadge = item.rank === 1 ? 'gold' : item.rank === 2 ? 'silver' : item.rank === 3 ? 'bronze' : '';
-      const tagText = item.badge === 'DEV_RECORD' ? '★ CREATOR' : item.badge === 'AI_LEGEND' ? 'AI BOSS' : 'VERIFIED';
+      const tagText = item.badge === 'DEV_RECORD' ? '👑 CREATOR' : item.badge === 'AI_LEGEND' ? '⚡ AI BOSS' : item.badge === 'PRO_PILOT' ? '🔥 PRO' : 'VERIFIED';
+      const delta = (item.lapTime - topLap).toFixed(3);
+      const deltaFormatted = item.rank === 1 ? 'WORLD RECORD' : `+${delta}s`;
 
       return `
         <tr class="${isPlayer ? 'player-row' : ''}">
@@ -3732,12 +5354,63 @@ export class CinematicUI {
           </td>
           <td class="col-vehicle">${item.vehicleName || 'F-8000 // NIGHTRIFT'}</td>
           <td class="col-time"><strong>${item.lapTimeFormatted}</strong></td>
+          <td class="col-delta ${item.rank === 1 ? 'wr' : ''}">${deltaFormatted}</td>
           <td class="col-spd">${item.topSpeed} KM/H</td>
           <td class="col-drift">${(item.driftScore || 0).toLocaleString()} PTS</td>
           <td class="col-badge"><span class="verified-tag ${item.badge}">${tagText}</span></td>
+          <td>
+            <button class="btn-challenge-ghost" data-pilot="${item.pilotName}" data-time="${item.lapTime}">⚡ RACE GHOST</button>
+          </td>
         </tr>
       `;
     }).join('');
+
+    // Attach race ghost buttons
+    tbody.querySelectorAll('.btn-challenge-ghost').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const pilot = btn.dataset.pilot;
+        const time = parseFloat(btn.dataset.time);
+        this.challengePilotGhost(pilot, time);
+      });
+    });
+  }
+
+  formatLeaderboardTime(seconds) {
+    if (!seconds || isNaN(seconds)) return '00:48.214';
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    const millis = Math.floor((seconds % 1) * 1000);
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${millis.toString().padStart(3, '0')}`;
+  }
+
+  challengeWorldRecordGhost() {
+    if (!this.cachedLeaderboard || !this.cachedLeaderboard.worldRecord) return;
+    const wr = this.cachedLeaderboard.worldRecord;
+    this.challengePilotGhost(wr.pilotName, wr.lapTime);
+  }
+
+  challengePilotGhost(pilotName, lapTime) {
+    if (this.game && this.game.sound) {
+      this.game.sound.playCountdownBeep(true);
+    }
+    this.showCyberpunkToast(
+      `GHOST TELEMETRY ENGAGED`,
+      `CHALLENGING ${pilotName} (${this.formatLeaderboardTime(lapTime)}) ON ${this.leaderboardTrack.toUpperCase()}!`,
+      '⚡',
+      'cyan'
+    );
+    if (typeof document !== 'undefined' && document.activeElement && document.activeElement.blur) {
+      document.activeElement.blur();
+    }
+    if (this.game && this.game.ensureGameFocus) {
+      this.game.ensureGameFocus();
+    }
+    this.selectedTrackId = this.leaderboardTrack;
+    this.showScreen('LOBBY');
+    setTimeout(() => {
+      this.triggerPlayRaceFlow();
+    }, 400);
   }
 
   updateCloudStatusBadge(online, ping = 18) {
@@ -3756,11 +5429,147 @@ export class CinematicUI {
     }
   }
 
+  updateLobbyVehiclePanel(spec = null) {
+    if (!spec) {
+      spec = (this.game && this.game.playerVehicle && this.game.playerVehicle.spec)
+        ? this.game.playerVehicle.spec
+        : VEHICLE_CATALOG[this.selectedCarIndex || 0];
+    }
+    if (!spec) return;
+
+    const rarity = ['f8000', 'nxr01', 'v720'].includes(spec.id) ? 'PINNACLE' : ['x900', 'k77'].includes(spec.id) ? 'LEGENDARY' : 'EPIC';
+    const pr = Math.round((spec.maxSpeedKmh * 0.9) + (spec.stats.accel * 3.6) + (spec.stats.handling * 2.4) + ((spec.stats.boost || 90) * 1.2));
+    const spdPct = Math.min(100, Math.round(spec.maxSpeedKmh / 4.5));
+    const accPct = Math.min(100, spec.stats.accel >= 10 ? spec.stats.accel : spec.stats.accel * 10);
+    const hndPct = Math.min(100, spec.stats.handling >= 10 ? spec.stats.handling : spec.stats.handling * 10);
+    const bstPct = Math.min(100, (spec.stats.nitro ? spec.stats.nitro * 10 : (spec.stats.boost || 90)));
+
+    this.safeSetText('lobby-v-name', spec.name);
+    this.safeSetText('lobby-v-class', `${spec.category || 'HYPERCAR'} // ${spec.classType || 'BALANCED'}`);
+    this.safeSetText('lobby-v-rarity', rarity);
+    this.safeSetText('lobby-v-pr', `PR ${pr}`);
+
+    const rarityEl = document.getElementById('lobby-v-rarity');
+    if (rarityEl) {
+      rarityEl.className = `lmv-rarity ${rarity.toLowerCase()}`;
+    }
+
+    this.safeSetText('lobby-sb-spd', `${spec.maxSpeedKmh} KM/H`);
+    this.safeSetWidth('lobby-sbf-spd', `${spdPct}%`);
+
+    const accVal = (spec.stats.accel >= 10 ? (spec.stats.accel / 10).toFixed(1) : spec.stats.accel.toFixed(1));
+    this.safeSetText('lobby-sb-acc', accVal);
+    this.safeSetWidth('lobby-sbf-acc', `${accPct}%`);
+
+    const hndVal = (spec.stats.handling >= 10 ? (spec.stats.handling / 10).toFixed(1) : spec.stats.handling.toFixed(1));
+    this.safeSetText('lobby-sb-hnd', hndVal);
+    this.safeSetWidth('lobby-sbf-hnd', `${hndPct}%`);
+
+    const bstVal = (spec.stats.boost >= 10 ? (spec.stats.boost / 10).toFixed(1) : (spec.stats.boost || 90));
+    this.safeSetText('lobby-sb-bst', bstVal.toString());
+    this.safeSetWidth('lobby-sbf-bst', `${bstPct}%`);
+  }
+
+  startPreRaceLoadingEffects() {
+    const playerSpec = (this.game && this.game.playerVehicle && this.game.playerVehicle.spec)
+      ? this.game.playerVehicle.spec
+      : VEHICLE_CATALOG[0];
+    const playerPr = Math.round((playerSpec.maxSpeedKmh * 0.9) + (playerSpec.stats.accel * 3.6) + (playerSpec.stats.handling * 2.4) + ((playerSpec.stats.boost || 90) * 1.2));
+
+    this.safeSetText('pr-player-pilot-name', saveManager.data.player?.name || 'RANJEET');
+    this.safeSetText('pr-player-veh-name', playerSpec.name);
+    this.safeSetText('pr-player-veh-class', `${playerSpec.classType || 'S-CLASS'} • PR ${playerPr}`);
+    this.safeSetText('pr-player-lvl', `LVL ${saveManager.data.player?.level || 87}`);
+
+    const tips = [
+      '"Use boost after exiting sharp corners for maximum acceleration."',
+      '"Tap airbrakes [Q / E] to initiate high-speed magnetic drift through tight chicanes."',
+      '"Drafting behind rival slipstreams charges your kinetic boost capacitor."',
+      '"Hit induction pads on apex curbs to sustain top supersonic velocity."',
+      '"Clean landings after track jumps award bonus nitro overdrive energy."'
+    ];
+
+    if (this._prTipTimer) clearInterval(this._prTipTimer);
+    let tipIdx = 0;
+    const tipEl = document.getElementById('pr-tip-text');
+    if (tipEl) tipEl.textContent = tips[0];
+
+    this._prTipTimer = setInterval(() => {
+      tipIdx = (tipIdx + 1) % tips.length;
+      if (tipEl) {
+        tipEl.style.opacity = '0';
+        setTimeout(() => {
+          if (tipEl) {
+            tipEl.textContent = tips[tipIdx];
+            tipEl.style.opacity = '1';
+          }
+        }, 280);
+      }
+    }, 3000);
+  }
+
   updatePreRaceProgress(pct) {
-    this.safeSetWidth('pr-progress-fill', `${pct}%`);
-    this.safeSetText('pr-loading-pct', `${pct}%`);
-    if (pct >= 85) {
-      this.safeSetText('pr-loading-msg', 'SYNCHRONIZING ORBITAL GRID... READY TO LAUNCH');
+    const rounded = Math.min(100, Math.floor(pct));
+    this.safeSetWidth('pr-progress-fill', `${rounded}%`);
+    this.safeSetText('pr-loading-pct', `LOADING ${rounded}%`);
+
+    const setItemState = (id, state) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.className = `psc-item ${state}`;
+      const check = el.querySelector('.psc-check');
+      if (check) {
+        check.textContent = state === 'done' ? '✓' : (state === 'active' ? '...' : '-');
+      }
+    };
+
+    const beam = document.getElementById('pr-scan-beam');
+    if (beam) {
+      beam.style.left = `${rounded}%`;
+    }
+
+    if (rounded < 20) {
+      setItemState('psc-track', 'active');
+      setItemState('psc-veh', 'pending');
+      setItemState('psc-opp', 'pending');
+      setItemState('psc-grav', 'pending');
+      setItemState('psc-prep', 'pending');
+      this.safeSetText('pr-loading-msg', 'INITIALIZING TRACK TOPOLOGY...');
+    } else if (rounded < 45) {
+      setItemState('psc-track', 'done');
+      setItemState('psc-veh', 'active');
+      setItemState('psc-opp', 'pending');
+      setItemState('psc-grav', 'pending');
+      setItemState('psc-prep', 'pending');
+      this.safeSetText('pr-loading-msg', 'LOADING HIGH-PRECISION VEHICLES...');
+    } else if (rounded < 70) {
+      setItemState('psc-track', 'done');
+      setItemState('psc-veh', 'done');
+      setItemState('psc-opp', 'active');
+      setItemState('psc-grav', 'pending');
+      setItemState('psc-prep', 'pending');
+      this.safeSetText('pr-loading-msg', 'SYNCING ORBITAL OPPONENT TELEMETRY...');
+    } else if (rounded < 92) {
+      setItemState('psc-track', 'done');
+      setItemState('psc-veh', 'done');
+      setItemState('psc-opp', 'done');
+      setItemState('psc-grav', 'active');
+      setItemState('psc-prep', 'pending');
+      this.safeSetText('pr-loading-msg', 'CALIBRATING ANTI-GRAVITY FIELDS...');
+    } else if (rounded < 100) {
+      setItemState('psc-track', 'done');
+      setItemState('psc-veh', 'done');
+      setItemState('psc-opp', 'done');
+      setItemState('psc-grav', 'done');
+      setItemState('psc-prep', 'active');
+      this.safeSetText('pr-loading-msg', 'PREPARING RACE LAUNCH GANTRY...');
+    } else {
+      setItemState('psc-track', 'done');
+      setItemState('psc-veh', 'done');
+      setItemState('psc-opp', 'done');
+      setItemState('psc-grav', 'done');
+      setItemState('psc-prep', 'done');
+      this.safeSetText('pr-loading-msg', 'ALL SYSTEMS GREEN // LAUNCHING RACE');
     }
   }
 

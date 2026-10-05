@@ -76,6 +76,11 @@ export class VectorInstructor {
     let angle = 0;
 
     const render = () => {
+      if (!this.container || this.container.style.display === 'none') {
+        this.animFrameId = requestAnimationFrame(render);
+        return;
+      }
+
       angle += 0.04;
       const w = this.avatarCanvas.width;
       const h = this.avatarCanvas.height;

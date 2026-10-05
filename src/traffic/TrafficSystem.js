@@ -22,15 +22,26 @@ export class TrafficSystem {
     this.spawnTrafficFleet();
   }
 
+  setCircuit(circuit) {
+    this.circuit = circuit;
+    this.vehicles.forEach(v => {
+      if (v.mesh && v.mesh.parent) {
+        v.mesh.parent.remove(v.mesh);
+      }
+    });
+    this.vehicles = [];
+    this.spawnTrafficFleet();
+  }
+
   spawnTrafficFleet() {
     const trafficTypes = [
-      { type: 'taxi', name: 'CYBER-TAXI', color: 0xFFB800, length: 5.4, width: 2.2, height: 1.5, speed: 140 },
-      { type: 'sedan', name: 'AETHER SEDAN', color: 0x334466, length: 5.2, width: 2.1, height: 1.4, speed: 160 },
-      { type: 'van', name: 'LOGISTICS VAN', color: 0x182434, length: 7.2, width: 2.6, height: 2.4, speed: 120 },
-      { type: 'truck', name: 'CARGO HAULER', color: 0x0c1018, length: 11.5, width: 3.2, height: 3.2, speed: 110 }
+      { type: 'taxi', name: 'CYBER-TAXI', color: 0xFFB800, length: 4.8, width: 2.1, height: 1.45, speed: 140 },
+      { type: 'police', name: 'PATROL CRUISER', color: 0x161C24, length: 5.0, width: 2.1, height: 1.48, speed: 180 },
+      { type: 'sedan', name: 'AETHER SEDAN', color: 0x2A3C54, length: 4.9, width: 2.05, height: 1.42, speed: 155 },
+      { type: 'van', name: 'LOGISTICS VAN', color: 0x1B2433, length: 6.2, width: 2.3, height: 2.1, speed: 125 }
     ];
 
-    const trafficCount = 28;
+    const trafficCount = 24;
     const laneOffsets = [-7.5, -2.5, 2.5, 7.5]; // 4 distinct traffic lanes across 26m road
 
     for (let i = 0; i < trafficCount; i++) {
@@ -57,47 +68,122 @@ export class TrafficSystem {
   buildTrafficMesh(spec) {
     const group = new THREE.Group();
 
-    // Main Chassis Box
-    const bodyGeo = new THREE.BoxGeometry(spec.width, spec.height, spec.length);
+    const darkTrimMat = new THREE.MeshStandardMaterial({ color: 0x10141C, roughness: 0.8, metalness: 0.2 });
+    const tireMat = new THREE.MeshStandardMaterial({ color: 0x15181E, roughness: 0.9, metalness: 0.1 });
+    const rimMat = new THREE.MeshStandardMaterial({ color: 0xC0C8D0, roughness: 0.3, metalness: 0.9 });
+    const glassMat = new THREE.MeshStandardMaterial({ color: 0x08101C, roughness: 0.1, metalness: 0.9, transparent: true, opacity: 0.85 });
+
     const bodyMat = new THREE.MeshStandardMaterial({
       color: spec.color,
       metalness: 0.85,
-      roughness: 0.25,
-      emissive: new THREE.Color(spec.color).multiplyScalar(0.15)
+      roughness: 0.25
     });
+
+    const isVan = spec.type === 'van';
+    const isTaxi = spec.type === 'taxi';
+    const isPolice = spec.type === 'police';
+
+    // 1. Lower Body Fuselage
+    const bodyHeight = isVan ? 0.9 : 0.48;
+    const bodyGeo = new THREE.BoxGeometry(spec.width, bodyHeight, spec.length);
     const body = new THREE.Mesh(bodyGeo, bodyMat);
-    body.position.set(0, spec.height * 0.5 + 0.3, 0);
-    body.castShadow = true;
+    body.position.set(0, bodyHeight * 0.5 + 0.35, 0);
     group.add(body);
 
-    // Glowing Windshield / Sensor Visor
-    const visorGeo = new THREE.BoxGeometry(spec.width * 0.9, spec.height * 0.35, spec.length * 0.45);
-    const visorMat = new THREE.MeshBasicMaterial({ color: 0x00F0FF, transparent: true, opacity: 0.75 });
-    const visor = new THREE.Mesh(visorGeo, visorMat);
-    visor.position.set(0, spec.height * 0.75 + 0.3, spec.length * 0.1);
-    group.add(visor);
+    // 2. Cabin / Greenhouse
+    const cabinWidth = spec.width * 0.88;
+    const cabinHeight = isVan ? 1.0 : 0.55;
+    const cabinLength = isVan ? spec.length * 0.75 : spec.length * 0.52;
+    const cabinPosZ = isVan ? -0.3 : -0.2;
+    const cabinGeo = new THREE.BoxGeometry(cabinWidth, cabinHeight, cabinLength);
+    const cabin = new THREE.Mesh(cabinGeo, isVan ? bodyMat : glassMat);
+    cabin.position.set(0, bodyHeight + 0.35 + cabinHeight * 0.5, cabinPosZ);
+    group.add(cabin);
 
-    // Headlights (Twin White/Cyan point emitters)
-    const hlGeo = new THREE.BoxGeometry(0.5, 0.2, 0.1);
-    const hlMat = new THREE.MeshBasicMaterial({ color: 0xE0FFFF });
-    const hlLeft = new THREE.Mesh(hlGeo, hlMat);
-    hlLeft.position.set(-spec.width * 0.35, spec.height * 0.4 + 0.3, spec.length * 0.5 + 0.05);
-    group.add(hlLeft);
+    // Windshield frame for non-van
+    if (!isVan) {
+      const hoodGeo = new THREE.BoxGeometry(spec.width * 0.9, 0.08, spec.length * 0.35);
+      const hood = new THREE.Mesh(hoodGeo, bodyMat);
+      hood.position.set(0, bodyHeight + 0.36, spec.length * 0.3);
+      group.add(hood);
 
-    const hlRight = new THREE.Mesh(hlGeo, hlMat);
-    hlRight.position.set(spec.width * 0.35, spec.height * 0.4 + 0.3, spec.length * 0.5 + 0.05);
-    group.add(hlRight);
+      const trunkGeo = new THREE.BoxGeometry(spec.width * 0.88, 0.08, spec.length * 0.25);
+      const trunk = new THREE.Mesh(trunkGeo, bodyMat);
+      trunk.position.set(0, bodyHeight + 0.36, -spec.length * 0.35);
+      group.add(trunk);
+    }
 
-    // Taillights (Red LED strips)
-    const tlMat = new THREE.MeshBasicMaterial({ color: 0xFF1A1A });
-    const tl = new THREE.Mesh(new THREE.BoxGeometry(spec.width * 0.8, 0.15, 0.1), tlMat);
-    tl.position.set(0, spec.height * 0.4 + 0.3, -spec.length * 0.5 - 0.05);
+    // 3. Iconic Rooftop Accents: Taxi Sign or Police Emergency Bar
+    if (isTaxi) {
+      const taxiSignGeo = new THREE.BoxGeometry(0.8, 0.22, 0.35);
+      const taxiSignMat = new THREE.MeshBasicMaterial({ color: 0xFFE000 });
+      const taxiSign = new THREE.Mesh(taxiSignGeo, taxiSignMat);
+      taxiSign.position.set(0, bodyHeight + cabinHeight + 0.48, cabinPosZ);
+      group.add(taxiSign);
+    } else if (isPolice) {
+      const barGeo = new THREE.BoxGeometry(1.2, 0.16, 0.25);
+      const barMat = new THREE.MeshBasicMaterial({ color: 0xFF1E28 });
+      const bar = new THREE.Mesh(barGeo, barMat);
+      bar.position.set(0, bodyHeight + cabinHeight + 0.45, cabinPosZ);
+      group.add(bar);
+
+      const blueGeo = new THREE.BoxGeometry(0.55, 0.18, 0.27);
+      const blueMat = new THREE.MeshBasicMaterial({ color: 0x0066FF });
+      const blueBar = new THREE.Mesh(blueGeo, blueMat);
+      blueBar.position.set(0.3, bodyHeight + cabinHeight + 0.45, cabinPosZ);
+      group.add(blueBar);
+    }
+
+    // 4. Headlights & Taillights
+    const hlMat = new THREE.MeshBasicMaterial({ color: 0xE8F8FF });
+    const tlMat = new THREE.MeshBasicMaterial({ color: 0xFF1424 });
+    const hlGeo = new THREE.BoxGeometry(0.42, 0.14, 0.08);
+
+    [-spec.width * 0.36, spec.width * 0.36].forEach(hx => {
+      const hl = new THREE.Mesh(hlGeo, hlMat);
+      hl.position.set(hx, bodyHeight * 0.6 + 0.35, spec.length * 0.5 + 0.02);
+      group.add(hl);
+    });
+
+    const tlGeo = new THREE.BoxGeometry(spec.width * 0.85, 0.12, 0.08);
+    const tl = new THREE.Mesh(tlGeo, tlMat);
+    tl.position.set(0, bodyHeight * 0.6 + 0.35, -spec.length * 0.5 - 0.02);
     group.add(tl);
 
-    // Hover underglow light
-    const underglow = new THREE.PointLight(spec.color, 1.2, 6);
-    underglow.position.set(0, 0.1, 0);
-    group.add(underglow);
+    // 5. 4 Realistic Rubber Tires & Alloy Rims (No floating boxes!)
+    const wheelY = 0.36;
+    const wheelPositions = [
+      { x: -spec.width * 0.51, z: spec.length * 0.3 },
+      { x: spec.width * 0.51, z: spec.length * 0.3 },
+      { x: -spec.width * 0.51, z: -spec.length * 0.3 },
+      { x: spec.width * 0.51, z: -spec.length * 0.3 }
+    ];
+
+    const tireGeo = new THREE.CylinderGeometry(0.36, 0.36, 0.24, 16);
+    tireGeo.rotateZ(Math.PI * 0.5);
+    const rimGeo = new THREE.CylinderGeometry(0.24, 0.24, 0.25, 12);
+    rimGeo.rotateZ(Math.PI * 0.5);
+
+    wheelPositions.forEach(wp => {
+      const tire = new THREE.Mesh(tireGeo, tireMat);
+      tire.position.set(wp.x, wheelY, wp.z);
+      const rim = new THREE.Mesh(rimGeo, rimMat);
+      tire.add(rim);
+      group.add(tire);
+    });
+
+    // 6. Ground-Effect Emissive Glow Plate (ZERO PointLights - 100% Free GPU Shading!)
+    const glowGeo = new THREE.PlaneGeometry(spec.width * 0.9, spec.length * 0.85);
+    glowGeo.rotateX(-Math.PI * 0.5);
+    const glowMat = new THREE.MeshBasicMaterial({
+      color: spec.color,
+      transparent: true,
+      opacity: 0.28,
+      depthWrite: false
+    });
+    const underglowPlate = new THREE.Mesh(glowGeo, glowMat);
+    underglowPlate.position.set(0, 0.05, 0);
+    group.add(underglowPlate);
 
     return group;
   }

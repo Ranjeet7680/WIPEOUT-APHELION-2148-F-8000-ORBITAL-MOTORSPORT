@@ -50,6 +50,7 @@ export class CameraController {
     // Roll banking angle
     this.currentRoll = 0.0;
     this.targetRoll = 0.0;
+    this.lastTrackU = 0.0;
 
     // Broadcast Drone Telephoto State
     this.broadcastDroneAnchor = new THREE.Vector3();
@@ -65,6 +66,8 @@ export class CameraController {
     this.shakeDecay = 4.2;
 
     this.boostPushback = 0.0;
+    this.accelLag = 0.0;
+    this.lastSpeedKmh = 0.0;
 
     // FOV elasticity
     this.baseFov = 75.0;
@@ -74,13 +77,33 @@ export class CameraController {
     this.onCameraChange = null;
   }
 
+  setCircuit(circuit) {
+    this.circuit = circuit;
+  }
+
   setMode(mode) {
     if (this.mode !== mode) {
       this.mode = mode;
+      // Snap currentCameraPos to current camera position to prevent violent warp on mode switch
+      this.currentCameraPos.copy(this.camera.position);
+      this.currentLookTarget.copy(this.lookTarget);
       if (this.onCameraChange) {
         this.onCameraChange(this.mode);
       }
     }
+  }
+
+  isFPP() {
+    return this.mode === CAMERA_MODES.COCKPIT || this.mode === CAMERA_MODES.HOOD || this.mode === CAMERA_MODES.BUMPER;
+  }
+
+  togglePerspective() {
+    if (this.isFPP()) {
+      this.setMode(CAMERA_MODES.CHASE);
+    } else {
+      this.setMode(CAMERA_MODES.COCKPIT);
+    }
+    return this.mode;
   }
 
   cycleMode() {
@@ -108,9 +131,14 @@ export class CameraController {
     this.eliminationTargetPos.copy(victimWorldPos);
   }
 
-  reset(craftPos, craftQuat) {
+  reset(craftPos, craftQuat, snap = true) {
     this.isEliminationReplay = false;
     this.eliminationTimer = 0;
+    this.boostPushback = 0.0;
+    this.accelLag = 0.0;
+    this.lastSpeedKmh = 0.0;
+    this.targetRoll = 0.0;
+    this.broadcastDroneAnchor.set(0, 0, 0);
     this.shakeIntensity = 0;
     this.currentRoll = 0;
 
@@ -118,26 +146,38 @@ export class CameraController {
     _up.set(0, 1, 0).applyQuaternion(craftQuat);
 
     this.targetCameraPos.copy(craftPos)
-      .addScaledVector(_fwd, -8.0)
-      .addScaledVector(_up, 2.4);
+      .addScaledVector(_fwd, -7.4)
+      .addScaledVector(_up, 2.3);
 
-    this.currentCameraPos.copy(this.targetCameraPos);
-    this.camera.position.copy(this.targetCameraPos);
+    this.lookTarget.copy(craftPos).addScaledVector(_fwd, 20.0).addScaledVector(_up, 1.25);
 
-    this.lookTarget.copy(craftPos).addScaledVector(_fwd, 8.0).addScaledVector(_up, 0.4);
-    this.currentLookTarget.copy(this.lookTarget);
-    this.camera.lookAt(this.currentLookTarget);
-    this.camera.up.copy(_up);
+    if (snap || this.currentCameraPos.lengthSq() < 1.0) {
+      this.currentCameraPos.copy(this.targetCameraPos);
+      this.camera.position.copy(this.targetCameraPos);
+      this.currentLookTarget.copy(this.lookTarget);
+      this.camera.lookAt(this.currentLookTarget);
+      this.camera.up.copy(_up);
+      this.camera.fov = this.baseFov;
+      this.camera.updateProjectionMatrix();
+    } else {
+      this.targetFov = this.baseFov;
+    }
   }
 
-  update(delta, craftPos, craftVel, craftQuat, speedKmh, isScraping, isBoosting, aerialInfo = null) {
+  update(delta, craftPos, craftVel, craftQuat, speedKmh, isScraping, isBoosting, aerialInfo = null, landingShake = 0.0) {
     _fwd.set(0, 0, 1).applyQuaternion(craftQuat);
     _up.set(0, 1, 0).applyQuaternion(craftQuat);
     _right.set(1, 0, 0).applyQuaternion(craftQuat);
     const time = performance.now() * 0.001;
 
     // Speed ratio 0..1 (top speed ~420 km/h baseline)
-    const speedRatio = Math.min(speedKmh / 420.0, 1.3);
+    const speedRatio = Math.min(speedKmh / 420.0, 1.25);
+
+    // Dynamic G-force acceleration pull-back / braking forward compression lag
+    const speedDelta = (speedKmh - this.lastSpeedKmh) / Math.max(0.001, delta);
+    this.lastSpeedKmh = speedKmh;
+    const targetAccelLag = THREE.MathUtils.clamp(speedDelta * 0.007, -0.65, 0.95);
+    this.accelLag = THREE.MathUtils.damp(this.accelLag, targetAccelLag, 6.0, delta);
 
     // ------------------------------------------------------------------------
     // 0. ELIMINATION REPLAY CINEMATIC TRACKING OVERRIDE
@@ -161,32 +201,34 @@ export class CameraController {
     }
 
     // ------------------------------------------------------------------------
-    // 1. DYNAMIC FOV & HYPERSONIC STRETCH
+    // 1. CALIBRATED DYNAMIC FOV (74° base to 85° high-speed + 5° nitro = 90° max)
+    // Preserves vehicle prominence on screen rather than shrinking vehicle into distance
     // ------------------------------------------------------------------------
-    let desiredFov = 75.0;
+    let desiredFov = 74.0;
     if (this.mode === CAMERA_MODES.COCKPIT || this.mode === CAMERA_MODES.HOOD) {
-      desiredFov = 80.0 + speedRatio * 22.0 + (isBoosting ? 14.0 : 0.0);
+      desiredFov = 78.0 + speedRatio * 15.0 + (isBoosting ? 8.0 : 0.0);
     } else if (this.mode === CAMERA_MODES.BUMPER) {
-      desiredFov = 85.0 + speedRatio * 20.0 + (isBoosting ? 12.0 : 0.0);
+      desiredFov = 82.0 + speedRatio * 14.0 + (isBoosting ? 8.0 : 0.0);
     } else if (this.mode === CAMERA_MODES.BROADCAST_DRONE) {
       desiredFov = 34.0; // High telephoto lens
     } else {
-      // Chase, Action, Orbit
-      desiredFov = 75.0 + speedRatio * 22.0 + (isBoosting ? 15.0 : 0.0);
+      // Chase, Action, Orbit: natural cinematic FOV curve
+      desiredFov = 74.0 + speedRatio * 11.0 + (isBoosting ? 5.5 : 0.0);
     }
 
     this.camera.fov = THREE.MathUtils.lerp(this.camera.fov, desiredFov, delta * 7.5);
     this.camera.updateProjectionMatrix();
 
     // ------------------------------------------------------------------------
-    // 2. CAMERA SHAKE & HIGH-SPEED BUFFETING
+    // 2. CAMERA SHAKE, LANDING IMPULSE & NITRO VIBRATION
     // ------------------------------------------------------------------------
+    if (landingShake > 0.01) this.addShake(landingShake);
     if (isScraping) this.addShake(0.09);
-    if (isBoosting) this.addShake(0.04);
+    if (isBoosting) this.addShake(0.035);
 
-    // Aerodynamic buffeting at high velocity (>320 km/h)
-    if (speedKmh > 320.0) {
-      const buffetIntensity = ((speedKmh - 320.0) / 130.0) * 0.025;
+    // Aerodynamic buffeting at hypersonic velocity (>340 km/h)
+    if (speedKmh > 340.0) {
+      const buffetIntensity = ((speedKmh - 340.0) / 120.0) * 0.022;
       this.addShake(buffetIntensity * delta * 60.0);
     }
 
@@ -194,24 +236,49 @@ export class CameraController {
     if (this.shakeIntensity > 0.001) {
       const shakeScale = 0.5 + speedRatio * 0.5;
       _shakeOffset.set(
-        Math.sin(time * 65.0) * this.shakeIntensity * 0.18 * shakeScale,
-        Math.cos(time * 85.0) * this.shakeIntensity * 0.18 * shakeScale,
-        Math.sin(time * 105.0) * this.shakeIntensity * 0.12 * shakeScale
+        Math.sin(time * 65.0) * this.shakeIntensity * 0.16 * shakeScale,
+        Math.cos(time * 85.0) * this.shakeIntensity * 0.16 * shakeScale,
+        Math.sin(time * 105.0) * this.shakeIntensity * 0.10 * shakeScale
       );
       this.shakeIntensity = Math.max(0.0, this.shakeIntensity - delta * this.shakeDecay);
     }
 
+    // Subtle high-frequency camera vibration during nitro boost
+    if (isBoosting) {
+      _shakeOffset.x += Math.sin(time * 95.0) * 0.025;
+      _shakeOffset.y += Math.cos(time * 115.0) * 0.020;
+    }
+
     // ------------------------------------------------------------------------
-    // 3. CENTRIFUGAL ROLL BANKING INTO TURNS
+    // 3. CENTRIFUGAL ROLL BANKING INTO TURNS WITH STABILIZATION
     // ------------------------------------------------------------------------
+    // Track normal reference prevents sideways tilting on curb or wall scrape
+    let trackNormal = _up;
+    let trackTangent = _fwd;
+    if (this.circuit && this.circuit.getClosestFrame) {
+      const trackRef = this.circuit.getClosestFrame(craftPos, this.lastTrackU);
+      if (trackRef && trackRef.frame) {
+        trackNormal = trackRef.frame.normal;
+        trackTangent = trackRef.frame.tangent;
+        this.lastTrackU = trackRef.u;
+      }
+    }
+
+    // Blend up vector to track normal when stationary, wedged or tilted
+    if (speedKmh < 45.0 || _up.dot(trackNormal) < 0.88) {
+      _up.lerp(trackNormal, Math.min(1.0, delta * 12.0)).normalize();
+    }
+
     if (this.enableBanking && (this.mode === CAMERA_MODES.CHASE || this.mode === CAMERA_MODES.HOOD || this.mode === CAMERA_MODES.ACTION)) {
-      // Calculate lateral drift/steer angle relative to forward
-      const lateralVel = craftVel.dot(_right);
-      const targetRollDeg = THREE.MathUtils.clamp(-lateralVel * 0.025, -0.22, 0.22);
-      this.currentRoll = THREE.MathUtils.lerp(this.currentRoll, targetRollDeg, delta * 6.5);
-      
-      if (aerialInfo && aerialInfo.inAir && aerialInfo.barrelRollAngle) {
-        this.currentRoll += aerialInfo.barrelRollAngle * 0.18;
+      if (speedKmh > 30.0) {
+        const lateralVel = craftVel.dot(_right);
+        const targetRollDeg = THREE.MathUtils.clamp(-lateralVel * 0.02, -0.12, 0.12);
+        this.currentRoll = THREE.MathUtils.lerp(this.currentRoll, targetRollDeg, delta * 6.5);
+        if (aerialInfo && aerialInfo.inAir && aerialInfo.barrelRollAngle) {
+          this.currentRoll += THREE.MathUtils.clamp(aerialInfo.barrelRollAngle * 0.14, -0.2, 0.2);
+        }
+      } else {
+        this.currentRoll = THREE.MathUtils.lerp(this.currentRoll, 0.0, delta * 10.0);
       }
     } else {
       this.currentRoll = THREE.MathUtils.lerp(this.currentRoll, 0.0, delta * 8.0);
@@ -229,44 +296,47 @@ export class CameraController {
     // ------------------------------------------------------------------------
     switch (this.mode) {
       case CAMERA_MODES.CHASE: {
-        // Blend velocity direction with vehicle forward for smooth drift tracking
-        _velDir.copy(craftVel);
-        if (_velDir.lengthSq() < 2.0) {
-          _velDir.copy(_fwd);
-        } else {
-          _velDir.normalize();
-          // 70% forward + 30% velocity vector for natural trailing
-          _velDir.lerp(_fwd, 0.45).normalize();
+        // TPP (Third-Person Perspective) Behind-the-Car Follow Camera
+        // Firmly positioned directly behind the vehicle heading for authentic arcade rear chase view
+        _velDir.copy(_fwd);
+        if (speedKmh > 25.0 && craftVel.lengthSq() > 1.0) {
+          const velNorm = _tempVec1.copy(craftVel).normalize();
+          // Maintain 88% vehicle forward + 12% velocity vector for subtle drift yaw without swinging sideways
+          _velDir.lerp(velNorm, 0.12).normalize();
         }
 
         if (isBoosting) {
-          this.boostPushback = THREE.MathUtils.lerp(this.boostPushback, 1.8, delta * 12.0);
+          this.boostPushback = THREE.MathUtils.lerp(this.boostPushback, 0.75, delta * 8.0);
         } else {
-          this.boostPushback = THREE.MathUtils.lerp(this.boostPushback, 0.0, delta * 8.0);
+          this.boostPushback = THREE.MathUtils.lerp(this.boostPushback, 0.0, delta * 6.0);
         }
 
-        // Dynamic distance & height based on speed and boost
-        const dynamicDistance = THREE.MathUtils.lerp(6.6, 9.4, speedRatio) + this.boostPushback;
-        const dynamicHeight   = THREE.MathUtils.lerp(2.2, 2.7, speedRatio);
+        // Calibrated TPP distance & height: vehicle retains commanding scale and speed perception
+        const dynamicDistance = THREE.MathUtils.lerp(6.2, 7.4, speedRatio) + this.boostPushback + this.accelLag;
+        const dynamicHeight   = THREE.MathUtils.lerp(2.20, 2.48, speedRatio);
+
+        // Jump pitch follow: smoothly tilt camera with vehicle launch and trajectory
+        if (aerialInfo && aerialInfo.inAir) {
+          const jumpPitch = THREE.MathUtils.clamp((aerialInfo.verticalVel || 0) * 0.012, -0.14, 0.22);
+          dynamicUp.addScaledVector(_fwd, jumpPitch);
+        }
 
         this.targetCameraPos.copy(craftPos)
           .addScaledVector(_velDir, -dynamicDistance)
-          .addScaledVector(_up, dynamicHeight);
+          .addScaledVector(dynamicUp, dynamicHeight);
 
         // Snap immediately if uninitialized
         if (this.currentCameraPos.lengthSq() < 1.0) {
           this.currentCameraPos.copy(this.targetCameraPos);
         }
 
-        const followSpeed = 16.0;
+        // Responsive spring-damper following directly behind vehicle rear
+        const followSpeed = 22.0;
         this.currentCameraPos.lerp(this.targetCameraPos, Math.min(1.0, delta * followSpeed));
-
-        const lateralVel = craftVel.dot(_right);
-        this.currentCameraPos.addScaledVector(_right, -lateralVel * 0.012);
 
         // Track surface clearance clamping: prevents camera from penetrating track underside or clipping barriers
         if (this.circuit) {
-          const closest = this.circuit.getClosestFrame(this.currentCameraPos);
+          const closest = this.circuit.getClosestFrame(this.currentCameraPos, this.lastTrackU);
           if (closest && closest.frame) {
             _tempVec1.copy(this.currentCameraPos).sub(closest.frame.pos);
             const heightAboveTrack = _tempVec1.dot(closest.frame.normal);
@@ -275,12 +345,14 @@ export class CameraController {
               this.currentCameraPos.addScaledVector(closest.frame.normal, minHeight - heightAboveTrack);
             }
 
-            // Barrier clearance check: prevent clipping behind or inside the barrier
+            // Barrier clearance check: push camera inward and up if near walls
             const halfWidth = this.circuit.roadWidth * 0.5;
             const latDist = Math.abs(closest.lateralOffset);
-            if (latDist > halfWidth - 2.4 && latDist < halfWidth + 2.4) {
-              const barrierMinH = this.circuit.barrierHeight + 0.85;
-              const curH = this.currentCameraPos.clone().sub(closest.frame.pos).dot(closest.frame.normal);
+            if (latDist > halfWidth - 2.8) {
+              const pushInward = (latDist - (halfWidth - 2.8)) * 0.85;
+              this.currentCameraPos.addScaledVector(closest.frame.binormal, -Math.sign(closest.lateralOffset) * pushInward);
+              const barrierMinH = this.circuit.barrierHeight + 1.15;
+              const curH = _tempVec1.copy(this.currentCameraPos).sub(closest.frame.pos).dot(closest.frame.normal);
               if (curH < barrierMinH) {
                 this.currentCameraPos.addScaledVector(closest.frame.normal, barrierMinH - curH);
               }
@@ -290,15 +362,15 @@ export class CameraController {
 
         this.camera.position.copy(this.currentCameraPos).add(_shakeOffset);
 
-        // Look-ahead apex target
-        const lookAheadDist = THREE.MathUtils.lerp(6.5, 12.0, speedRatio);
+        // Look-ahead target anchored ahead of vehicle for panoramic forward road preview
+        const lookAheadDist = THREE.MathUtils.lerp(18.0, 34.0, speedRatio);
         this.lookTarget.copy(craftPos)
           .addScaledVector(_fwd, lookAheadDist)
-          .addScaledVector(_up, 0.45);
+          .addScaledVector(dynamicUp, 1.25);
 
-        this.currentLookTarget.lerp(this.lookTarget, Math.min(1.0, delta * 20.0));
-        this.camera.lookAt(this.currentLookTarget);
+        this.currentLookTarget.lerp(this.lookTarget, Math.min(1.0, delta * 24.0));
         this.camera.up.copy(dynamicUp);
+        this.camera.lookAt(this.currentLookTarget);
         break;
       }
 
@@ -310,8 +382,8 @@ export class CameraController {
 
         this.camera.position.copy(hoodPos).add(_shakeOffset);
         this.lookTarget.copy(craftPos).addScaledVector(_fwd, 20.0).addScaledVector(_up, 0.3);
-        this.camera.lookAt(this.lookTarget);
         this.camera.up.copy(dynamicUp);
+        this.camera.lookAt(this.lookTarget);
         break;
       }
 
@@ -326,8 +398,8 @@ export class CameraController {
 
         this.camera.position.copy(eyePos).add(_shakeOffset);
         this.lookTarget.copy(craftPos).addScaledVector(_fwd, 18.0).addScaledVector(_up, 0.45);
-        this.camera.lookAt(this.lookTarget);
         this.camera.up.copy(dynamicUp);
+        this.camera.lookAt(this.lookTarget);
         break;
       }
 
@@ -355,8 +427,8 @@ export class CameraController {
 
         this.camera.position.lerp(this.targetCameraPos, Math.min(1.0, delta * 10.0)).add(_shakeOffset);
         this.lookTarget.copy(craftPos).addScaledVector(_fwd, 5.0).addScaledVector(_up, 0.5);
-        this.camera.lookAt(this.lookTarget);
         this.camera.up.copy(dynamicUp);
+        this.camera.lookAt(this.lookTarget);
         break;
       }
 
@@ -414,32 +486,86 @@ export class CameraController {
   updateRaceIntro(introProgress, circuit, rivals = [], playerVehicle = null) {
     if (!circuit) return;
 
-    if (introProgress < 0.32) {
-      // 1. High-speed broadcast crane sweep over Start/Finish gantry along the illuminated track corridor
-      const p = introProgress / 0.32;
-      const easeP = p * p * (3.0 - 2.0 * p); // Smooth cubic ease
-      const frame0 = circuit.getFrameAt(0.0);
+    // Resolve player craft position and orientation with robust fallbacks
+    const frame0 = circuit.getFrameAt(0.0);
+    const pPos = (playerVehicle && playerVehicle.group) ? playerVehicle.group.position : frame0.pos;
+    const pRot = (playerVehicle && playerVehicle.group) ? playerVehicle.group.quaternion : new THREE.Quaternion();
 
-      const startPos = _tempVec1.copy(frame0.pos)
-        .addScaledVector(frame0.tangent, -42)
-        .addScaledVector(frame0.normal, 20.0)
-        .addScaledVector(frame0.binormal, 8.5);
+    _fwd.set(0, 0, 1).applyQuaternion(pRot);
+    _up.set(0, 1, 0).applyQuaternion(pRot);
+    _right.set(1, 0, 0).applyQuaternion(pRot);
 
-      const endPos = _tempVec2.copy(frame0.pos)
-        .addScaledVector(frame0.tangent, 18)
-        .addScaledVector(frame0.normal, 4.8)
-        .addScaledVector(frame0.binormal, 5.5);
+    if (introProgress < 0.25) {
+      // ----------------------------------------------------------------------
+      // SHOT 1 (0.00 - 0.25): [CAM 01 // HERO FASCIA & AERODYNAMICS]
+      // Low-angle Dutch beauty pass gliding across the front splitter, headlights and canopy
+      // ----------------------------------------------------------------------
+      const p = introProgress / 0.25;
+      const easeP = p * p * (3.0 - 2.0 * p);
+
+      const startPos = _tempVec1.copy(pPos)
+        .addScaledVector(_fwd, 4.2)
+        .addScaledVector(_right, 2.4)
+        .addScaledVector(_up, 0.45);
+
+      const endPos = _tempVec2.copy(pPos)
+        .addScaledVector(_fwd, 2.6)
+        .addScaledVector(_right, -1.8)
+        .addScaledVector(_up, 0.85);
 
       this.camera.position.lerpVectors(startPos, endPos, easeP);
-      const lookAhead = _fwd.copy(frame0.pos)
-        .addScaledVector(frame0.tangent, 55)
-        .addScaledVector(frame0.normal, 1.8);
-      this.camera.lookAt(lookAhead);
-      this.camera.fov = THREE.MathUtils.lerp(65, 54, easeP);
+
+      const startLook = _velDir.copy(pPos).addScaledVector(_fwd, 0.6).addScaledVector(_up, 0.35);
+      const endLook = _shakeOffset.copy(pPos).addScaledVector(_fwd, -0.3).addScaledVector(_up, 0.65);
+      this.lookTarget.lerpVectors(startLook, endLook, easeP);
+      this.camera.lookAt(this.lookTarget);
+
+      // Subtle Dutch angle for dramatic automotive aesthetic
+      const dutchAngle = THREE.MathUtils.lerp(-0.08, 0.05, easeP);
+      _bankQuat.setFromAxisAngle(_fwd, dutchAngle);
+      this.camera.up.copy(_up).applyQuaternion(_bankQuat);
+
+      this.camera.fov = THREE.MathUtils.lerp(42.0, 48.0, easeP);
       this.camera.updateProjectionMatrix();
-    } else if (introProgress < 0.78) {
-      // 2. Smooth continuous dolly tracking sweep past starting grid racers
-      const p = (introProgress - 0.32) / 0.46;
+
+    } else if (introProgress < 0.50) {
+      // ----------------------------------------------------------------------
+      // SHOT 2 (0.25 - 0.50): [CAM 02 // DUAL THRUSTER PROPULSION & DIFFUSER]
+      // Ultra-low asphalt angle tracking titanium exhaust vents, underglow & turbine spool
+      // ----------------------------------------------------------------------
+      const p = (introProgress - 0.25) / 0.25;
+      const easeP = p * p * (3.0 - 2.0 * p);
+
+      const startPos = _tempVec1.copy(pPos)
+        .addScaledVector(_fwd, -3.4)
+        .addScaledVector(_right, -1.9)
+        .addScaledVector(_up, 0.32);
+
+      const endPos = _tempVec2.copy(pPos)
+        .addScaledVector(_fwd, -4.8)
+        .addScaledVector(_right, 1.4)
+        .addScaledVector(_up, 0.82);
+
+      this.camera.position.lerpVectors(startPos, endPos, easeP);
+
+      this.lookTarget.copy(pPos)
+        .addScaledVector(_fwd, -0.6)
+        .addScaledVector(_up, 0.42);
+      this.camera.lookAt(this.lookTarget);
+
+      const dutchAngle = THREE.MathUtils.lerp(0.06, -0.04, easeP);
+      _bankQuat.setFromAxisAngle(_fwd, dutchAngle);
+      this.camera.up.copy(_up).applyQuaternion(_bankQuat);
+
+      this.camera.fov = THREE.MathUtils.lerp(48.0, 52.0, easeP);
+      this.camera.updateProjectionMatrix();
+
+    } else if (introProgress < 0.72) {
+      // ----------------------------------------------------------------------
+      // SHOT 3 (0.50 - 0.72): [CAM 03 // TRACKSIDE TELEPHOTO GRID FLYBY]
+      // Telephoto barrier broadcast lens sweeping down starting grid past rival racers
+      // ----------------------------------------------------------------------
+      const p = (introProgress - 0.50) / 0.22;
       const allRacers = [
         playerVehicle,
         ...rivals.map(r => r.vehicle)
@@ -447,7 +573,6 @@ export class CameraController {
 
       const totalRacers = allRacers.length;
       if (totalRacers > 0) {
-        // Continuous float index moving from back of grid to front of grid
         const floatIdx = (1.0 - p) * (totalRacers - 1);
         const baseIdx = Math.floor(floatIdx);
         const nextIdx = Math.min(baseIdx + 1, totalRacers - 1);
@@ -461,58 +586,62 @@ export class CameraController {
         } else if (r1) {
           _tempVec1.copy(r1.group.position);
         } else {
-          _tempVec1.set(0, 150, 0);
+          _tempVec1.copy(frame0.pos);
         }
 
-        // Anchor camera relative to track corridor Frenet frame to prevent clipping into buildings
-        const trackFrame = circuit.getClosestFrame ? circuit.getClosestFrame(_tempVec1) : circuit.getFrameAt(0.0);
+        const trackFrame = circuit.getClosestFrame ? circuit.getClosestFrame(_tempVec1) : frame0;
         const fTangent = trackFrame.tangent || trackFrame.frame?.tangent || new THREE.Vector3(0, 0, 1);
         const fNormal = trackFrame.normal || trackFrame.frame?.normal || new THREE.Vector3(0, 1, 0);
         const fBinormal = trackFrame.binormal || trackFrame.frame?.binormal || new THREE.Vector3(1, 0, 0);
 
-        const sideSweep = (Math.sin(p * Math.PI) * 1.2 + 3.8);
+        const sideSweep = Math.sin(p * Math.PI) * 1.0 + 4.2;
         this.camera.position.copy(_tempVec1)
-          .addScaledVector(fTangent, -1.8)
-          .addScaledVector(fNormal, 1.45)
+          .addScaledVector(fTangent, -2.2)
+          .addScaledVector(fNormal, 1.65)
           .addScaledVector(fBinormal, sideSweep);
 
-        const lookTarget = _tempVec2.copy(_tempVec1)
-          .addScaledVector(fTangent, 6.0)
-          .addScaledVector(fNormal, 0.4);
+        this.lookTarget.copy(_tempVec1)
+          .addScaledVector(fTangent, 7.5)
+          .addScaledVector(fNormal, 0.45);
 
-        this.camera.lookAt(lookTarget);
+        this.camera.lookAt(this.lookTarget);
         this.camera.up.copy(fNormal);
-        this.camera.fov = 52;
+        this.camera.fov = 36.0; // High telephoto broadcast compression
         this.camera.updateProjectionMatrix();
       }
+
     } else {
-      // 3. Final hero sweep behind player's craft, aligning seamlessly into Chase cam
-      const p = (introProgress - 0.78) / 0.22;
+      // ----------------------------------------------------------------------
+      // SHOT 4 (0.72 - 1.00): [CAM 04 // LAUNCH GANTRY SWOOP & CHASE TOUCHDOWN]
+      // High gantry crane swooping smoothly down into the driver's Chase Cam
+      // ----------------------------------------------------------------------
+      const p = (introProgress - 0.72) / 0.28;
       const easeP = p * p * (3.0 - 2.0 * p);
 
-      if (playerVehicle) {
-        const pPos = playerVehicle.group.position;
-        const pRot = playerVehicle.group.quaternion;
-        _fwd.set(0, 0, 1).applyQuaternion(pRot);
-        _up.set(0, 1, 0).applyQuaternion(pRot);
-        _right.set(1, 0, 0).applyQuaternion(pRot);
+      const highCranePos = _tempVec1.copy(pPos)
+        .addScaledVector(_fwd, -16.0)
+        .addScaledVector(_right, 3.8)
+        .addScaledVector(_up, 11.5);
 
-        const sideIntroPos = _tempVec1.copy(pPos)
-          .addScaledVector(_fwd, -4.5)
-          .addScaledVector(_right, 3.2)
-          .addScaledVector(_up, 1.6);
+      const targetChasePos = _tempVec2.copy(pPos)
+        .addScaledVector(_fwd, -7.4)
+        .addScaledVector(_up, 2.3);
 
-        const targetChasePos = _tempVec2.copy(pPos)
-          .addScaledVector(_fwd, -7.5)
-          .addScaledVector(_up, 2.3);
+      this.camera.position.lerpVectors(highCranePos, targetChasePos, easeP);
 
-        this.camera.position.lerpVectors(sideIntroPos, targetChasePos, easeP);
-        const lookTarget = _tempVec1.copy(pPos).addScaledVector(_fwd, 8.0).addScaledVector(_up, 0.4);
-        this.camera.lookAt(lookTarget);
-        this.camera.up.copy(_up);
-        this.camera.fov = THREE.MathUtils.lerp(52, 75, easeP);
-        this.camera.updateProjectionMatrix();
-      }
+      const craneLook = _velDir.copy(pPos).addScaledVector(_fwd, 26.0).addScaledVector(_up, 0.8);
+      const chaseLook = _shakeOffset.copy(pPos).addScaledVector(_fwd, 20.0).addScaledVector(_up, 1.25);
+      this.lookTarget.lerpVectors(craneLook, chaseLook, easeP);
+
+      this.camera.lookAt(this.lookTarget);
+      this.camera.up.copy(_up);
+      this.camera.fov = THREE.MathUtils.lerp(48.0, 74.0, easeP);
+      this.camera.updateProjectionMatrix();
+
+      // Pre-seed chase camera vectors so transition into COUNTDOWN / RACING is 100% seamless
+      this.currentCameraPos.copy(this.camera.position);
+      this.currentLookTarget.copy(this.lookTarget);
+      this.targetCameraPos.copy(this.camera.position);
     }
   }
 }

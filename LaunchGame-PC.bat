@@ -21,13 +21,9 @@ if %ERRORLEVEL% NEQ 0 (
     exit /b 1
 )
 
-:: 2. Build production assets if missing
-if not exist "dist\index.html" (
-    echo [2/3] Compiling optimized WebGPU shaders and production game bundle...
-    call npm run build
-) else (
-    echo [2/3] Production game bundle verified: dist\index.html
-)
+:: 2. Compile latest production game bundle
+echo [2/3] Compiling and verifying optimized WebGPU shaders and production game bundle...
+call npm run build
 echo.
 
 :: 3. Launch Native PC Desktop Game with Discrete GPU Acceleration

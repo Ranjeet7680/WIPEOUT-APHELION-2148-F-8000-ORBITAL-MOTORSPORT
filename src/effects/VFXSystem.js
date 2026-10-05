@@ -146,18 +146,18 @@ export class VFXSystem {
     }
 
     // 5. High-Velocity Rain Streaks (Centered around Player Camera)
-    this.maxRainDrops = 1200;
+    this.maxRainDrops = 600;
     this.rainGeo = new THREE.BufferGeometry();
     this.rainPos = new Float32Array(this.maxRainDrops * 6); // 2 vertices per line streak
     this.rainOffset = [];
 
     for (let i = 0; i < this.maxRainDrops; i++) {
       this.rainOffset.push({
-        x: (Math.random() - 0.5) * 140,
-        y: Math.random() * 80,
-        z: (Math.random() - 0.5) * 140,
-        speed: 120 + Math.random() * 80,
-        len: 2.5 + Math.random() * 3.5
+        x: (Math.random() - 0.5) * 120,
+        y: Math.random() * 70,
+        z: (Math.random() - 0.5) * 120,
+        speed: 100 + Math.random() * 60,
+        len: 2.0 + Math.random() * 2.5
       });
     }
 
@@ -165,7 +165,7 @@ export class VFXSystem {
     const rainMat = new THREE.LineBasicMaterial({
       color: 0x70C8FF,
       transparent: true,
-      opacity: 0.55,
+      opacity: 0.45,
       blending: THREE.AdditiveBlending,
       depthWrite: false
     });
@@ -174,22 +174,22 @@ export class VFXSystem {
     this.scene.add(this.rainLines);
 
     // Dynamic performance scaling defaults
-    this.activeRainDrops = 800;
-    this.activeSpeedLines = 120;
+    this.activeRainDrops = 450;
+    this.activeSpeedLines = 50;
 
-    // 6. Hypersonic Speed Warp Lines (> 300 km/h)
-    this.maxSpeedLines = 150;
+    // 6. Hypersonic Peripheral Warp Lines (Edges only, clear center view)
+    this.maxSpeedLines = 60;
     this.speedLineGeo = new THREE.BufferGeometry();
     this.speedLinePos = new Float32Array(this.maxSpeedLines * 6);
     this.speedLinesData = [];
 
     for (let i = 0; i < this.maxSpeedLines; i++) {
       this.speedLinesData.push({
-        radius: 12 + Math.random() * 24,
+        radius: 22 + Math.random() * 32, // Strictly peripheral edges so car and road remain 100% visible
         angle: Math.random() * Math.PI * 2,
-        z: -Math.random() * 90,
-        len: 8 + Math.random() * 16,
-        speed: 160 + Math.random() * 100
+        z: -Math.random() * 80,
+        len: 5 + Math.random() * 10,
+        speed: 140 + Math.random() * 80
       });
     }
 
@@ -510,23 +510,23 @@ export class VFXSystem {
     switch (preset) {
       case 'LOW':
         this.activeRainDrops = 0;
-        this.activeSpeedLines = 40;
+        this.activeSpeedLines = 30;
         this.rainLines.visible = false;
         break;
       case 'MEDIUM':
-        this.activeRainDrops = 400;
-        this.activeSpeedLines = 80;
+        this.activeRainDrops = 180;
+        this.activeSpeedLines = 60;
         this.rainLines.visible = true;
         break;
       case 'HIGH':
-        this.activeRainDrops = 800;
-        this.activeSpeedLines = 120;
+        this.activeRainDrops = 380;
+        this.activeSpeedLines = 90;
         this.rainLines.visible = true;
         break;
       case 'ULTRA':
       default:
-        this.activeRainDrops = 1200;
-        this.activeSpeedLines = 150;
+        this.activeRainDrops = 600;
+        this.activeSpeedLines = 120;
         this.rainLines.visible = true;
         break;
     }
@@ -657,19 +657,19 @@ export class VFXSystem {
       this.rainGeo.attributes.position.needsUpdate = true;
     }
 
-    // 7. Update Speed Lines (> 300 km/h)
-    const speedRatio = Math.max(0.0, (speedKmh - 260.0) / 160.0);
-    this.speedLinesMesh.material.opacity = Math.min(0.85, speedRatio * (isBoosting ? 0.95 : 0.65));
+    // 7. Update Speed Lines (> 340 km/h or Overdrive Boost)
+    const speedRatio = isBoosting ? 1.0 : Math.max(0.0, (speedKmh - 340.0) / 100.0);
+    this.speedLinesMesh.material.opacity = Math.min(0.40, speedRatio * (isBoosting ? 0.45 : 0.25));
 
     if (this.speedLinesMesh.material.opacity > 0.01) {
-      const lineCount = Math.min(this.activeSpeedLines || 120, this.maxSpeedLines);
+      const lineCount = Math.min(this.activeSpeedLines || 50, this.maxSpeedLines);
       for (let i = 0; i < lineCount; i++) {
         const line = this.speedLinesData[i];
-        line.z += line.speed * delta * (1.0 + speedRatio);
+        line.z += line.speed * delta * (1.0 + speedRatio * 0.8);
         if (line.z > 5.0) {
-          line.z = -90.0 - Math.random() * 30.0;
+          line.z = -80.0 - Math.random() * 25.0;
           line.angle = Math.random() * Math.PI * 2;
-          line.radius = 8.0 + Math.random() * 22.0;
+          line.radius = 22.0 + Math.random() * 32.0;
         }
 
         const lx = Math.cos(line.angle) * line.radius;

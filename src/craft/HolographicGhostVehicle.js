@@ -217,8 +217,8 @@ export class HolographicGhostVehicle {
     if (uDiff > 0.5) uDiff -= 1.0;
     if (uDiff < -0.5) uDiff += 1.0;
 
-    // Convert track delta to time estimate (track is ~5.4km, average speed 115m/s)
-    const trackLengthMeters = 5400;
+    // Convert track delta to time estimate (dynamic track length, average speed 115m/s)
+    const trackLengthMeters = (this.circuit && this.circuit.totalLength) ? this.circuit.totalLength : 5400;
     const distanceDelta = uDiff * trackLengthMeters;
     const timeDelta = -(distanceDelta / 115.0); // positive means player is slower (behind), negative means player is ahead!
     const isGhostAhead = uDiff > 0;
@@ -236,6 +236,10 @@ export class HolographicGhostVehicle {
       isGhostAhead,
       lapTimeFormatted: this.telemetry ? this.telemetry.lapTimeFormatted : '00:48.214'
     };
+  }
+
+  setCircuit(circuit) {
+    this.circuit = circuit;
   }
 
   show() {

@@ -25,14 +25,9 @@ for /f "tokens=*" %%v in ('node -v') do set NODE_VER=%%v
 echo [OK] Node.js detected: %NODE_VER%
 echo.
 
-:: 2. Check and build bundle if needed
-echo [2/4] Verifying production game assets...
-if not exist "dist\index.html" (
-    echo [INFO] Compiling production shaders and WebGPU bundle...
-    call npm run build
-) else (
-    echo [OK] Production game bundle ready.
-)
+:: 2. Compile latest production game bundle
+echo [2/4] Compiling and verifying optimized WebGPU shaders and production game bundle...
+call npm run build
 echo.
 
 :: 3. Run verification test suite

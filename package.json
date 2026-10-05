@@ -3,8 +3,7 @@
   "version": "1.0.0",
   "type": "module",
   "description": "NEO RACING // WORLD TOUR — AAA Futuristic Cyberpunk Arcade Racing Game & Simulation Engine by Ranjeet Kumar",
-  "main": "dist/assets/index-DiUrtcsq.js",
-  "module": "dist/assets/index-DiUrtcsq.js",
+  "main": "desktop/main.cjs",
   "files": [
     "dist",
     "api",
@@ -17,7 +16,7 @@
   "scripts": {
     "dev": "vite --host --port 5173",
     "build": "vite build",
-    "desktop": "electron desktop/main.cjs",
+    "desktop": "vite build && electron desktop/main.cjs",
     "desktop:build": "vite build && electron desktop/main.cjs",
     "preview": "vite preview",
     "test": "node test/e2e-simulation-test.js"
