@@ -2,26 +2,38 @@
   <defs>
     <!-- Gradients -->
     <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#05070d" />
-      <stop offset="50%" stop-color="#090d18" />
-      <stop offset="100%" stop-color="#04060a" />
+      <stop offset="0%" stop-color="#04060b" />
+      <stop offset="40%" stop-color="#080e1a" />
+      <stop offset="75%" stop-color="#0b1326" />
+      <stop offset="100%" stop-color="#030508" />
     </linearGradient>
 
     <linearGradient id="cyanGlow" x1="0%" y1="0%" x2="100%" y2="0%">
       <stop offset="0%" stop-color="#00F0FF" stop-opacity="1" />
-      <stop offset="70%" stop-color="#7928CA" stop-opacity="0.8" />
-      <stop offset="100%" stop-color="#FF2A13" stop-opacity="1" />
+      <stop offset="45%" stop-color="#7028E4" stop-opacity="0.9" />
+      <stop offset="80%" stop-color="#FF0055" stop-opacity="1" />
+      <stop offset="100%" stop-color="#FFB800" stop-opacity="1" />
+    </linearGradient>
+
+    <linearGradient id="goldGlow" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#FFB800" />
+      <stop offset="100%" stop-color="#FF5500" />
+    </linearGradient>
+
+    <linearGradient id="greenGlow" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#00FF88" />
+      <stop offset="100%" stop-color="#00D4AA" />
     </linearGradient>
 
     <linearGradient id="thrustPlume" x1="0%" y1="50%" x2="100%" y2="50%">
       <stop offset="0%" stop-color="#00F0FF" stop-opacity="0" />
-      <stop offset="40%" stop-color="#00F0FF" stop-opacity="0.8" />
-      <stop offset="80%" stop-color="#ffffff" stop-opacity="1" />
+      <stop offset="30%" stop-color="#00F0FF" stop-opacity="0.85" />
+      <stop offset="70%" stop-color="#ffffff" stop-opacity="1" />
       <stop offset="100%" stop-color="#00F0FF" stop-opacity="0" />
     </linearGradient>
 
     <linearGradient id="radarSweep" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#00F0FF" stop-opacity="0.4" />
+      <stop offset="0%" stop-color="#00F0FF" stop-opacity="0.45" />
       <stop offset="100%" stop-color="#00F0FF" stop-opacity="0" />
     </linearGradient>
 
@@ -47,15 +59,11 @@
     <style>
       @keyframes pulseGlow {
         0%, 100% { opacity: 0.85; filter: drop-shadow(0 0 4px #00F0FF); }
-        50% { opacity: 1; filter: drop-shadow(0 0 14px #00F0FF); }
+        50% { opacity: 1; filter: drop-shadow(0 0 16px #00F0FF); }
       }
       @keyframes traceLine {
         0% { stroke-dashoffset: 1200; }
         100% { stroke-dashoffset: 0; }
-      }
-      @keyframes scanline {
-        0% { transform: translateY(-100%); }
-        100% { transform: translateY(340px); }
       }
       @keyframes radarSpin {
         0% { transform: rotate(0deg); }
@@ -63,21 +71,25 @@
       }
       @keyframes craftFloat {
         0%, 100% { transform: translateY(0px) rotate(0deg); }
-        50% { transform: translateY(-7px) rotate(-0.5deg); }
+        50% { transform: translateY(-8px) rotate(-0.6deg); }
       }
       @keyframes afterburnerPulse {
-        0%, 100% { transform: scaleX(0.92); opacity: 0.75; }
-        50% { transform: scaleX(1.15); opacity: 1; }
+        0%, 100% { transform: scaleX(0.90); opacity: 0.75; }
+        50% { transform: scaleX(1.18); opacity: 1; }
       }
       @keyframes glitchText {
-        0%, 94%, 100% { transform: translate(0, 0); opacity: 1; }
-        95% { transform: translate(-2px, 1px); opacity: 0.85; }
+        0%, 93%, 100% { transform: translate(0, 0); opacity: 1; }
+        94% { transform: translate(-2px, 1px); opacity: 0.85; }
         96% { transform: translate(2px, -1px); opacity: 0.95; }
-        97% { transform: translate(0, 0); opacity: 1; }
+        98% { transform: translate(0, 0); opacity: 1; }
       }
       @keyframes blinkCursor {
         0%, 49% { opacity: 1; }
         50%, 100% { opacity: 0; }
+      }
+      @keyframes tagPulse {
+        0%, 100% { stroke-opacity: 0.8; }
+        50% { stroke-opacity: 0.2; }
       }
       @keyframes eqBar1 { 0%, 100% { height: 6px; } 50% { height: 28px; } }
       @keyframes eqBar2 { 0%, 100% { height: 26px; } 50% { height: 10px; } }
@@ -90,14 +102,14 @@
         animation: traceLine 4s cubic-bezier(0.4, 0, 0.2, 1) infinite alternate;
       }
       .anim-radar {
-        transform-origin: 1020px 170px;
+        transform-origin: 1040px 170px;
         animation: radarSpin 6s linear infinite;
       }
       .anim-craft {
         animation: craftFloat 4s ease-in-out infinite;
       }
       .anim-burner {
-        transform-origin: 790px 170px;
+        transform-origin: 810px 170px;
         animation: afterburnerPulse 0.12s ease-in-out infinite alternate;
       }
       .anim-title {
@@ -118,7 +130,7 @@
   <rect width="1200" height="340" fill="url(#bgGrad)" />
 
   <!-- Grid Blueprint Pattern -->
-  <g stroke="#00F0FF" stroke-width="0.5" opacity="0.08">
+  <g stroke="#00F0FF" stroke-width="0.5" opacity="0.07">
     <line x1="0" y1="40" x2="1200" y2="40" />
     <line x1="0" y1="90" x2="1200" y2="90" />
     <line x1="0" y1="140" x2="1200" y2="140" />
@@ -137,29 +149,29 @@
   </g>
 
   <!-- Scanning Line Effect -->
-  <g opacity="0.15">
-    <rect x="0" y="0" width="1200" height="4" fill="#00F0FF">
-      <animate attributeName="y" values="-20;350" dur="4s" repeatCount="indefinite" />
+  <g opacity="0.18">
+    <rect x="0" y="0" width="1200" height="3" fill="#00F0FF">
+      <animate attributeName="y" values="-10;345" dur="3.8s" repeatCount="indefinite" />
     </rect>
   </g>
 
   <!-- Outer Tech Border & Crop Markers -->
-  <rect x="18" y="18" width="1164" height="304" fill="none" stroke="#1d263b" stroke-width="1.5" />
+  <rect x="16" y="16" width="1168" height="308" fill="none" stroke="#1d263b" stroke-width="1.5" />
   
   <!-- Corner Tech Reticles -->
-  <path d="M 18,36 L 18,18 L 36,18" fill="none" stroke="#00F0FF" stroke-width="3" />
-  <path d="M 1182,36 L 1182,18 L 1164,18" fill="none" stroke="#00F0FF" stroke-width="3" />
-  <path d="M 18,304 L 18,322 L 36,322" fill="none" stroke="#00F0FF" stroke-width="3" />
-  <path d="M 1182,304 L 1182,322 L 1164,322" fill="none" stroke="#00F0FF" stroke-width="3" />
+  <path d="M 16,36 L 16,16 L 36,16" fill="none" stroke="#00F0FF" stroke-width="3" />
+  <path d="M 1184,36 L 1184,16 L 1164,16" fill="none" stroke="#00F0FF" stroke-width="3" />
+  <path d="M 16,304 L 16,324 L 36,324" fill="none" stroke="#00F0FF" stroke-width="3" />
+  <path d="M 1184,304 L 1184,324 L 1164,324" fill="none" stroke="#00F0FF" stroke-width="3" />
 
   <!-- Animated High-Speed Circuit Traces -->
-  <path d="M 24,70 L 160,70 L 210,120 L 520,120 L 550,90 L 860,90 L 910,140 L 1176,140" 
+  <path d="M 20,68 L 180,68 L 220,118 L 540,118 L 570,88 L 880,88 L 920,138 L 1180,138" 
         fill="none" stroke="#00F0FF" stroke-width="1.8" opacity="0.45" class="anim-trace" />
-  <path d="M 24,270 L 240,270 L 280,230 L 640,230 L 670,260 L 1176,260" 
-        fill="none" stroke="#FF2A13" stroke-width="1.8" opacity="0.4" class="anim-trace" style="animation-delay: -2s;" />
+  <path d="M 20,272 L 250,272 L 290,232 L 660,232 L 690,262 L 1180,262" 
+        fill="none" stroke="#FF0055" stroke-width="1.8" opacity="0.4" class="anim-trace" style="animation-delay: -2s;" />
 
   <!-- Radar Telemetry Widget (Right side) -->
-  <g transform="translate(1020, 170)">
+  <g transform="translate(1040, 170)">
     <!-- Radar Rings -->
     <circle r="75" fill="none" stroke="#1d2c42" stroke-width="1" />
     <circle r="52" fill="none" stroke="#1d2c42" stroke-width="1" stroke-dasharray="3,3" />
@@ -180,18 +192,18 @@
     <circle cx="28" cy="-18" r="2.5" fill="#FFB800" filter="url(#glow)">
       <animate attributeName="opacity" values="0.2;1;0.2" dur="2s" repeatCount="indefinite" />
     </circle>
-    <circle cx="-35" cy="22" r="2.5" fill="#FF2A13" filter="url(#glow)">
+    <circle cx="-35" cy="22" r="2.5" fill="#FF0055" filter="url(#glow)">
       <animate attributeName="opacity" values="1;0.3;1" dur="1.6s" repeatCount="indefinite" />
     </circle>
-    <circle cx="12" cy="42" r="2" fill="#00F0FF" filter="url(#glow)">
+    <circle cx="12" cy="42" r="2" fill="#00FF88" filter="url(#glow)">
       <animate attributeName="opacity" values="0.4;1;0.4" dur="2.4s" repeatCount="indefinite" />
     </circle>
     
-    <text x="-65" y="98" fill="#8C99A8" font-family="'Courier New', monospace" font-size="9" letter-spacing="1">RADAR // 120Hz LOCK</text>
+    <text x="-70" y="98" fill="#8C99A8" font-family="'Courier New', monospace" font-size="9" letter-spacing="1">RADAR // 120Hz LOCK</text>
   </g>
 
   <!-- Anti-Gravity Craft Silhouette (Center-Right) -->
-  <g class="anim-craft" transform="translate(40, 0)">
+  <g class="anim-craft" transform="translate(60, 0)">
     <!-- Mach 1 Ion Trail / Kinetic Wake Waves -->
     <ellipse cx="680" cy="170" rx="140" ry="14" fill="url(#thrustPlume)" opacity="0.5" />
     <ellipse cx="660" cy="170" rx="100" ry="9" fill="url(#thrustPlume)" opacity="0.75" />
@@ -199,7 +211,7 @@
 
     <!-- Exhaust shock diamond rings -->
     <ellipse cx="720" cy="170" rx="8" ry="14" fill="none" stroke="#00F0FF" stroke-width="1.8" opacity="0.7" />
-    <ellipse cx="750" cy="170" rx="12" ry="20" fill="none" stroke="#7928CA" stroke-width="1.5" opacity="0.5" />
+    <ellipse cx="750" cy="170" rx="12" ry="20" fill="none" stroke="#7028E4" stroke-width="1.5" opacity="0.5" />
     <ellipse cx="790" cy="170" rx="18" ry="28" fill="none" stroke="#00F0FF" stroke-width="1.2" opacity="0.3" class="anim-burner" />
 
     <!-- Futuristic Anti-Gravity Interceptor Chassis (Vector Silhouette) -->
@@ -219,15 +231,15 @@
              L 775,216 
              L 810,194 
              L 865,188 Z" 
-          fill="#0D1322" stroke="#00F0FF" stroke-width="2.2" filter="url(#glow)" />
+          fill="#0B1220" stroke="#00F0FF" stroke-width="2.2" filter="url(#glow)" />
 
     <!-- Cockpit Dielectric Canopy -->
     <polygon points="860,170 835,164 805,165 825,170 805,175 835,176" 
              fill="#00F0FF" opacity="0.85" filter="url(#intenseGlow)" />
 
     <!-- Wing Canard Accents & Airbrake Flaps -->
-    <line x1="775" y1="124" x2="810" y2="146" stroke="#FF2A13" stroke-width="2.5" />
-    <line x1="775" y1="216" x2="810" y2="194" stroke="#FF2A13" stroke-width="2.5" />
+    <line x1="775" y1="124" x2="810" y2="146" stroke="#FF0055" stroke-width="2.5" />
+    <line x1="775" y1="216" x2="810" y2="194" stroke="#FF0055" stroke-width="2.5" />
     <line x1="745" y1="158" x2="730" y2="162" stroke="#FFB800" stroke-width="3" />
     <line x1="745" y1="182" x2="730" y2="178" stroke="#FFB800" stroke-width="3" />
 
@@ -249,74 +261,101 @@
     </line>
   </g>
 
-  <!-- Typography & tDR Aesthetic Brand Badges (Left side) -->
-  <g transform="translate(60, 50)">
-    <!-- Top Micro Tagline -->
-    <g font-family="'Courier New', monospace" font-size="11" letter-spacing="3" font-weight="bold">
-      <text x="0" y="24" fill="#00F0FF" filter="url(#glow)">+ THE DESIGNERS REPUBLIC / APHELION ACCORD</text>
-      <text x="430" y="24" fill="#FFB800">CLASS-A // 2148.09</text>
+  <!-- Typography, Team Credentials & Brand Badges (Left side) -->
+  <g transform="translate(54, 42)">
+    
+    <!-- Top Cyber Banner: Team & Leader Recognition -->
+    <g transform="translate(0, 0)">
+      <!-- Team Tag Pill -->
+      <rect x="0" y="0" width="168" height="24" rx="4" fill="#0b1a2e" stroke="#00F0FF" stroke-width="1.2" />
+      <circle cx="12" cy="12" r="4" fill="#00F0FF" filter="url(#glow)">
+        <animate attributeName="opacity" values="0.4;1;0.4" dur="1.8s" repeatCount="indefinite" />
+      </circle>
+      <text x="24" y="16" fill="#00F0FF" font-family="'Courier New', monospace" font-size="10.5" font-weight="bold" letter-spacing="1">
+        TEAM: rajranjeet7680
+      </text>
+
+      <!-- Leader Tag Pill -->
+      <rect x="176" y="0" width="186" height="24" rx="4" fill="#1f1606" stroke="#FFB800" stroke-width="1.2" />
+      <polygon points="186,8 194,12 186,16" fill="#FFB800" />
+      <text x="200" y="16" fill="#FFB800" font-family="'Courier New', monospace" font-size="10.5" font-weight="bold" letter-spacing="1">
+        LEAD: RANJEET KUMAR
+      </text>
+
+      <!-- Tests Passing Pill -->
+      <rect x="370" y="0" width="158" height="24" rx="4" fill="#061f12" stroke="#00FF88" stroke-width="1.2" />
+      <text x="382" y="16" fill="#00FF88" font-family="'Courier New', monospace" font-size="10.5" font-weight="bold" letter-spacing="1">
+        ✓ 235 TESTS PASSING
+      </text>
+
+      <!-- Specification Release -->
+      <text x="540" y="16" fill="#8C99A8" font-family="'Courier New', monospace" font-size="10" letter-spacing="2">
+        SPEC // v2.4.0 • 120Hz
+      </text>
     </g>
 
     <!-- Main Title -->
-    <g class="anim-title" font-family="'Arial Black', 'Helvetica Neue', Impact, sans-serif" font-weight="900">
-      <text x="0" y="92" font-size="64" fill="url(#cyanGlow)" letter-spacing="4" filter="url(#glow)">
+    <g class="anim-title" transform="translate(0, 24)" font-family="'Arial Black', 'Helvetica Neue', Impact, sans-serif" font-weight="900">
+      <text x="0" y="66" font-size="60" fill="url(#cyanGlow)" letter-spacing="3" filter="url(#glow)">
         WIPEOUT
       </text>
-      <text x="355" y="92" font-size="64" fill="#EAEFF5" letter-spacing="6">
+      <text x="340" y="66" font-size="60" fill="#EAEFF5" letter-spacing="5">
         //
       </text>
-      <text x="430" y="92" font-size="64" fill="#EAEFF5" letter-spacing="5">
+      <text x="410" y="66" font-size="60" fill="#EAEFF5" letter-spacing="4">
         APHELION
       </text>
     </g>
 
     <!-- Subtitle Bar -->
-    <rect x="0" y="112" width="580" height="24" fill="#00F0FF" opacity="0.12" />
-    <rect x="0" y="112" width="4" height="24" fill="#00F0FF" />
-    <text x="14" y="129" font-family="'Courier New', monospace" font-size="13" font-weight="bold" fill="#00F0FF" letter-spacing="2">
-      F-8000 ORBITAL MOTORSPORT // 1,650 KM/H 6-DOF SIMULATION
-    </text>
+    <g transform="translate(0, 102)">
+      <rect x="0" y="0" width="600" height="24" rx="2" fill="#00F0FF" opacity="0.12" />
+      <rect x="0" y="0" width="4" height="24" rx="1" fill="#00F0FF" />
+      <text x="14" y="16" font-family="'Courier New', monospace" font-size="12" font-weight="bold" fill="#00F0FF" letter-spacing="1.8">
+        F-8000 ORBITAL MOTORSPORT // 1,650 KM/H 6-DOF HYPER-DRIVE
+      </text>
+    </g>
 
     <!-- Feature Tags Row -->
-    <g transform="translate(0, 158)" font-family="'Courier New', monospace" font-size="10" font-weight="bold">
-      <!-- Tag 1 -->
-      <rect x="0" y="0" width="128" height="22" fill="#101826" stroke="#00F0FF" stroke-width="1" />
-      <text x="10" y="15" fill="#00F0FF">TRI-VECTOR PWR</text>
+    <g transform="translate(0, 138)" font-family="'Courier New', monospace" font-size="9.5" font-weight="bold">
+      <!-- Tag 1: Physics Engine -->
+      <rect x="0" y="0" width="138" height="22" rx="3" fill="#101826" stroke="#00F0FF" stroke-width="1" />
+      <text x="8" y="15" fill="#00F0FF">120Hz SPLINE ENGINE</text>
 
-      <!-- Tag 2 -->
-      <rect x="138" y="0" width="138" height="22" fill="#101826" stroke="#7928CA" stroke-width="1" />
-      <text x="148" y="15" fill="#C490FF">6-DOF VACUUM RIFT</text>
+      <!-- Tag 2: 4 Sectors -->
+      <rect x="146" y="0" width="136" height="22" rx="3" fill="#101826" stroke="#7028E4" stroke-width="1" />
+      <text x="154" y="15" fill="#C490FF">4 MASTER SECTORS</text>
 
-      <!-- Tag 3 -->
-      <rect x="286" y="0" width="136" height="22" fill="#101826" stroke="#FF2A13" stroke-width="1" />
-      <text x="296" y="15" fill="#FF4E36">INDUCTION GRIND</text>
+      <!-- Tag 3: 9 Fleet Cars -->
+      <rect x="290" y="0" width="132" height="22" rx="3" fill="#101826" stroke="#FF0055" stroke-width="1" />
+      <text x="298" y="15" fill="#FF4E88">9 FLEET VEHICLES</text>
 
-      <!-- Tag 4 -->
-      <rect x="432" y="0" width="144" height="22" fill="#101826" stroke="#FFB800" stroke-width="1" />
-      <text x="442" y="15" fill="#FFB800">COBRA AIR-ANCHOR</text>
+      <!-- Tag 4: Career & Live Ops -->
+      <rect x="430" y="0" width="170" height="22" rx="3" fill="#101826" stroke="#FFB800" stroke-width="1" />
+      <text x="438" y="15" fill="#FFB800">CAREER + LIVE OPS HUB</text>
     </g>
 
     <!-- Circuit & Telemetry Status Footer -->
-    <g transform="translate(0, 206)" font-family="'Courier New', monospace" font-size="11" fill="#8C99A8">
+    <g transform="translate(0, 178)" font-family="'Courier New', monospace" font-size="10.5" fill="#8C99A8">
       <text x="0" y="14" letter-spacing="1">
-        CIRCUIT: <tspan fill="#00F0FF" font-weight="bold">NEO-SHINJUKU RIFT</tspan> | ELEVATION: <tspan fill="#FFB800">+850M ➔ -120M</tspan>
+        TRACKS: <tspan fill="#00F0FF" font-weight="bold">NEO-SHINJUKU</tspan> | <tspan fill="#00FF88">COASTLINE</tspan> | <tspan fill="#FFB800">FUJI SKYWAY</tspan> | <tspan fill="#FF0055">UNDERCITY</tspan>
       </text>
       <text x="0" y="32" letter-spacing="1">
-        MRT PIPELINE: <tspan fill="#00F0FF">ACTIVE (4 TARGETS)</tspan> | SYSTEM STATUS: <tspan fill="#00FF66">NOMINAL</tspan>
+        EDGE RELAY: <tspan fill="#00FF88">VERCEL PRODUCTION</tspan> | STATUS: <tspan fill="#00F0FF">OPTIMAL (100% 235/235)</tspan>
         <tspan fill="#00F0FF" class="blink">█</tspan>
       </text>
     </g>
 
     <!-- Equalizer Audio Waveform Visualizer -->
-    <g transform="translate(500, 200)">
+    <g transform="translate(525, 204)">
       <rect x="0" y="0" width="5" height="12" fill="#00F0FF" class="eq-1" />
       <rect x="8" y="0" width="5" height="22" fill="#00F0FF" class="eq-2" />
-      <rect x="16" y="0" width="5" height="15" fill="#7928CA" class="eq-3" />
-      <rect x="24" y="0" width="5" height="28" fill="#FF2A13" class="eq-4" />
+      <rect x="16" y="0" width="5" height="15" fill="#7028E4" class="eq-3" />
+      <rect x="24" y="0" width="5" height="28" fill="#FF0055" class="eq-4" />
       <rect x="32" y="0" width="5" height="18" fill="#FFB800" class="eq-5" />
-      <rect x="40" y="0" width="5" height="10" fill="#00F0FF" class="eq-2" />
+      <rect x="40" y="0" width="5" height="10" fill="#00FF88" class="eq-2" />
       <rect x="48" y="0" width="5" height="24" fill="#00F0FF" class="eq-4" />
-      <text x="58" y="16" font-family="'Courier New', monospace" font-size="9" fill="#00F0FF" opacity="0.8">150 BPM</text>
+      <text x="58" y="16" font-family="'Courier New', monospace" font-size="9" fill="#00F0FF" opacity="0.85">150 BPM</text>
     </g>
   </g>
 </svg>

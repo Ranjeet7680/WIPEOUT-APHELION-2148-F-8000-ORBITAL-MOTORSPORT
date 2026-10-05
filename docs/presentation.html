@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WIPEOUT: APHELION 2148 // 12-Slide Pitch Deck - Team rajranjeet7680</title>
+  <link rel="icon" type="image/svg+xml" href="/header.svg">
+  <style>
+    :root {
+      --bg: #05070f;
+      --card-bg: rgba(13, 20, 36, 0.85);
+      --cyan: #00F0FF;
+      --pink: #FF0055;
+      --gold: #FFB800;
+      --green: #00FF88;
+      --purple: #7928CA;
+      --text: #EAEFF5;
+      --text-muted: #8C99A8;
+      --border: rgba(0, 240, 255, 0.25);
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    /* Ambient Tech Grid Background */
+    .bg-grid {
+      position: absolute;
+      inset: 0;
+      background-image: 
+        linear-gradient(rgba(0, 240, 255, 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 240, 255, 0.05) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Top Global Header Bar */
+    header {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 28px;
+      background: rgba(5, 8, 16, 0.95);
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(10px);
+    }
+    .header-branding {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .game-logo {
+      font-size: 1.1rem;
+      font-weight: 900;
+      letter-spacing: 2px;
+      color: var(--cyan);
+      text-shadow: 0 0 10px rgba(0, 240, 255, 0.6);
+    }
+    .team-badge {
+      display: flex;
+      gap: 8px;
+    }
+    .pill {
+      font-family: 'Courier New', monospace;
+      font-size: 0.75rem;
+      padding: 3px 10px;
+      border-radius: 4px;
+      font-weight: 700;
+      letter-spacing: 1px;
+    }
+    .pill-team {
+      background: rgba(112, 40, 228, 0.2);
+      border: 1px solid #7028E4;
+      color: #C490FF;
+    }
+    .pill-leader {
+      background: rgba(255, 184, 0, 0.15);
+      border: 1px solid var(--gold);
+      color: var(--gold);
+    }
+    .pill-tests {
+      background: rgba(0, 255, 136, 0.15);
+      border: 1px solid var(--green);
+      color: var(--green);
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .slide-counter {
+      font-family: 'Courier New', monospace;
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--cyan);
+    }
+    .btn {
+      background: rgba(0, 240, 255, 0.1);
+      border: 1px solid var(--cyan);
+      color: var(--cyan);
+      padding: 6px 14px;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.8rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .btn:hover {
+      background: var(--cyan);
+      color: #000;
+      box-shadow: 0 0 15px rgba(0, 240, 255, 0.6);
+    }
+
+    /* Deck Viewport & Slides */
+    .deck-container {
+      position: relative;
+      flex: 1;
+      width: 100%;
+      overflow: hidden;
+      z-index: 1;
+    }
+
+    .slide {
+      position: absolute;
+      inset: 0;
+      display: none;
+      opacity: 0;
+      transform: translateX(30px);
+      transition: opacity 0.35s ease, transform 0.35s ease;
+      padding: 32px 48px;
+    }
+    .slide.active {
+      display: flex;
+      flex-direction: column;
+      opacity: 1;
+      transform: translateX(0);
+    }
+
+    .slide-header {
+      margin-bottom: 24px;
+    }
+    .slide-number {
+      font-family: 'Courier New', monospace;
+      font-size: 0.85rem;
+      font-weight: bold;
+      color: var(--pink);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+    .slide-title {
+      font-size: 2.2rem;
+      font-weight: 900;
+      letter-spacing: 1px;
+      color: #fff;
+      margin-top: 4px;
+      text-shadow: 0 0 20px rgba(0, 240, 255, 0.3);
+    }
+
+    .slide-content-grid {
+      display: grid;
+      grid-template-columns: 1.1fr 1fr;
+      gap: 36px;
+      flex: 1;
+      align-items: center;
+      min-height: 0;
+    }
+
+    .slide-content-grid.single-col {
+      grid-template-columns: 1fr;
+      text-align: center;
+      justify-content: center;
+    }
+
+    .text-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      font-size: 1.05rem;
+      line-height: 1.6;
+    }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px;
+      backdrop-filter: blur(8px);
+    }
+    .card-title {
+      font-family: 'Courier New', monospace;
+      font-size: 0.95rem;
+      font-weight: bold;
+      color: var(--cyan);
+      margin-bottom: 8px;
+      letter-spacing: 1px;
+    }
+    .bullet-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .bullet-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .bullet-list li::before {
+      content: "▶";
+      font-size: 0.75rem;
+      color: var(--cyan);
+      margin-top: 4px;
+    }
+
+    .media-panel {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100%;
+      max-height: 520px;
+    }
+    .media-frame {
+      width: 100%;
+      height: 100%;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 20px rgba(0, 240, 255, 0.2);
+      object-fit: cover;
+      background: #000;
+    }
+
+    /* Key Metrics Display */
+    .metric-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-top: 8px;
+    }
+    .metric-box {
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(0, 240, 255, 0.2);
+      border-radius: 6px;
+      padding: 12px;
+      text-align: center;
+    }
+    .metric-val {
+      font-family: 'Courier New', monospace;
+      font-size: 1.6rem;
+      font-weight: 900;
+      color: var(--cyan);
+    }
+    .metric-val.green { color: var(--green); }
+    .metric-val.gold { color: var(--gold); }
+    .metric-lbl {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-top: 4px;
+    }
+
+    /* Bottom Control Bar */
+    footer {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 28px;
+      background: rgba(5, 8, 16, 0.95);
+      border-top: 1px solid var(--border);
+    }
+    .progress-track {
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 3px;
+      width: 100%;
+      background: rgba(255, 255, 255, 0.1);
+    }
+    .progress-fill {
+      height: 100%;
+      width: 8.33%;
+      background: linear-gradient(90deg, var(--cyan), var(--pink));
+      transition: width 0.3s ease;
+    }
+    .nav-hints {
+      font-family: 'Courier New', monospace;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+    .nav-buttons {
+      display: flex;
+      gap: 10px;
+    }
+
+    @media (max-width: 900px) {
+      .slide-content-grid {
+        grid-template-columns: 1fr;
+        overflow-y: auto;
+      }
+      .slide {
+        padding: 20px;
+      }
+      .media-panel {
+        max-height: 240px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-grid"></div>
+
+  <!-- Header -->
+  <header>
+    <div class="header-branding">
+      <div class="game-logo">WIPEOUT: APHELION 2148</div>
+      <div class="team-badge">
+        <span class="pill pill-team">TEAM: rajranjeet7680</span>
+        <span class="pill pill-leader">LEAD: RANJEET KUMAR</span>
+        <span class="pill pill-tests">235 TESTS PASSING</span>
+      </div>
+    </div>
+    <div class="header-actions">
+      <span class="slide-counter" id="slide-indicator">SLIDE 01 / 12</span>
+      <button class="btn" id="btn-fullscreen" title="Toggle Fullscreen (F)">FULLSCREEN</button>
+    </div>
+  </header>
+
+  <!-- Slides Viewport -->
+  <main class="deck-container" id="deck">
+
+    <!-- SLIDE 1: Title -->
+    <section class="slide active">
+      <div class="slide-header">
+        <div class="slide-number">Slide 01 // Executive Presentation</div>
+        <h1 class="slide-title">WIPEOUT: APHELION 2148 // F-8000 ORBITAL MOTORSPORT</h1>
+      </div>
+      <div class="slide-content-grid">
+        <div class="text-panel">
+          <div class="card">
+            <div class="card-title">PROJECT CREDENTIALS & LEADERSHIP</div>
+            <ul class="bullet-list">
+              <li><strong>Engineering Team:</strong> <code>rajranjeet7680</code></li>
+              <li><strong>Project Leader & Lead Architect:</strong> <strong>Ranjeet Kumar</strong></li>
+              <li><strong>Live Production URL:</strong> <a href="https://optimistic-carson-pink.vercel.app" target="_blank" style="color:var(--cyan);">optimistic-carson-pink.vercel.app</a></li>
+              <li><strong>Repository:</strong> <a href="https://github.com/Ranjeet7680/WIPEOUT-APHELION-2148-F-8000-ORBITAL-MOTORSPORT" target="_blank" style="color:var(--cyan);">GitHub Official Repo</a></li>
+              <li><strong>Current Status:</strong> Gold Master 2.4.0 (235/235 Automated Tests Passing)</li>
+            </ul>
+          </div>
+          <div class="metric-row">
+            <div class="metric-box">
+              <div class="metric-val">120Hz</div>
+              <div class="metric-lbl">Sub-Step Physics</div>
+            </div>
+            <div class="metric-box">
+              <div class="metric-val gold">9 CRAFTS</div>
+              <div class="metric-lbl">Original Fleet</div>
+            </div>
+            <div class="metric-box">
+              <div class="metric-val green">235 / 235</div>
+              <div class="metric-lbl">Tests Verified</div>
+            </div>
+          </div>
+        </div>
+        <div class="media-panel">
+          <img src="/header.svg" alt="Aphelion Header" class="media-frame" style="object-fit:contain; background:#04060b;">
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 2: Vision & High Concept -->
+    <section class="slide">
+      <div class="slide-header">
+        <div class="slide-number">Slide 02 // Vision & High Concept</div>
+        <h1 class="slide-title">Pure Arcade Nostalgia Meets Next-Gen Web Tech</h1>
+      </div>
+      <div class="slide-content-grid">
+        <div class="text-panel">
+          <div class="card">
+            <div class="card-title">CORE DESIGN PHILOSOPHY</div>
+            <ul class="bullet-list">
+              <li><strong>Zero Heavy Engine Overhead:</strong> Built directly with Three.js and vanilla JavaScript; loads anywhere in under 1.5 seconds.</li>
+              <li><strong>3D Japan Skyline Showroom:</strong> Full 360° pedestal vehicle inspection with dynamic Tokyo tower lighting and clean cinematic UI.</li>
+              <li><strong>Cross-Platform Universal Deployment:</strong> Responsive mobile touch PWA + Native 120Hz/144Hz Windows PC desktop launcher with discrete GPU acceleration.</li>
+              <li><strong>Integrated Lore:</strong> The Aphelion Accord of 2148 uniting orbital megacities and terrestrial speedways.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="media-panel">
+          <img src="/images/screenshots/screenshot_garage_lobby_tokyo.png" alt="3D Japan Skyline Showroom" class="media-frame">
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 3: Smooth Driving Physics Engine -->
+    <section class="slide">
+      <div class="slide-header">
+        <div class="slide-number">Slide 03 // Deterministic Physics Engine</div>
+        <h1 class="slide-title">120Hz Sub-Stepping & Continuous C¹ Spline Math</h1>
+      </div>
+      <div class="slide-content-grid">
+        <div class="text-panel">
+          <div class="card">
+            <div class="card-title">END-TO-END SMOOTH DRIVING MATHEMATICS</div>
+            <ul class="bullet-list">
+              <li><strong>Continuous C¹ Hermite Splines:</strong> Frenet-Serret frame calculation eliminating polygonal segment bumps and camera jitter.</li>
+              <li><strong>Standstill Stability Theorem:</strong> At 0 km/h, lateral drift slip is unconditionally zero. Front wheels turn realistically while the vehicle remains rock-steady on the grid.</li>
+              <li><strong>4-Corner Damped Harmonic Suspension:</strong> Second-order spring equations modeling acceleration squat, braking dive, and centrifugal roll.</li>
+              <li><strong>Glancing Barrier Wall-Riding:</strong> Smoothly scrubs exactly 35 km/h per second without bouncy rebound or sticky catches.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="media-panel">
+          <img src="/images/screenshots/screenshot_race_hud_378kmh.png" alt="High Speed 378 km/h In-Game HUD" class="media-frame">
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 4: 9-Vehicle Original Fleet -->
+    <section class="slide">
+      <div class="slide-header">
+        <div class="slide-number">Slide 04 // Vehicle Fleet Engineering</div>
+        <h1 class="slide-title">9 Original Anti-Gravity & Hyper-Drive Machines</h1>
+      </div>
+      <div class="slide-content-grid">
+        <div class="text-panel">
+          <div class="card">
+            <div class="card-title">FLEET COMPOSITION & KINEMATICS</div>
+            <ul class="bullet-list">
+              <li><strong>F-8000 NIGHTRIFT:</strong> Flagship muscle coupe, 420 km/h top speed, dual heat-extractor hood vents.</li>
+              <li><strong>NXR-01 HYPERCAR:</strong> Carrera mid-engine exotic, active motorized GT wing, twin intake nacelles.</li>
+              <li><strong>V-720 PHANTOM:</strong> 80s wedge supercar, side strakes, pop-up lights, 445 km/h maximum velocity.</li>
+              <li><strong>TERRA-X CYBER BEAST:</strong> Armored luxury SUV, vertical LED blades, indestructible durability.</li>
+              <li><strong>Active Shaders:</strong> Thermochromic glowing brake rotors and dynamic suspension compression.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="media-panel">
+          <img src="/images/screenshots/screenshot_car_selection_specs.png" alt="Fleet Selection Spec Sheet" class="media-frame">
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 5: 4 Master Grand Prix Circuits -->
+    <section class="slide">
+      <div class="slide-header">
+        <div class="slide-number">Slide 05 // World Architecture</div>
+        <h1 class="slide-title">4 Master Grand Prix Sectors Across Tokyo & Beyond</h1>
+      </div>
+      <div class="slide-content-grid">
+        <div class="text-panel">
+          <div class="card">
+            <div class="card-title">GLOBAL CIRCUITS MATRIX</div>
+            <ul class="bullet-list">
+              <li><strong>Sector 01 // Neo-Shinjuku Rift:</strong> 5.4 km, 8 districts, 140 skyscrapers, 5 monumental transit tunnels, and suspension skybridges.</li>
+              <li><strong>Sector 02 // Coastline Expressway:</strong> 5.4 km Pacific rim with 12,000m Gerstner wave ocean shader and kinetic wind turbines.</li>
+              <li><strong>Sector 03 // Fuji Skyway Pass:</strong> 5.2 km alpine mountain climb (+400m elevation), 1,800m Mount Fuji cone, and snowfall particles.</li>
+              <li><strong>Sector 05 // Undercity & Night District:</strong> 5.0 km subterranean pipe chasm with dynamic lap-by-lap hazard escalations.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="media-panel">
+          <img src="/images/screenshots/screenshot_district01_neoncore.png" alt="Sector 01 Neon Core Metropolis" class="media-frame">
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 6: Dedicated Career Campaign -->
+    <section class="slide">
+      <div class="slide-header">
+        <div class="slide-number">Slide 06 // Career Mode Progression</div>
+        <h1 class="slide-title">5 Distinct Campaign Chapters & 25 Handcrafted Stages</h1>
+      </div>
+      <div class="slide-content-grid">
+        <div class="text-panel">
+          <div class="card">
+            <div class="card-title">PILOT JOURNEY & LICENSE TIERS</div>
+            <ul class="bullet-list">
+              <li><strong>5 Structured Chapters:</strong> Rookie Proving Grounds, Urban Nightfall, Coastline Apex Rivalry, Fuji Summit Ascent, and Aphelion Pinnacle Masters.</li>
+              <li><strong>25 Varied Stages:</strong> Circuit Sprints, Elimination Knockouts, Time Trials, Drift Slalom, and 1v1 Boss Duels.</li>
+              <li><strong>3-Star Mastery:</strong> Podium finishes, zero-barrier clean racing, and drift metrics unlock Class C, B, A, S, and Pinnacle Licenses.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="media-panel">
+          <img src="/images/screenshots/screenshot_district05_undercity.png" alt="District 05 Undercity Pipe Chasm" class="media-frame">
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 7: Live Operations Hub -->
+    <section class="slide">
+      <div class="slide-header">
+        <div class="slide-number">Slide 07 // Live Operations & Retention</div>
+        <h1 class="slide-title">Rotating Daily Cups & Special Ops Ghost Telemetry</h1>
+      </div>
+      <div class="slide-content-grid">
+        <div class="text-panel">
+          <div class="card">
+            <div class="card-title">CONTINUOUS ENGAGEMENT ECOSYSTEM</div>
+            <ul class="bullet-list">
+              <li><strong>Daily Circuit Cups:</strong> 24-hour rotating events with car restrictions and double Credit multipliers.</li>
+              <li><strong>Weekly Aphelion Showdowns:</strong> Global leaderboard events awarding prestigious Gold-foil livery unlocks.</li>
+              <li><strong>Special Ops Ghost Challenges:</strong> Race against real-time 120Hz recorded ghost streams of team developers and leaderboard champions.</li>
+              <li><strong>Energy Pool System:</strong> 10-point capacity system (2 energy per race) with automated cooldown replenishment.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="media-panel">
+          <img src="/images/screenshots/screenshot_satellite_world_map.png" alt="Satellite Orbital World Map" class="media-frame">
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 8: Procedural Web Audio Engine -->
+    <section class="slide">
+      <div class="slide-header">
+        <div class="slide-number">Slide 08 // Audio Synthesis</div>
+        <h1 class="slide-title">Real-Time Web Audio Synthesizer & Zero Asset Bloat</h1>
+      </div>
+      <div class="slide-content-grid">
+        <div class="text-panel">
+          <div class="card">
+            <div class="card-title">SYNTHESIS ARCHITECTURE</div>
+            <ul class="bullet-list">
+              <li><strong>Dual-Oscillator RPM Synthesis:</strong> Sawtooth + Square waves dynamically tracking RPM (40Hz to 480Hz) with zero pre-recorded audio lag.</li>
+              <li><strong>Resonant Lowpass Filter:</strong> Biquad filter sweeping 600Hz to 4,500Hz under wide-open throttle spooling.</li>
+              <li><strong>Procedural White Noise:</strong> Real-time tire screeching and wind buffeting modulated by G-force and velocity.</li>
+              <li><strong>Independent Mixers:</strong> Full master, music, sound FX, and engine volume control with hardware diagnostics.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="media-panel">
+          <img src="/images/screenshots/screenshot_system_settings_config.png" alt="Audio & System Config" class="media-frame">
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 9: AI Telemetry & Frenet Navigation -->
+    <section class="slide">
+      <div class="slide-header">
+        <div class="slide-number">Slide 09 // Artificial Intelligence</div>
+        <h1 class="slide-title">Predictive Spline Pathfinding & Adaptive Elasticity</h1>
+      </div>
+      <div class="slide-content-grid">
+        <div class="text-panel">
+          <div class="card">
+            <div class="card-title">AI DRIVER BEHAVIOR MODEL</div>
+            <ul class="bullet-list">
+              <li><strong>Dynamic Lookahead Horizon:</strong> AI samples upcoming spline curvature ahead of the vehicle (L = 25m + 0.12v) for human-like racing lines.</li>
+              <li><strong>Frenet Overtaking Offsets:</strong> Rivals calculate dynamic lateral offsets to slipstream, overtake, or block.</li>
+              <li><strong>Adaptive Rubberbanding (±8%):</strong> Maintains tight bumper-to-bumper racing without artificial rubberband snapping.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="media-panel">
+          <img src="/images/screenshots/screenshot_high_altitude_skyway.png" alt="High Altitude Skyway Overpass" class="media-frame">
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 10: Serverless Edge Cloud (Vercel) -->
+    <section class="slide">
+      <div class="slide-header">
+        <div class="slide-number">Slide 10 // Cloud Infrastructure</div>
+        <h1 class="slide-title">Serverless Edge Microservices & Global Holographic Ghost</h1>
+      </div>
+      <div class="slide-content-grid">
+        <div class="text-panel">
+          <div class="card">
+            <div class="card-title">VERCEL EDGE ARCHITECTURE</div>
+            <ul class="bullet-list">
+              <li><strong>/api/leaderboard:</strong> Global low-latency relativistic lap time rankings.</li>
+              <li><strong>/api/ghost:</strong> 120Hz spline streaming endpoint for real-time translucent ghost car replays.</li>
+              <li><strong>/api/profile:</strong> Cloud synchronization of pilot rank, XP, credits, tokens, and vehicle fleet unlocks.</li>
+              <li><strong>/api/status:</strong> Global edge node health, deployment region telemetry, and round-trip ping.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="media-panel">
+          <img src="/images/screenshots/screenshot_district06_aetherport.png" alt="Aether Port Orbital Corridors" class="media-frame">
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 11: QA & 235 Automated Test Suite -->
+    <section class="slide">
+      <div class="slide-header">
+        <div class="slide-number">Slide 11 // Quality Assurance</div>
+        <h1 class="slide-title">235 Automated Simulation Tests & Zero Regressions</h1>
+      </div>
+      <div class="slide-content-grid">
+        <div class="text-panel">
+          <div class="card">
+            <div class="card-title">COMPREHENSIVE TEST SUITE METRICS</div>
+            <ul class="bullet-list">
+              <li><strong>21 Verification Modules:</strong> Spline continuity, zero-slide standstill math, collision dynamics, 4-corner suspension, audio synthesis, and Vercel edge endpoints.</li>
+              <li><strong>100% Determinism:</strong> Guaranteed identical mathematical output across disparate browser engines.</li>
+              <li><strong>Automated Execution:</strong> <code>node test/e2e-simulation-test.js</code> validates all 235 assertions in milliseconds.</li>
+            </ul>
+          </div>
+          <div class="metric-row">
+            <div class="metric-box">
+              <div class="metric-val green">235</div>
+              <div class="metric-lbl">Total Tests</div>
+            </div>
+            <div class="metric-box">
+              <div class="metric-val green">0</div>
+              <div class="metric-lbl">Failures</div>
+            </div>
+            <div class="metric-box">
+              <div class="metric-val">100%</div>
+              <div class="metric-lbl">Pass Rate</div>
+            </div>
+          </div>
+        </div>
+        <div class="media-panel">
+          <img src="/images/screenshots/screenshot_sector_blueprint_plan.png" alt="Sector Blueprints & Plan" class="media-frame">
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 12: Production Roadmap & Conclusion -->
+    <section class="slide">
+      <div class="slide-header">
+        <div class="slide-number">Slide 12 // Conclusion & Roadmap</div>
+        <h1 class="slide-title">The Future of Orbital Motorsport</h1>
+      </div>
+      <div class="slide-content-grid">
+        <div class="text-panel">
+          <div class="card">
+            <div class="card-title">PROJECT DELIVERABLES & FUTURE PHASES</div>
+            <ul class="bullet-list">
+              <li><strong>Production Gold Master:</strong> 9 fleet cars, 4 master sectors, Career Mode, and Live Ops live on Vercel.</li>
+              <li><strong>Upcoming Roadmap (2026-2027):</strong> Season 02 track expansions, WebGPU compute shader particles, WebRTC peer-to-peer real-time multiplayer, and WebXR VR support.</li>
+              <li><strong>Engineering Team:</strong> <code>rajranjeet7680</code></li>
+              <li><strong>Project Leader:</strong> <strong>Ranjeet Kumar</strong></li>
+              <li><strong>Play Instantly:</strong> <a href="https://optimistic-carson-pink.vercel.app" target="_blank" style="color:var(--cyan); font-weight:bold;">https://optimistic-carson-pink.vercel.app</a></li>
+            </ul>
+          </div>
+        </div>
+        <div class="media-panel">
+          <img src="/header.svg" alt="Aphelion Branding" class="media-frame" style="object-fit:contain; background:#04060b;">
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer Navigation -->
+  <footer>
+    <div class="progress-track">
+      <div class="progress-fill" id="progress-bar"></div>
+    </div>
+    <div class="nav-hints">
+      USE ◀ / ▶ ARROWS, SPACEBAR, OR ON-SCREEN BUTTONS TO NAVIGATE (PRESS 'F' FOR FULLSCREEN)
+    </div>
+    <div class="nav-buttons">
+      <button class="btn" id="btn-prev">◀ PREV</button>
+      <button class="btn" id="btn-next">NEXT ▶</button>
+    </div>
+  </footer>
+
+  <script>
+    const slides = document.querySelectorAll('.slide');
+    const indicator = document.getElementById('slide-indicator');
+    const progressBar = document.getElementById('progress-bar');
+    const btnPrev = document.getElementById('btn-prev');
+    const btnNext = document.getElementById('btn-next');
+    const btnFullscreen = document.getElementById('btn-fullscreen');
+
+    let currentSlide = 0;
+    const totalSlides = slides.length;
+
+    function updateSlide(index) {
+      if (index < 0) index = 0;
+      if (index >= totalSlides) index = totalSlides - 1;
+
+      slides[currentSlide].classList.remove('active');
+      currentSlide = index;
+      slides[currentSlide].classList.add('active');
+
+      const paddedIndex = String(currentSlide + 1).padStart(2, '0');
+      const paddedTotal = String(totalSlides).padStart(2, '0');
+      indicator.textContent = `SLIDE ${paddedIndex} / ${paddedTotal}`;
+      progressBar.style.width = `${((currentSlide + 1) / totalSlides) * 100}%`;
+    }
+
+    function nextSlide() {
+      if (currentSlide < totalSlides - 1) updateSlide(currentSlide + 1);
+    }
+
+    function prevSlide() {
+      if (currentSlide > 0) updateSlide(currentSlide - 1);
+    }
+
+    btnNext.addEventListener('click', nextSlide);
+    btnPrev.addEventListener('click', prevSlide);
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') {
+        e.preventDefault();
+        nextSlide();
+      } else if (e.key === 'ArrowLeft' || e.key === 'Backspace' || e.key === 'PageUp') {
+        e.preventDefault();
+        prevSlide();
+      } else if (e.key === 'f' || e.key === 'F') {
+        toggleFullscreen();
+      }
+    });
+
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      } else {
+        if (document.exitFullscreen) document.exitFullscreen();
+      }
+    }
+
+    btnFullscreen.addEventListener('click', toggleFullscreen);
+
+    // Touch swipe support
+    let touchStartX = 0;
+    window.addEventListener('touchstart', (e) => {
+      touchStartX = e.changedTouches[0].screenX;
+    }, { passive: true });
+
+    window.addEventListener('touchend', (e) => {
+      const touchEndX = e.changedTouches[0].screenX;
+      if (touchStartX - touchEndX > 50) nextSlide();
+      if (touchEndX - touchStartX > 50) prevSlide();
+    }, { passive: true });
+  </script>
+</body>
+</html>

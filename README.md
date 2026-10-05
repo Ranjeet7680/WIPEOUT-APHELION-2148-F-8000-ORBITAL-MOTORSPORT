@@ -1,24 +1,26 @@
 # WIPEOUT: APHELION 2148 // F-8000 ORBITAL MOTORSPORT
-### HIGH-OCTANE 3D ARCADE STREET RACING // DEVELOPED BY RANJEET KUMAR
+### TEAM: rajranjeet7680 // PROJECT LEADER: RANJEET KUMAR
 
 <p align="center">
   <a href="https://optimistic-carson-pink.vercel.app">
-    <img src="./public/header.svg" width="100%" alt="WIPEOUT: APHELION 2148 // Animated Header" />
+    <img src="./public/header.svg" width="100%" alt="WIPEOUT: APHELION 2148 // Animated Header - Team rajranjeet7680" />
   </a>
 </p>
 
 <p align="center">
   <a href="https://optimistic-carson-pink.vercel.app"><img src="https://img.shields.io/badge/Live%20Demo-Vercel-00F0FF?style=for-the-badge&logo=vercel" alt="Live Demo" /></a>
-  <a href="https://github.com/Ranjeet7680/WIPEOUT-APHELION-2148-F-8000-ORBITAL-MOTORSPORT"><img src="https://img.shields.io/badge/Developer-Ranjeet%20Kumar-FFB800?style=for-the-badge" alt="Developer" /></a>
-  <a href="https://github.com/Ranjeet7680/WIPEOUT-APHELION-2148-F-8000-ORBITAL-MOTORSPORT"><img src="https://img.shields.io/badge/Fleet-9%20Original%20Cars-FF2A13?style=for-the-badge" alt="Fleet" /></a>
-  <a href="https://github.com/Ranjeet7680/WIPEOUT-APHELION-2148-F-8000-ORBITAL-MOTORSPORT"><img src="https://img.shields.io/badge/Sectors-4%20Grand%20Prix%20Circuits-7928CA?style=for-the-badge" alt="Sectors" /></a>
-  <a href="https://github.com/Ranjeet7680/WIPEOUT-APHELION-2148-F-8000-ORBITAL-MOTORSPORT"><img src="https://img.shields.io/badge/Tests-235%2F235%20Passing-00FF66?style=for-the-badge" alt="Tests Passing" /></a>
-  <a href="https://github.com/Ranjeet7680/WIPEOUT-APHELION-2148-F-8000-ORBITAL-MOTORSPORT/blob/main/WIKI.md"><img src="https://img.shields.io/badge/Docs-Technical%20Wiki-00D4FF?style=for-the-badge" alt="Wiki" /></a>
+  <a href="https://github.com/Ranjeet7680/WIPEOUT-APHELION-2148-F-8000-ORBITAL-MOTORSPORT"><img src="https://img.shields.io/badge/Team-rajranjeet7680-7028E4?style=for-the-badge" alt="Team rajranjeet7680" /></a>
+  <a href="https://github.com/Ranjeet7680/WIPEOUT-APHELION-2148-F-8000-ORBITAL-MOTORSPORT"><img src="https://img.shields.io/badge/Leader-Ranjeet%20Kumar-FFB800?style=for-the-badge" alt="Leader Ranjeet Kumar" /></a>
+  <a href="./docs/GAME_DEVELOPMENT_DOCUMENT.md"><img src="https://img.shields.io/badge/Docs-GDD%20(16%20Pages)-FF0055?style=for-the-badge" alt="Game Dev Doc" /></a>
+  <a href="./docs/PRESENTATION_SLIDES_12.md"><img src="https://img.shields.io/badge/Slides-PPT%20(12%20Slides)-00D4FF?style=for-the-badge" alt="12 Slides" /></a>
+  <a href="https://github.com/Ranjeet7680/WIPEOUT-APHELION-2148-F-8000-ORBITAL-MOTORSPORT"><img src="https://img.shields.io/badge/Tests-235%2F235%20Passing-00FF88?style=for-the-badge" alt="Tests Passing" /></a>
 </p>
 
-> **WIPEOUT: APHELION 2148** is a state-of-the-art 3D futuristic arcade racing game developed by **Ranjeet Kumar**.  
-> Built with Three.js, deterministic 120Hz sub-stepping physics, continuous $C^1$ spline interpolation, 4-corner harmonic suspension dynamics, Web Audio API procedural sound synthesis, 9 detailed high-performance vehicles, and 4 master sector circuits across Tokyo, oceanic coastlines, and alpine mountain summits.  
+> **WIPEOUT: APHELION 2148** is an advanced 3D orbital motorsport and futuristic arcade street racing simulation developed by **Team rajranjeet7680**, led by **Ranjeet Kumar**.  
+> Built with Three.js, deterministic 120Hz sub-stepping physics, continuous $C^1$ Hermite spline interpolation, 4-corner harmonic suspension dynamics, Web Audio API procedural sound synthesis, 9 high-performance vehicles, and 4 master sector circuits across Tokyo, oceanic coastlines, alpine mountain summits, and subterranean chasms.  
 > 🌐 **Play Live in Browser**: [optimistic-carson-pink.vercel.app](https://optimistic-carson-pink.vercel.app)  
+> 📑 **Game Development Document (12-20 Pages)**: [docs/GAME_DEVELOPMENT_DOCUMENT.md](./docs/GAME_DEVELOPMENT_DOCUMENT.md)  
+> 📊 **12-Slide Pitch Deck Presentation**: [docs/PRESENTATION_SLIDES_12.md](./docs/PRESENTATION_SLIDES_12.md) | [Interactive Web Slides](./public/presentation.html)  
 > 📖 **Comprehensive Technical Documentation**: [WIKI.md](./WIKI.md)
 
 ---
