@@ -12,7 +12,7 @@
   <a href="https://github.com/Ranjeet7680/WIPEOUT-APHELION-2148-F-8000-ORBITAL-MOTORSPORT"><img src="https://img.shields.io/badge/Developer-Ranjeet%20Kumar-FFB800?style=for-the-badge" alt="Developer" /></a>
   <a href="https://github.com/Ranjeet7680/WIPEOUT-APHELION-2148-F-8000-ORBITAL-MOTORSPORT"><img src="https://img.shields.io/badge/Fleet-9%20Original%20Cars-FF2A13?style=for-the-badge" alt="Fleet" /></a>
   <a href="https://github.com/Ranjeet7680/WIPEOUT-APHELION-2148-F-8000-ORBITAL-MOTORSPORT"><img src="https://img.shields.io/badge/Sectors-4%20Grand%20Prix%20Circuits-7928CA?style=for-the-badge" alt="Sectors" /></a>
-  <a href="https://github.com/Ranjeet7680/WIPEOUT-APHELION-2148-F-8000-ORBITAL-MOTORSPORT"><img src="https://img.shields.io/badge/Tests-229%2F229%20Passing-00FF66?style=for-the-badge" alt="Tests Passing" /></a>
+  <a href="https://github.com/Ranjeet7680/WIPEOUT-APHELION-2148-F-8000-ORBITAL-MOTORSPORT"><img src="https://img.shields.io/badge/Tests-235%2F235%20Passing-00FF66?style=for-the-badge" alt="Tests Passing" /></a>
   <a href="https://github.com/Ranjeet7680/WIPEOUT-APHELION-2148-F-8000-ORBITAL-MOTORSPORT/blob/main/WIKI.md"><img src="https://img.shields.io/badge/Docs-Technical%20Wiki-00D4FF?style=for-the-badge" alt="Wiki" /></a>
 </p>
 
@@ -156,13 +156,20 @@ start.bat
 
 ---
 
-## 🧪 Automated Verification Suite (229 Tests)
+- **Dedicated Career Mode & Live Operations Hub**:
+  - **Career Progression**: 5 distinct campaign chapters spanning from Rookie Proving Grounds to Aphelion Grand Prix, 25 sequential challenges with star objectives and license tier unlocks.
+  - **Live Operations Hub**: Rotating Daily Cups, Weekly Showdowns, Special Ops Ghost Telemetry, and Boss Rival Duels with a dedicated energy mechanic.
+  - **UI Polish**: Native browser scrollbars replaced with cyber neon scrollbars, showroom floating chips cleared for an unobstructed 360° vehicle view, and desktop HUD decluttered.
+
+---
+
+## 🧪 Automated Verification Suite (235 Tests)
 
 To run the complete automated test suite:
 ```bash
 node test/e2e-simulation-test.js
 ```
-**Verification Status**: **229 PASSED, 0 FAILED** across 20 distinct verification modules.
+**Verification Status**: **235 PASSED, 0 FAILED** across 21 distinct verification modules.
 
 ---
 

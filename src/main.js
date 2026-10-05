@@ -504,7 +504,7 @@ class GameManager {
           if (this.cinematicIntro) this.cinematicIntro.skip();
         } else if (this.ui && this.ui.currentScreen === 'ROYAL_PASS') {
           this.ui.hideRoyalPassScreen();
-        } else if (this.ui && ['WORLD_MAP', 'EVENT_SELECT', 'LEADERBOARD', 'SETTINGS', 'DRIVING_SCHOOL', 'CAR_SELECT', 'GARAGE'].includes(this.ui.currentScreen)) {
+        } else if (this.ui && ['WORLD_MAP', 'EVENT_SELECT', 'LEADERBOARD', 'SETTINGS', 'DRIVING_SCHOOL', 'CAR_SELECT', 'GARAGE', 'CAREER', 'EVENTS'].includes(this.ui.currentScreen)) {
           this.ui.showScreen('LOBBY');
           if (this.garageLobby) this.garageLobby.setCameraAnglePreset('FRONT');
         } else if (this.worldMap && this.worldMap.isOpen) {

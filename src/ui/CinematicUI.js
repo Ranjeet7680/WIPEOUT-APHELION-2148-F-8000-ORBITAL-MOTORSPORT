@@ -255,6 +255,256 @@ export const ROYAL_PASS_SEASON_1_TIERS = [
   { tier: 20, title: '24K GOLDEN HYPERCAR', icon: '👑', reward: { credits: 100000, tokens: 1000, item: 'Vehicle: 24K Golden Hypercar Prototype' }, type: 'elite', isPinnacle: true }
 ];
 
+// ============================================================================
+// DEDICATED CAREER CAMPAIGN DATA (5 Chapters x 5 Stages = 25 Challenges)
+// License Tiers: C-Class -> B-Class -> A-Class -> S-Class -> Pinnacle
+// Total Campaign Stars: 120 Stars
+// ============================================================================
+export const CAREER_CHAPTERS = [
+  {
+    id: 'ch_01',
+    num: '01',
+    title: 'ROOKIE PROVING GROUNDS',
+    subtitle: 'Neo-Shinjuku Low-Altitude Grid',
+    desc: 'Master foundational 600 km/h levitation dynamics, apex drift lines, and boost management across the metropolis.',
+    license: 'CLASS C // ROOKIE',
+    color: '#00F0FF',
+    stars: 24,
+    maxStars: 24,
+    unlocked: true,
+    stages: [
+      { id: 'st_01_01', num: 'STAGE 01', type: 'SPRINT', title: 'NEO PROVING SPRINT', sector: 'district', laps: 1, dist: '3.2 KM', weather: 'CLEAR NIGHT', target: '< 00:48.00', recPr: 750, rewardCr: 8000, rewardXp: 800, rewardPart: 'AERO SPLITTER T1', stars: 3, objs: ['Finish the sprint in top 3', 'Beat target time (00:52.00)', 'Execute 2 Clean Boost Burnouts'] },
+      { id: 'st_01_02', num: 'STAGE 02', type: 'CIRCUIT', title: 'HIGHWAY RIFT CLASH', sector: 'district', laps: 2, dist: '3.8 KM', weather: 'NEON RAIN', target: 'TOP 3 FINISH', recPr: 780, rewardCr: 12000, rewardXp: 1100, rewardPart: 'ION EXHAUST T1', stars: 3, objs: ['Win 1st place in circuit', 'Lap under 00:50.00', 'Perform 1 Air Stunt Roll'] },
+      { id: 'st_01_03', num: 'STAGE 03', type: 'DRIFT', title: 'METROPOLIS DRIFT APEX', sector: 'district', laps: 1, dist: '2.8 KM', weather: 'CYBER MIST', target: '18,000 PTS', recPr: 800, rewardCr: 14000, rewardXp: 1300, rewardPart: 'MAG COILS T1', stars: 3, objs: ['Score 18,000 Drift Points', 'Chain a 3x Drift Combo', 'Zero barrier collisions'] },
+      { id: 'st_01_04', num: 'STAGE 04', type: 'ELIMINATION', title: 'NEON CORE SUDDEN-DEATH', sector: 'district', laps: 3, dist: '4.2 KM', weather: 'STORMY MIDNIGHT', target: 'SURVIVE 8 PILOTS', recPr: 820, rewardCr: 16000, rewardXp: 1500, rewardPart: 'REPULSOR SHIELD T1', stars: 3, objs: ['Survive until the final duel', 'Never drop to 8th position', 'Achieve 380 km/h top speed'] },
+      { id: 'st_01_05', num: 'STAGE 05', type: 'BOSS DUEL', title: 'BOSS DUEL // VS HARUTO', sector: 'district', laps: 2, dist: '4.5 KM', weather: 'ELECTRO STORM', target: 'DEFEAT RIVAL HARUTO', recPr: 850, rewardCr: 25000, rewardXp: 2500, rewardPart: 'HARUTO SIGNATURE DECAL', stars: 3, objs: ['Defeat Haruto in 1v1 duel', 'Finish with 50%+ nitro remaining', 'Set new sector lap record'] }
+    ]
+  },
+  {
+    id: 'ch_02',
+    num: '02',
+    title: 'PACIFIC COASTLINE CONTENDER',
+    subtitle: 'Ocean Cliffs & Supersonic Skyways',
+    desc: 'Battle ferocious ocean gales and sweeping sea-bridge curves along the 5.4 KM Pacific Highway.',
+    license: 'CLASS B // CONTENDER',
+    color: '#00E5FF',
+    stars: 24,
+    maxStars: 24,
+    unlocked: true,
+    stages: [
+      { id: 'st_02_01', num: 'STAGE 01', type: 'SPRINT', title: 'COASTLINE OCEAN SPRINT', sector: 'coastline', laps: 1, dist: '4.0 KM', weather: 'SUNSET OVERCAST', target: '< 00:54.00', recPr: 860, rewardCr: 14000, rewardXp: 1400, rewardPart: 'STAB FIN T2', stars: 3, objs: ['Beat coastal target time', 'Reach 420 km/h on bridge', 'Pass 3 rivals on straightaways'] },
+      { id: 'st_02_02', num: 'STAGE 02', type: 'CIRCUIT', title: 'PACIFIC STORM HIGHWAY', sector: 'coastline', laps: 2, dist: '5.4 KM', weather: 'OCEAN STORM', target: '1ST PLACE', recPr: 880, rewardCr: 18000, rewardXp: 1800, rewardPart: 'TURBO COMPRESSOR T2', stars: 3, objs: ['Finish 1st place in storm', 'Clean landing on sea gap', 'Maintain 400+ km/h for 10s'] },
+      { id: 'st_02_03', num: 'STAGE 03', type: 'DRIFT', title: 'SHEER CLIFF VELOCITY', sector: 'coastline', laps: 1, dist: '3.6 KM', weather: 'TROPICAL GALE', target: '25,000 PTS', recPr: 900, rewardCr: 20000, rewardXp: 2000, rewardPart: 'MAG VECTOR T2', stars: 3, objs: ['Accumulate 25,000 Drift Pts', 'Drift continuous 400m', 'Zero off-track penalties'] },
+      { id: 'st_02_04', num: 'STAGE 04', type: 'ELIMINATION', title: 'HIGH-TIDE SURVIVAL', sector: 'coastline', laps: 3, dist: '5.4 KM', weather: 'HIGH SURGE STORM', target: 'FINAL SURVIVOR', recPr: 920, rewardCr: 22000, rewardXp: 2200, rewardPart: 'AERO MONOCOQUE T2', stars: 3, objs: ['Survive to 1st place', 'Execute 4 tactical overtakes', 'Overdrive nitro at finish line'] },
+      { id: 'st_02_05', num: 'STAGE 05', type: 'BOSS DUEL', title: 'BOSS DUEL // VS RYUKI', sector: 'coastline', laps: 2, dist: '5.4 KM', weather: 'TYPHOON ALERT', target: 'DEFEAT RIVAL RYUKI', recPr: 940, rewardCr: 32000, rewardXp: 3000, rewardPart: 'RYUKI CYBER BLADES', stars: 3, objs: ['Defeat Ryuki 1v1', 'Break coastline speed trap', 'Lead race for both laps'] }
+    ]
+  },
+  {
+    id: 'ch_03',
+    num: '03',
+    title: 'ALPINE FUJI SKYWAY MASTER',
+    subtitle: 'Mount Fuji High-Altitude Vortex',
+    desc: 'Ascend 400 meters of vertical elevation into sub-zero blizzard peaks and hyper-speed alpine hairpins.',
+    license: 'CLASS A // SPECIALIST',
+    color: '#38BDF8',
+    stars: 20,
+    maxStars: 24,
+    unlocked: true,
+    stages: [
+      { id: 'st_03_01', num: 'STAGE 01', type: 'SPRINT', title: 'SUMMIT RIDGE SPRINT', sector: 'fuji', laps: 1, dist: '4.2 KM', weather: 'CLEAR ALPINE', target: '< 00:52.00', recPr: 950, rewardCr: 20000, rewardXp: 2000, rewardPart: 'CRYOGENIC CORE T3', stars: 3, objs: ['Beat alpine sprint target', 'Climb summit in under 30s', 'Clean jump across chasm'] },
+      { id: 'st_03_02', num: 'STAGE 02', type: 'CIRCUIT', title: 'FUJI VORTEX ELEVATION', sector: 'fuji', laps: 2, dist: '5.2 KM', weather: 'FALLING SNOW', target: 'TOP 2 FINISH', recPr: 970, rewardCr: 24000, rewardXp: 2400, rewardPart: 'SUB-ZERO BRAKES T3', stars: 3, objs: ['Top 2 finish against Class A', 'Fastest lap under 00:54.00', 'Slipstream for 500m'] },
+      { id: 'st_03_03', num: 'STAGE 03', type: 'DRIFT', title: 'BLIZZARD APEX SLALOM', sector: 'fuji', laps: 1, dist: '3.8 KM', weather: 'BLIZZARD WHITE-OUT', target: '32,000 PTS', recPr: 980, rewardCr: 26000, rewardXp: 2600, rewardPart: 'HARMONIC STABILIZER T3', stars: 3, objs: ['Score 32,000 Drift Pts', 'Maintain 4x drift combo', 'No barrier grazes on hairpins'] },
+      { id: 'st_03_04', num: 'STAGE 04', type: 'ELIMINATION', title: 'AVALANCHE GAUNTLET', sector: 'fuji', laps: 3, dist: '5.2 KM', weather: 'MOUNTAIN GALE', target: 'SURVIVE 8 RACERS', recPr: 990, rewardCr: 28000, rewardXp: 2800, rewardPart: 'TITANIUM EXHAUST T3', stars: 2, objs: ['Survive to podium rank', 'Pass 2 racers in one turn', 'Hit every boost gate'] },
+      { id: 'st_03_05', num: 'STAGE 05', type: 'BOSS DUEL', title: 'BOSS DUEL // VS SORA', sector: 'fuji', laps: 2, dist: '5.2 KM', weather: 'FROZEN VORTEX', target: 'DEFEAT RIVAL SORA', recPr: 1000, rewardCr: 40000, rewardXp: 3800, rewardPart: 'SORA APEX WING T3', stars: 2, objs: ['Defeat Sora in blizzard', 'Lead across summit crest', 'Win by 2.0s+ margin'] }
+    ]
+  },
+  {
+    id: 'ch_04',
+    num: '04',
+    title: 'UNDERGROUND NIGHT SYNDICATE',
+    subtitle: 'Industrial Rift & Subterranean Pipe Chasm',
+    desc: 'Unsanctioned midnight syndicate duels through magnetic dampening fields and claustrophobic tunnels.',
+    license: 'CLASS S // PRODIGY',
+    color: '#FF007F',
+    stars: 16,
+    maxStars: 24,
+    unlocked: true,
+    stages: [
+      { id: 'st_04_01', num: 'STAGE 01', type: 'SPRINT', title: 'PIPE CHASM BREAKAWAY', sector: 'sector05', laps: 1, dist: '4.4 KM', weather: 'CYBER INDUSTRIAL', target: '< 00:50.00', recPr: 1010, rewardCr: 26000, rewardXp: 2600, rewardPart: 'PLASMA INJECTOR T4', stars: 3, objs: ['Beat industrial sprint time', 'Exit pipe chasm at 430 km/h', 'Clean barrel roll off ramp'] },
+      { id: 'st_04_02', num: 'STAGE 02', type: 'CIRCUIT', title: 'SYNDICATE NEON RUN', sector: 'sector05', laps: 2, dist: '5.0 KM', weather: 'HEAVY NEON RAIN', target: '1ST PLACE FINISH', recPr: 1020, rewardCr: 30000, rewardXp: 3000, rewardPart: 'QUANTUM SUSPENSION T4', stars: 2, objs: ['Win 1st place outright', 'Never drop below 350 km/h', 'Lap under 00:49.00'] },
+      { id: 'st_04_03', num: 'STAGE 03', type: 'DRIFT', title: 'MAGNET HAZARD DRIFT', sector: 'sector05', laps: 1, dist: '3.5 KM', weather: 'ACID MIST', target: '38,000 PTS', recPr: 1030, rewardCr: 32000, rewardXp: 3200, rewardPart: 'SUPERCONDUCTOR SHUNT T4', stars: 2, objs: ['Reach 38,000 Drift Points', 'Drift within 1m of barrier', 'Trigger 3 Overdrive boosts'] },
+      { id: 'st_04_04', num: 'STAGE 04', type: 'ELIMINATION', title: 'SUBTERRANEAN PURGE', sector: 'sector05', laps: 3, dist: '5.0 KM', weather: 'INDUSTRIAL MIDNIGHT', target: 'FINAL PILOT STANDING', recPr: 1040, rewardCr: 36000, rewardXp: 3600, rewardPart: 'HYPER-DRIVE CELL T4', stars: 2, objs: ['Eliminate remaining 7 rivals', 'Clean lap with no scrapes', 'Finish with 3x stunt combo'] },
+      { id: 'st_04_05', num: 'STAGE 05', type: 'BOSS DUEL', title: 'BOSS DUEL // VS TANAKA', sector: 'sector05', laps: 2, dist: '5.0 KM', weather: 'DARK MATTER GALE', target: 'DEFEAT SYNDICATE BOSS', recPr: 1050, rewardCr: 55000, rewardXp: 5000, rewardPart: 'TANAKA SYNDICATE CHASSIS', stars: 2, objs: ['Crush Syndicate Boss Tanaka', 'Hit 450 km/h top speed', 'Lead every checkpoint'] }
+    ]
+  },
+  {
+    id: 'ch_05',
+    num: '05',
+    title: 'APHELION ORBITAL GRAND PRIX',
+    subtitle: 'The Pinnacle League Apex Showdown',
+    desc: 'The supreme galactic championship. Only the highest PR prototype machines and elite pilots survive.',
+    license: 'PINNACLE // APHELION',
+    color: '#FFB800',
+    stars: 0,
+    maxStars: 24,
+    unlocked: false,
+    reqStars: 80,
+    stages: [
+      { id: 'st_05_01', num: 'STAGE 01', type: 'SPRINT', title: 'ORBITAL LAUNCH QUALIFIER', sector: 'district', laps: 1, dist: '5.0 KM', weather: 'ORBITAL SUNRISE', target: '< 00:46.00', recPr: 1060, rewardCr: 45000, rewardXp: 4500, rewardPart: 'APEX AERODYNAMICS T5', stars: 0, objs: ['Sub-46s orbital sprint', 'Zero steering jitter', 'Top speed 460+ km/h'] },
+      { id: 'st_05_02', num: 'STAGE 02', type: 'CIRCUIT', title: 'GRAND PRIX MAIN EVENT', sector: 'coastline', laps: 3, dist: '5.4 KM', weather: 'IONIC AURORA', target: 'CHAMPIONSHIP VICTORY', recPr: 1070, rewardCr: 60000, rewardXp: 6000, rewardPart: 'DARK ENERGY TURBINE T5', stars: 0, objs: ['1st Place Grand Prix victory', 'Lap time under 00:48.00', '5 perfect overtakes'] },
+      { id: 'st_05_03', num: 'STAGE 03', type: 'DRIFT', title: 'HYPER-GRAVITY DRIFT FINALE', sector: 'fuji', laps: 1, dist: '4.8 KM', weather: 'GOLDEN DUSK', target: '50,000 PTS', recPr: 1080, rewardCr: 65000, rewardXp: 6500, rewardPart: 'WARP LEVITATION MATRIX T5', stars: 0, objs: ['Achieve 50,000 Drift Points', 'Chain 5x continuous combo', 'Zero collisions entire run'] },
+      { id: 'st_05_04', num: 'STAGE 04', type: 'ELIMINATION', title: 'THE APHELION CRUCIBLE', sector: 'sector05', laps: 3, dist: '5.0 KM', weather: 'SUPERNOVA FLARE', target: 'LAST SURVIVING PILOT', recPr: 1090, rewardCr: 80000, rewardXp: 8000, rewardPart: 'CHRONO BOOST OVERDRIVE', stars: 0, objs: ['Survive the elite 8 lineup', 'Win without using reset', 'Clock fastest lap of season'] },
+      { id: 'st_05_05', num: 'STAGE 05', type: 'BOSS DUEL', title: 'WORLD APEX // MASTER PILOT', sector: 'district', laps: 3, dist: '5.4 KM', weather: 'COSMIC CORONA', target: 'CLAIM THE WORLD CROWN', recPr: 1100, rewardCr: 150000, rewardXp: 15000, rewardPart: 'GOLDEN FLEET MASTER TROPHY', stars: 0, objs: ['Defeat the Aphelion World Champion', 'Set all-time world record', 'Unlock Legendary 24K Prototype'] }
+    ]
+  }
+];
+
+// ============================================================================
+// DEDICATED LIVE OPERATIONS & ROTATING EVENTS DATA
+// Categories: DAILY, WEEKLY, SPECIAL, BOSS
+// Energy system: Max 10, Refillable
+// ============================================================================
+export const LIVE_EVENTS_DATA = [
+  {
+    id: 'ev_midnight',
+    category: 'DAILY',
+    tag: 'DAILY CUP // LIVE NOW',
+    title: 'NEO-SHINJUKU MIDNIGHT CUP',
+    subtitle: 'Sector 01 Cyberpunk City // 3 Laps Circuit',
+    desc: 'High-speed urban night championship under towering holographic skyscrapers. High reward credits and exclusive Midnight Decal for top 5% finishers.',
+    sector: 'district',
+    laps: 3,
+    energy: 1,
+    difficulty: 'CLASS S',
+    timeLeft: '08h 14m',
+    rewardCr: 25000,
+    rewardXp: 2500,
+    rewardItem: 'MIDNIGHT NEON DECAL',
+    playerRank: '#42 (TOP 3%)',
+    bestTime: '01:22.450',
+    top3: [
+      { rank: '#01', name: 'HARUTO_X', time: '01:14.220' },
+      { rank: '#02', name: 'RYUKI_APEX', time: '01:15.890' },
+      { rank: '#03', name: 'SORA_DRIFT', time: '01:16.140' }
+    ]
+  },
+  {
+    id: 'ev_coastline',
+    category: 'DAILY',
+    tag: 'DAILY CUP // SPEED TRAP',
+    title: 'PACIFIC STORM SPEED TRIAL',
+    subtitle: 'Sector 02 Coastline // Sprint Top Speed',
+    desc: 'Bioluminescent ocean cliffs and mega skyway suspension bridge. Shatter the 430 km/h speed trap radar barrier.',
+    sector: 'coastline',
+    laps: 1,
+    energy: 1,
+    difficulty: 'CLASS A',
+    timeLeft: '14h 32m',
+    rewardCr: 18000,
+    rewardXp: 1800,
+    rewardItem: 'AERO COILS T3',
+    playerRank: '#68 (TOP 5%)',
+    bestTime: '00:54.120',
+    top3: [
+      { rank: '#01', name: 'KENJI_TURBO', time: '00:51.340' },
+      { rank: '#02', name: 'MIKA_VELOCITY', time: '00:52.010' },
+      { rank: '#03', name: 'YOU (RANJEET)', time: '00:54.120' }
+    ]
+  },
+  {
+    id: 'ev_fuji',
+    category: 'WEEKLY',
+    tag: 'WEEKLY SHOWDOWN // S-CLASS',
+    title: 'FUJI BLIZZARD DRIFT CLASH',
+    subtitle: 'Sector 03 Fuji Skyway // Mountain Apex Vortex',
+    desc: 'High-altitude sub-zero mountain pass with extreme hairpins. Accumulate 35,000 drift points to claim the Gold Weekly Trophy.',
+    sector: 'fuji',
+    laps: 2,
+    energy: 2,
+    difficulty: 'CLASS S',
+    timeLeft: '3d 18h',
+    rewardCr: 45000,
+    rewardXp: 4000,
+    rewardItem: 'GOLD TROPHY BLUEPRINT',
+    playerRank: '#19 (TOP 1%)',
+    bestTime: '38,400 PTS',
+    top3: [
+      { rank: '#01', name: 'SORA_DRIFT', time: '44,200 PTS' },
+      { rank: '#02', name: 'YOU (RANJEET)', time: '38,400 PTS' },
+      { rank: '#03', name: 'HARUTO_X', time: '36,900 PTS' }
+    ]
+  },
+  {
+    id: 'ev_ghost',
+    category: 'SPECIAL',
+    tag: 'SPECIAL OPS // WORLD RECORD HUNT',
+    title: 'GHOST PROTOCOL // TELEMETRY DUEL',
+    subtitle: 'Sector 01 / Open // Realtime Holographic Ghost',
+    desc: 'Race side-by-side against the actual #1 worldwide fastest lap telemetry projected as a glowing neon ghost machine directly onto the track.',
+    sector: 'district',
+    laps: 1,
+    energy: 2,
+    difficulty: 'PINNACLE',
+    timeLeft: '5d 02h',
+    rewardCr: 50000,
+    rewardXp: 5000,
+    rewardItem: 'GHOST PROTOCOL BADGE',
+    playerRank: '#12 (GLOBAL ELITE)',
+    bestTime: '01:14.980',
+    top3: [
+      { rank: '#01', name: 'WORLD_RECORD_GHOST', time: '01:13.410' },
+      { rank: '#02', name: 'YOU (RANJEET)', time: '01:14.980' },
+      { rank: '#03', name: 'APEX_SHADOW', time: '01:15.110' }
+    ]
+  },
+  {
+    id: 'ev_night',
+    category: 'SPECIAL',
+    tag: 'SPECIAL OPS // HIGH ROLLER',
+    title: 'NIGHT DISTRICT SYNDICATE ELIMINATION',
+    subtitle: 'Sector 05 Night District // 8 Pilots Sudden Death',
+    desc: 'Underground subterranean elimination cup. Every 20 seconds, the pilot in last place is permanently eliminated from the grid.',
+    sector: 'sector05',
+    laps: 3,
+    energy: 2,
+    difficulty: 'CLASS S+',
+    timeLeft: '2d 06h',
+    rewardCr: 65000,
+    rewardXp: 6000,
+    rewardItem: 'SYNDICATE CARBON CHASSIS',
+    playerRank: '#05 (FINALIST)',
+    bestTime: 'WINNER (02:45.10)',
+    top3: [
+      { rank: '#01', name: 'TANAKA_SYNDICATE', time: 'SURVIVOR #01' },
+      { rank: '#02', name: 'YOU (RANJEET)', time: 'SURVIVOR #02' },
+      { rank: '#03', name: 'RYUKI_APEX', time: 'SURVIVOR #03' }
+    ]
+  },
+  {
+    id: 'ev_boss',
+    category: 'BOSS',
+    tag: 'BOSS CLASH // PINNACLE DUEL',
+    title: 'APHELION BOSS SHOWDOWN // HARUTO DUEL',
+    subtitle: 'Sector 07 Apex // 1v1 High Stakes Battle',
+    desc: 'Grand Champion Haruto challenges you to a winner-take-all 1-on-1 sprint. Win to unlock Haruto Custom 24K Gold Prototype Hypercar.',
+    sector: 'district',
+    laps: 2,
+    energy: 3,
+    difficulty: 'PINNACLE',
+    timeLeft: '6d 12h',
+    rewardCr: 100000,
+    rewardXp: 10000,
+    rewardItem: 'EXCLUSIVE 24K GOLD PROTOTYPE',
+    playerRank: 'UNRANKED (CHALLENGER)',
+    bestTime: '--:--.---',
+    top3: [
+      { rank: '#01', name: 'HARUTO [CHAMPION]', time: '01:12.890' },
+      { rank: '#02', name: 'VECTOR_AI', time: '01:13.400' },
+      { rank: '#03', name: 'KAI_APEX', time: '01:14.050' }
+    ]
+  }
+];
+
 export class CinematicUI {
   constructor(gameManager) {
     this.game = gameManager;
@@ -893,6 +1143,180 @@ export class CinematicUI {
           <div class="ses-actions">
             <button class="btn-action-secondary" id="btn-event-choose-car">CHOOSE CAR</button>
             <button class="btn-primary-glow" id="btn-event-start-race">START RACE ►</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5.7 DEDICATED CAREER PROGRESSION HUBSCREEN -->
+      <div id="screen-career" class="ui-screen" style="display: none;">
+        <div class="career-top-bar">
+          <button class="btn-back" id="btn-career-back">◄ BACK TO HQ</button>
+          <div class="career-title-wrap">
+            <span class="career-sub">APHELION WORLD CHAMPIONSHIP // SEASON 2148</span>
+            <h2>CAREER CAMPAIGN PROGRESSION</h2>
+          </div>
+          <div class="career-stats-bar">
+            <div class="career-stat-pill">
+              <span class="csp-icon">🎖️</span>
+              <div class="csp-text">
+                <small>LICENSE TIER</small>
+                <strong class="cyan" id="career-license-tier">S-CLASS PRO</strong>
+              </div>
+            </div>
+            <div class="career-stat-pill">
+              <span class="csp-icon">★</span>
+              <div class="csp-text">
+                <small>CAMPAIGN STARS</small>
+                <strong class="gold-text" id="career-stars-counter">84 / 120 STARS</strong>
+              </div>
+            </div>
+            <div class="career-stat-pill">
+              <span class="csp-icon">🏆</span>
+              <div class="csp-text">
+                <small>COMPLETION</small>
+                <strong id="career-completion-pct">70%</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="career-main-layout">
+          <!-- Left: Chapter Selector Sidebar -->
+          <div class="career-chapters-sidebar">
+            <div class="ccs-header">
+              <h3>[ CAMPAIGN CHAPTERS ]</h3>
+              <span class="ccs-sub">PROGRESSIVE TIER UNLOCKS</span>
+            </div>
+            <div class="career-chapter-list" id="career-chapter-list"></div>
+          </div>
+
+          <!-- Center: Stage Nodes Grid for Active Chapter -->
+          <div class="career-stages-panel">
+            <div class="csp-header">
+              <div class="csph-left">
+                <span class="csph-badge" id="career-active-chapter-badge">CHAPTER 01</span>
+                <h3 id="career-active-chapter-title">ROOKIE PROVING GROUNDS</h3>
+                <p id="career-active-chapter-desc">Master foundational levitation dynamics, apex clipping, and boost management across Neo-Shinjuku.</p>
+              </div>
+              <div class="csph-progress">
+                <span>CHAPTER STARS: <strong id="career-chapter-stars" class="cyan">24 / 24 ★</strong></span>
+              </div>
+            </div>
+
+            <div class="career-stages-grid" id="career-stages-grid"></div>
+          </div>
+
+          <!-- Right: Selected Stage Dossier / Preview & Launch -->
+          <div class="career-stage-dossier" id="career-stage-dossier">
+            <div class="csd-header">
+              <span class="csd-stage-num" id="csd-stage-num">STAGE 01</span>
+              <span class="csd-stage-type" id="csd-stage-type">SPRINT</span>
+            </div>
+            <h3 class="csd-title" id="csd-title">NEO PROVING SPRINT</h3>
+            <div class="csd-meta-row">
+              <span class="csd-meta" id="csd-circuit">SECTOR 01 // HIGHWAY RIFT</span>
+              <span class="csd-meta" id="csd-weather">WEATHER: CLEAR NIGHT</span>
+            </div>
+
+            <div class="csd-preview-box" id="csd-preview-box">
+              <div class="csd-preview-overlay">
+                <span class="csd-rec-pr" id="csd-rec-pr">REC. PR: 750+</span>
+                <span class="csd-target" id="csd-target">TARGET: &lt; 00:48.00</span>
+              </div>
+            </div>
+
+            <div class="csd-objectives">
+              <h4>[ STAR OBJECTIVES ]</h4>
+              <div class="csd-obj-list" id="csd-obj-list"></div>
+            </div>
+
+            <div class="csd-rewards-card">
+              <div class="csd-reward-val"><span>CREDITS:</span><strong class="gold-text" id="csd-reward-cr">+8,000 Ȼ</strong></div>
+              <div class="csd-reward-val"><span>XP:</span><strong id="csd-reward-xp">+800 XP</strong></div>
+              <div class="csd-reward-val"><span>PARTS:</span><strong class="cyan" id="csd-reward-part">AERO SPLITTER T1</strong></div>
+            </div>
+
+            <div class="csd-actions">
+              <button class="btn-action-secondary" id="btn-career-change-car">CHOOSE CAR</button>
+              <button class="btn-primary-glow csd-launch-btn" id="btn-career-launch-race">START CAREER RACE ►</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5.8 DEDICATED LIVE OPERATIONS & EVENTS HUBSCREEN -->
+      <div id="screen-events" class="ui-screen" style="display: none;">
+        <div class="events-top-bar">
+          <button class="btn-back" id="btn-events-back">◄ BACK TO HQ</button>
+          <div class="events-title-wrap">
+            <span class="events-sub">GLOBAL LIVE ROTATION // WORLD SERIES</span>
+            <h2>LIVE OPERATIONS &amp; SPECIAL CUPS</h2>
+          </div>
+          <div class="events-stats-bar">
+            <div class="events-stat-pill energy-pill">
+              <span class="esp-icon">⚡</span>
+              <div class="esp-text">
+                <small>RACE ENERGY</small>
+                <strong id="events-energy-count">10 / 10</strong>
+              </div>
+              <button class="btn-mini-refill" id="btn-events-refill-energy" title="Instant Energy Refill (+5 Energy for 5,000 Credits)">+</button>
+            </div>
+            <div class="events-stat-pill">
+              <span class="esp-icon">⏱️</span>
+              <div class="esp-text">
+                <small>DAILY RESET</small>
+                <strong class="cyan" id="events-reset-timer">14h 28m 10s</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Filter tabs: ALL, DAILY, WEEKLY, SPECIAL OPS, BOSS -->
+        <div class="events-category-bar">
+          <div class="events-filters" id="events-filters">
+            <button class="ev-filter-btn active" data-filter="ALL">ALL EVENTS (6)</button>
+            <button class="ev-filter-btn" data-filter="DAILY">DAILY CUPS</button>
+            <button class="ev-filter-btn" data-filter="WEEKLY">WEEKLY SHOWDOWN</button>
+            <button class="ev-filter-btn" data-filter="SPECIAL">SPECIAL OPS</button>
+            <button class="ev-filter-btn" data-filter="BOSS">BOSS CLASH</button>
+          </div>
+          <div class="events-live-pulse">
+            <span class="pulse-marker green"></span>
+            <span>LIVE RELAY: GLOBAL TELEMETRY ONLINE</span>
+          </div>
+        </div>
+
+        <div class="events-main-layout">
+          <!-- Left/Center: Event Cards Grid -->
+          <div class="events-cards-grid" id="events-cards-grid"></div>
+
+          <!-- Right: Selected Event Dossier Drawer -->
+          <div class="event-dossier-drawer" id="event-dossier-drawer">
+            <div class="edd-header">
+              <span class="edd-badge" id="edd-badge">DAILY CUP // LIVE</span>
+              <span class="edd-cost" id="edd-cost">⚡ 1 ENERGY</span>
+            </div>
+            <h3 class="edd-title" id="edd-title">NEO-SHINJUKU MIDNIGHT CUP</h3>
+            <p class="edd-desc" id="edd-desc">Compete in 3 laps through Neon Shinjuku at midnight. Global high-stakes championship with top 5% leaderboard rank rewards.</p>
+
+            <div class="edd-leaderboard-preview">
+              <div class="eddl-head">
+                <span>EVENT LEADERBOARD (TOP 3)</span>
+                <strong class="cyan" id="edd-player-rank">RANK: #42 (TOP 3%)</strong>
+              </div>
+              <div class="eddl-list" id="eddl-list"></div>
+            </div>
+
+            <div class="edd-rewards-box">
+              <div class="edd-reward-item"><span>WINNER BONUS:</span><strong class="gold-text" id="edd-reward-cr">25,000 CREDITS</strong></div>
+              <div class="edd-reward-item"><span>XP REWARD:</span><strong id="edd-reward-xp">+2,500 XP</strong></div>
+              <div class="edd-reward-item"><span>EXCLUSIVE:</span><strong class="cyan" id="edd-reward-item">MIDNIGHT DECAL</strong></div>
+            </div>
+
+            <div class="edd-actions">
+              <button class="btn-action-secondary" id="btn-event-hub-choose-car">CHOOSE CAR</button>
+              <button class="btn-primary-glow edd-enter-btn" id="btn-event-hub-enter">ENTER EVENT ►</button>
+            </div>
           </div>
         </div>
       </div>
@@ -2100,9 +2524,10 @@ export class CinematicUI {
         if (tab === 'race') this.triggerPlayRaceFlow();
         if (tab === 'cars') this.showScreen('CAR_SELECT');
         if (tab === 'garage') this.showScreen('GARAGE');
-        if (tab === 'career' || tab === 'map') this.showWorldMap();
+        if (tab === 'career') this.showCareerScreen();
+        if (tab === 'map') this.showWorldMap();
         if (tab === 'shop') this.showScreen('GARAGE');
-        if (tab === 'events') this.showWorldMap();
+        if (tab === 'events') this.showEventsHubScreen();
         if (tab === 'leaderboard') this.showLeaderboardModal();
         if (tab === 'more' || tab === 'settings') this.showSettingsModal();
       });
@@ -2126,11 +2551,76 @@ export class CinematicUI {
         if (nav === 'play') this.game.startMatchmaking();
         if (nav === 'cars') this.showScreen('CAR_SELECT');
         if (nav === 'garage') this.showScreen('GARAGE');
+        if (nav === 'career') this.showCareerScreen();
         if (nav === 'map') this.showWorldMap();
-        if (nav === 'events') this.showWorldMap();
+        if (nav === 'events') this.showEventsHubScreen();
         if (nav === 'leaderboard') this.showLeaderboardModal();
         if (nav === 'rewards') this.claimDailyReward();
         if (nav === 'settings') this.showSettingsModal();
+      });
+    });
+
+    // Career Hub Action Listeners
+    safeBind('btn-career-back', 'click', () => {
+      if (this.game.sound) this.game.sound.playMenuClick();
+      this.showScreen('LOBBY');
+    });
+
+    safeBind('btn-career-change-car', 'click', () => {
+      if (this.game.sound) this.game.sound.playMenuClick();
+      this.showScreen('CAR_SELECT');
+    });
+
+    safeBind('btn-career-launch-race', 'click', () => {
+      if (this.game.sound) {
+        this.game.sound.resume();
+        this.game.sound.playMenuClick();
+      }
+      const sector = this.selectedCareerStage ? this.selectedCareerStage.sector : 'district';
+      this.game.startMatchmaking(sector);
+    });
+
+    // Live Events Hub Action Listeners
+    safeBind('btn-events-back', 'click', () => {
+      if (this.game.sound) this.game.sound.playMenuClick();
+      this.showScreen('LOBBY');
+    });
+
+    safeBind('btn-event-hub-choose-car', 'click', () => {
+      if (this.game.sound) this.game.sound.playMenuClick();
+      this.showScreen('CAR_SELECT');
+    });
+
+    safeBind('btn-event-hub-enter', 'click', () => {
+      if (this.game.sound) {
+        this.game.sound.resume();
+        this.game.sound.playMenuClick();
+      }
+      const ev = this.selectedEventItem || LIVE_EVENTS_DATA[0];
+      const cost = ev.energy || 1;
+      if (this.eventEnergy < cost) {
+        this.showCyberpunkToast('ENERGY DEPLETED', 'NOT ENOUGH EVENT ENERGY! REFILL TO RACE.', '⚡', 'yellow');
+        return;
+      }
+      this.eventEnergy = Math.max(0, this.eventEnergy - cost);
+      this.safeSetText('events-energy-count', `${this.eventEnergy} / 10`);
+      this.game.startMatchmaking(ev.sector || 'district');
+    });
+
+    safeBind('btn-events-refill-energy', 'click', () => {
+      if (this.game.sound) this.game.sound.playMenuClick();
+      this.eventEnergy = 10;
+      this.safeSetText('events-energy-count', '10 / 10');
+      this.showCyberpunkToast('ENERGY RESTORED', 'EVENT ENERGY REFILLED TO 10/10 (+10 CELLS).', '⚡', 'cyan');
+    });
+
+    this.container.querySelectorAll('.ev-filter-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        this.container.querySelectorAll('.ev-filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        this.eventsFilter = btn.dataset.filter || 'ALL';
+        if (this.game.sound) this.game.sound.playMenuClick();
+        this.renderEventsHubList(this.eventsFilter);
       });
     });
 
@@ -3055,18 +3545,21 @@ export class CinematicUI {
   }
 
   updateTouchModeUI() {
-    const mobileControls = document.getElementById('rh-mobile-controls');
+    const steerButtons = document.getElementById('hud-steer-buttons');
+    const actionButtons = this.container ? this.container.querySelector('.action-buttons-cluster') : document.querySelector('.action-buttons-cluster');
     const controlsGuide = document.getElementById('rh-controls-guide');
     const minimapWrap = document.getElementById('rh-minimap-wrap');
     const toggleBtn = document.getElementById('btn-touch-toggle');
 
     if (this.isTouchMode) {
-      if (mobileControls) mobileControls.style.display = 'flex';
+      if (steerButtons) steerButtons.style.display = 'flex';
+      if (actionButtons) actionButtons.style.display = 'flex';
       if (controlsGuide) controlsGuide.style.display = 'none';
       if (minimapWrap) minimapWrap.classList.add('touch-layout');
       if (toggleBtn) toggleBtn.textContent = '📱 TOUCH: ON';
     } else {
-      if (mobileControls) mobileControls.style.display = 'none';
+      if (steerButtons) steerButtons.style.display = 'none';
+      if (actionButtons) actionButtons.style.display = 'none';
       if (controlsGuide) controlsGuide.style.display = 'flex';
       if (minimapWrap) minimapWrap.classList.remove('touch-layout');
       if (toggleBtn) toggleBtn.textContent = '⌨️ DESKTOP';
@@ -3083,6 +3576,8 @@ export class CinematicUI {
       'screen-lobby',
       'screen-world-map',
       'screen-event-select',
+      'screen-career',
+      'screen-events',
       'screen-car-select',
       'screen-garage',
       'screen-match-prep',
@@ -3116,6 +3611,8 @@ export class CinematicUI {
       'ROYAL_PASS': 'screen-royal-pass',
       'WORLD_MAP': 'screen-world-map',
       'EVENT_SELECT': 'screen-event-select',
+      'CAREER': 'screen-career',
+      'EVENTS': 'screen-events',
       'CAR_SELECT': 'screen-car-select',
       'GARAGE': 'screen-garage',
       'MATCH_PREP': 'screen-match-prep',
@@ -3140,6 +3637,8 @@ export class CinematicUI {
       if (el) el.style.display = 'flex';
     }
 
+    this.syncTopNav(screenName);
+
     if (screenName !== 'ROYAL_PASS') {
       if (this.game && this.game.garageLobby && this.game.garageLobby.isGoldenMode) {
         this.game.garageLobby.setGoldenCarMode(false);
@@ -3153,6 +3652,15 @@ export class CinematicUI {
       this.updateLobbyHeader();
       this.updateLobbyVehiclePanel();
       this.updateLobbySeasonCard();
+    }
+
+    if (screenName === 'CAREER') {
+      this.renderCareerChapterList();
+      this.renderCareerStages(this.selectedCareerChapterIndex || 0);
+    }
+
+    if (screenName === 'EVENTS') {
+      this.renderEventsHubList(this.eventsFilter || 'ALL');
     }
 
     if (screenName === 'PRE_RACE_LOADING') {
@@ -3652,6 +4160,240 @@ export class CinematicUI {
     this.safeSetText('ses-type', `${evt.type} RACE`);
     this.safeSetText('ses-title', evt.name);
     this.safeSetText('ses-meta', `${evt.dist} // ${evt.laps} ${evt.laps > 1 ? 'LAPS' : 'LAP'} // RECOMMENDED: ${evt.classReq} // REWARD: ${evt.rewardCr.toLocaleString()} CREDITS, ${evt.rewardXp} XP`);
+  }
+
+  showCareerScreen(chapterIdx = 0) {
+    this.selectedCareerChapterIndex = chapterIdx;
+    this.showScreen('CAREER');
+    if (this.game.sound) this.game.sound.playMenuClick();
+    this.renderCareerChapterList();
+    this.renderCareerStages(chapterIdx);
+  }
+
+  renderCareerChapterList() {
+    const listEl = document.getElementById('career-chapter-list');
+    if (!listEl) return;
+    listEl.innerHTML = CAREER_CHAPTERS.map((ch, idx) => {
+      const isSelected = idx === this.selectedCareerChapterIndex;
+      const isLocked = !ch.unlocked;
+      return `
+        <div class="career-chapter-card ${isSelected ? 'active' : ''} ${isLocked ? 'locked' : ''}" data-idx="${idx}" style="border-left-color: ${ch.color}">
+          <div class="ccc-top">
+            <span class="ccc-badge">CH.${ch.num}</span>
+            <span class="ccc-stars">${isLocked ? '🔒 LOCKED' : `★ ${ch.stars}/${ch.maxStars}`}</span>
+          </div>
+          <h4 class="ccc-title">${ch.title}</h4>
+          <span class="ccc-sub">${ch.subtitle}</span>
+          <div class="ccc-license">${ch.license}</div>
+        </div>
+      `;
+    }).join('');
+
+    listEl.querySelectorAll('.career-chapter-card').forEach(card => {
+      card.addEventListener('click', () => {
+        const idx = parseInt(card.dataset.idx, 10);
+        const ch = CAREER_CHAPTERS[idx];
+        if (!ch.unlocked) {
+          this.showCyberpunkToast('CHAPTER LOCKED', `REQUIRES ${ch.reqStars || 80} STARS TO UNLOCK.`, '🔒', 'yellow');
+          return;
+        }
+        this.selectedCareerChapterIndex = idx;
+        if (this.game.sound) this.game.sound.playMenuClick();
+        this.renderCareerChapterList();
+        this.renderCareerStages(idx);
+      });
+    });
+  }
+
+  renderCareerStages(chapterIdx) {
+    const chapter = CAREER_CHAPTERS[chapterIdx] || CAREER_CHAPTERS[0];
+    this.safeSetText('career-active-chapter-badge', `CHAPTER ${chapter.num} // ${chapter.license}`);
+    this.safeSetText('career-active-chapter-title', chapter.title);
+    this.safeSetText('career-active-chapter-desc', chapter.desc);
+    this.safeSetText('career-chapter-stars', `${chapter.stars} / ${chapter.maxStars} ★`);
+
+    const grid = document.getElementById('career-stages-grid');
+    if (!grid) return;
+
+    grid.innerHTML = chapter.stages.map((st, idx) => {
+      const isSelected = this.selectedCareerStage && this.selectedCareerStage.id === st.id;
+      return `
+        <div class="career-stage-card ${isSelected ? 'active' : ''}" data-stage-id="${st.id}">
+          <div class="csc-top">
+            <span class="csc-badge ${st.type.toLowerCase().replace(/\s+/g, '-')}">${st.type}</span>
+            <span class="csc-stars">${'★'.repeat(st.stars)}${'☆'.repeat(3 - st.stars)}</span>
+          </div>
+          <strong class="csc-stage-num">${st.num}</strong>
+          <h4 class="csc-title">${st.title}</h4>
+          <div class="csc-meta">
+            <span>DIST: <strong>${st.dist}</strong></span>
+            <span>WEATHER: <strong>${st.weather}</strong></span>
+          </div>
+          <div class="csc-target">TARGET: <strong class="yellow">${st.target}</strong></div>
+          <div class="csc-rewards">
+            <span class="csc-cr">+${st.rewardCr.toLocaleString()} Ȼ</span>
+            <span class="csc-xp">+${st.rewardXp} XP</span>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    grid.querySelectorAll('.career-stage-card').forEach(card => {
+      card.addEventListener('click', () => {
+        grid.querySelectorAll('.career-stage-card').forEach(c => c.classList.remove('active'));
+        card.classList.add('active');
+        const stId = card.dataset.stageId;
+        const found = chapter.stages.find(s => s.id === stId);
+        if (found) {
+          this.selectCareerStage(found);
+        }
+      });
+    });
+
+    const firstStage = chapter.stages[0];
+    this.selectCareerStage(firstStage);
+  }
+
+  selectCareerStage(stage) {
+    if (!stage) return;
+    this.selectedCareerStage = stage;
+    if (this.game.sound) this.game.sound.playMenuClick();
+
+    if (this.game && this.game.loadSector) {
+      this.game.loadSector(stage.sector);
+    }
+    this.selectedTrackId = stage.sector;
+
+    this.safeSetText('csd-stage-num', stage.num);
+    this.safeSetText('csd-stage-type', stage.type);
+    this.safeSetText('csd-title', stage.title);
+    this.safeSetText('csd-circuit', `SECTOR: ${stage.sector.toUpperCase()} // ${stage.dist} (${stage.laps} ${stage.laps > 1 ? 'LAPS' : 'LAP'})`);
+    this.safeSetText('csd-weather', `WEATHER: ${stage.weather}`);
+    this.safeSetText('csd-rec-pr', `REC. PR: ${stage.recPr}+`);
+    this.safeSetText('csd-target', `TARGET: ${stage.target}`);
+    this.safeSetText('csd-reward-cr', `+${stage.rewardCr.toLocaleString()} Ȼ`);
+    this.safeSetText('csd-reward-xp', `+${stage.rewardXp.toLocaleString()} XP`);
+    this.safeSetText('csd-reward-part', stage.rewardPart);
+
+    const objList = document.getElementById('csd-obj-list');
+    if (objList && stage.objs) {
+      objList.innerHTML = stage.objs.map((obj) => `
+        <div class="csd-obj-item">
+          <span class="obj-star active">★</span>
+          <span>${obj}</span>
+        </div>
+      `).join('');
+    }
+  }
+
+  showEventsHubScreen(filter = 'ALL') {
+    this.eventsFilter = filter;
+    this.showScreen('EVENTS');
+    if (this.game.sound) this.game.sound.playMenuClick();
+    this.renderEventsHubList(filter);
+  }
+
+  renderEventsHubList(filter = 'ALL') {
+    const grid = document.getElementById('events-cards-grid');
+    if (!grid) return;
+
+    const filtered = filter === 'ALL'
+      ? LIVE_EVENTS_DATA
+      : LIVE_EVENTS_DATA.filter(ev => ev.category === filter);
+
+    grid.innerHTML = filtered.map((ev) => {
+      const isSelected = this.selectedEventItem && this.selectedEventItem.id === ev.id;
+      return `
+        <div class="event-hub-card ${isSelected ? 'active' : ''}" data-ev-id="${ev.id}">
+          <div class="ehc-banner">
+            <span class="ehc-tag ${ev.category.toLowerCase()}">${ev.tag}</span>
+            <span class="ehc-timer">⏱️ ${ev.timeLeft}</span>
+          </div>
+          <h3 class="ehc-title">${ev.title}</h3>
+          <span class="ehc-sub">${ev.subtitle}</span>
+          <div class="ehc-specs">
+            <span class="ehc-spec-pill">DIFF: <strong>${ev.difficulty}</strong></span>
+            <span class="ehc-spec-pill energy">COST: <strong>⚡ ${ev.energy}</strong></span>
+            <span class="ehc-spec-pill">RANK: <strong class="cyan">${ev.playerRank}</strong></span>
+          </div>
+          <div class="ehc-footer">
+            <div class="ehc-rewards">
+              <span class="ehc-cr">+${ev.rewardCr.toLocaleString()} Ȼ</span>
+              <span class="ehc-item">${ev.rewardItem}</span>
+            </div>
+            <button class="btn-card-select">VIEW ►</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    grid.querySelectorAll('.event-hub-card').forEach(card => {
+      card.addEventListener('click', () => {
+        grid.querySelectorAll('.event-hub-card').forEach(c => c.classList.remove('active'));
+        card.classList.add('active');
+        const evId = card.dataset.evId;
+        const found = LIVE_EVENTS_DATA.find(e => e.id === evId);
+        if (found) {
+          this.selectEventHubItem(found);
+        }
+      });
+    });
+
+    if (filtered.length > 0) {
+      this.selectEventHubItem(filtered[0]);
+    }
+  }
+
+  selectEventHubItem(ev) {
+    if (!ev) return;
+    this.selectedEventItem = ev;
+    if (this.game.sound) this.game.sound.playMenuClick();
+
+    if (this.game && this.game.loadSector) {
+      this.game.loadSector(ev.sector);
+    }
+    this.selectedTrackId = ev.sector;
+
+    this.safeSetText('edd-badge', ev.tag);
+    this.safeSetText('edd-cost', `⚡ ${ev.energy} ENERGY`);
+    this.safeSetText('edd-title', ev.title);
+    this.safeSetText('edd-desc', ev.desc);
+    this.safeSetText('edd-player-rank', `RANK: ${ev.playerRank}`);
+    this.safeSetText('edd-reward-cr', `+${ev.rewardCr.toLocaleString()} CREDITS`);
+    this.safeSetText('edd-reward-xp', `+${ev.rewardXp.toLocaleString()} XP`);
+    this.safeSetText('edd-reward-item', ev.rewardItem);
+
+    const listEl = document.getElementById('eddl-list');
+    if (listEl && ev.top3) {
+      listEl.innerHTML = ev.top3.map(row => `
+        <div class="eddl-row">
+          <span>${row.rank} ${row.name}</span>
+          <strong class="${row.name.includes('YOU') ? 'cyan' : ''}">${row.time}</strong>
+        </div>
+      `).join('');
+    }
+  }
+
+  syncTopNav(screenName) {
+    if (!this.container) return;
+    const tabMap = {
+      'LOBBY': 'lobby',
+      'CAR_SELECT': 'cars',
+      'GARAGE': 'garage',
+      'CAREER': 'career',
+      'EVENTS': 'events',
+      'WORLD_MAP': 'career',
+      'EVENT_SELECT': 'career',
+      'ROYAL_PASS': 'royalpass',
+      'LEADERBOARD': 'leaderboard',
+      'SETTINGS': 'settings'
+    };
+    const activeTab = tabMap[screenName];
+    if (activeTab) {
+      this.container.querySelectorAll('.top-nav-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.tab === activeTab);
+      });
+    }
   }
 
   claimDailyReward() {

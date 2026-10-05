@@ -17,7 +17,8 @@ import { NeoShinjukuWorld } from '../src/world/NeoShinjukuWorld.js';
 import { CoastlineWorld } from '../src/world/CoastlineWorld.js';
 import { FujiSkywayWorld } from '../src/world/FujiSkywayWorld.js';
 import { getSectorDefinition, SECTOR_DEFINITIONS } from '../src/track/TrackData.js';
-import { TPP_CAMERA_SVG, FPP_CAMERA_SVG } from '../src/ui/CinematicUI.js';
+import { TPP_CAMERA_SVG, FPP_CAMERA_SVG, CAREER_CHAPTERS, LIVE_EVENTS_DATA } from '../src/ui/CinematicUI.js';
+import { GarageLobbyScene } from '../src/world/GarageLobbyScene.js';
 import { HolographicMinimap } from '../src/ui/HolographicMinimap.js';
 import { backendService } from '../src/backend/BackendService.js';
 import * as THREE from 'three';
@@ -1173,6 +1174,22 @@ async function runTestSuite() {
   const hasRevPlume = revCar.exhaustPlumes.some(f => f.visible === true);
   assert(hasRevPlume, 'FuturisticVehicle: Exhaust plume fires when driver revs engine during countdown');
   testSplineCircuit.dispose();
+
+  // --- 21. DEDICATED CAREER CAMPAIGN & LIVE OPERATIONS HUB VERIFICATION ---
+  console.log('\n--- 21. DEDICATED CAREER CAMPAIGN & LIVE OPERATIONS HUB VERIFICATION ---');
+  assert(Array.isArray(CAREER_CHAPTERS) && CAREER_CHAPTERS.length === 5, 'Career: 5 complete progression chapters defined');
+  const totalCareerStages = CAREER_CHAPTERS.reduce((acc, ch) => acc + ch.stages.length, 0);
+  assert(totalCareerStages === 25, `Career: 25 distinct progression challenge stages defined (${totalCareerStages})`);
+  const licenseTiers = CAREER_CHAPTERS.map(c => c.license);
+  assert(licenseTiers.includes('CLASS C // ROOKIE') && licenseTiers.includes('PINNACLE // APHELION'), 'Career: License tiers span from Class C Rookie to Pinnacle Aphelion');
+  assert(Array.isArray(LIVE_EVENTS_DATA) && LIVE_EVENTS_DATA.length >= 6, `Live Events: ${LIVE_EVENTS_DATA.length} live operational cups defined`);
+  const eventCategories = new Set(LIVE_EVENTS_DATA.map(e => e.category));
+  assert(eventCategories.has('DAILY') && eventCategories.has('WEEKLY') && eventCategories.has('SPECIAL') && eventCategories.has('BOSS'), 'Live Events: Supports Daily, Weekly, Special Ops, and Boss Clash rotations');
+  
+  // Showroom clean view test
+  const garageScene = new GarageLobbyScene(testSplineScene);
+  assert(garageScene.techChipsGroup && garageScene.techChipsGroup.visible === false, 'GarageLobbyScene: Floating 3D billboard tech chips hidden for clean vehicle showroom view');
+  garageScene.hide();
 
   console.log('\n================================================================');
   console.log(`VERIFICATION SUMMARY: ${testsPassed} PASSED, ${testsFailed} FAILED`);

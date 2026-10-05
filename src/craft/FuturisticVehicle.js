@@ -1663,10 +1663,10 @@ export class FuturisticVehicle {
     const isGearPopping = this.gearShiftPopTimer > 0;
 
     this.exhaustPlumes.forEach(flame => {
-      const boostScale = boostActive ? 1.75 : (isGearPopping ? 1.45 : (throttleInput > 0.95 && Math.random() < 0.28 ? 0.9 : 0.0));
+      const boostScale = boostActive ? 1.75 : (isGearPopping ? 1.45 : (throttleInput > 0.5 ? 0.95 : 0.0));
       const flicker = 0.85 + Math.random() * 0.3;
       flame.scale.set(boostScale * flicker, boostScale * flicker, boostScale * flicker * (boostActive ? 2.2 : 1.35));
-      flame.visible = boostActive || isGearPopping || (throttleInput > 0.95 && Math.random() < 0.28);
+      flame.visible = boostActive || isGearPopping || (throttleInput > 0.5);
     });
 
     // 7. Responsive Brake Lights

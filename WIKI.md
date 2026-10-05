@@ -214,7 +214,41 @@ WIPEOUT: APHELION 2148 includes a native PC gaming desktop runtime (`desktop/mai
 
 ---
 
-## 12. Verification Suite & Automated Testing (229 Tests)
+## 12. Career Campaign & Live Operations Hub Architecture
+
+### A. Dedicated Career Campaign Mode (`#screen-career`)
+- **5 Progressive Chapters**:
+  1. *Chapter 01: Rookie Proving Grounds* (Neo-Shinjuku Low-Altitude, Class C License)
+  2. *Chapter 02: Pacific Coastline Contender* (Coastline Storm Highway, Class B License)
+  3. *Chapter 03: Alpine Fuji Skyway Master* (Fuji Skyway Vortex, Class A License)
+  4. *Chapter 04: Underground Night Syndicate* (Night District Subterranean, Class S License)
+  5. *Chapter 05: Aphelion Orbital Grand Prix* (Orbital Apex Showdown, Pinnacle License)
+- **25 Sequential Progression Challenges**: Each chapter features 5 distinct game modes (Sprint Qualifier, Circuit Clash, Drift Apex, Elimination Sudden-Death, and Boss Rival Duel).
+- **Campaign Milestones**: 120 Total Stars, License Tier badges, blueprint unlocks, and stage-specific credit/XP payouts.
+- **Stage Dossier Drawer**: Live stage preview, recommended PR indicator, 3-star objectives list, and direct race launch triggers.
+
+### B. Dedicated Live Operations Hub (`#screen-events`)
+- **Dynamic Operational Rotation**:
+  1. *Daily Cups*: Neo-Shinjuku Midnight Cup (3 Laps Circuit), Pacific Storm Speed Trial (Sprint Speed Trap).
+  2. *Weekly Showdowns*: Fuji Blizzard Drift Clash (35k Points Target).
+  3. *Special Operations*: Ghost Protocol World Record Hunt (race the #1 global telemetry ghost), Underground Syndicate Elimination.
+  4. *Boss Clash*: Aphelion Boss Showdown vs Grand Champion Haruto.
+- **Energy Mechanic**: 10-cell rechargeable energy pool (`⚡ 10/10`) with countdown refresh timers and instant pit refills.
+- **Leaderboard Integration**: Real-time event standing preview showing top 3 pilots and player's percentile rank.
+
+---
+
+## 13. UI Polish & Ergonomics Overhaul
+
+- **Unobstructed 360° Showroom**: Floating 3D technical billboard chips are hidden in `GarageLobbyScene` to provide a pristine, unobstructed view of the car in the showroom and vehicle selection carousel.
+- **Desktop HUD De-cluttering**: Virtual on-screen touch buttons (`◄ ►`, Brake, Drive, Nitro, Cam) automatically hide on desktop/keyboard environments so they never overlap the desktop keybind guide.
+- **Sleek Cyberpunk Scrollbars**: Custom slim cyan glow scrollbars (`::-webkit-scrollbar` with #00F0FF gradient) eliminate native browser scrollbars in the Settings modal, Career page, and Events hub.
+- **Spacious Fleet Selection Deck**: Expanded vehicle spec sheet (`max-width: 1240px`) with 2-column stat bars and dedicated mini-card strip prevents clipping and squished text.
+- **Active Navigation Pill Synchronization**: Top navbar pills (`RACE`, `GARAGE`, `CARS`, `CAREER`, `EVENTS`, `LEADERBOARD`, `SETTINGS`) automatically reflect whichever screen is active.
+
+---
+
+## 14. Verification Suite & Automated Testing (235 Tests)
 
 Run the full end-to-end verification suite:
 ```bash
@@ -231,5 +265,6 @@ node test/e2e-simulation-test.js
 7. **Section 18**: Countdown overlay failsafe, procedural audio nodes, race timer transition (8 tests).
 8. **Section 19**: Sector 02, 03, 05 master matrix, ocean shader, mountain climb +400m, pine forest, snow, dynamic elimination hazard escalation, full lap driving simulations (30 tests).
 9. **Section 20**: Continuous $C^1$ spline interpolation, 0 km/h standstill stability, dynamic turn-in heading yaw, glancing barrier wall-riding, clean breakaway, soft camera reset, countdown revving (11 tests).
+10. **Section 21**: Dedicated Career campaign matrix (5 chapters, 25 stages, license tiers C to Pinnacle), Live Operations hub (Daily, Weekly, Special Ops, Boss duels, energy pool), and clean showroom tech chip visibility (6 tests).
 
-**Total Verification Result**: **229 PASSED, 0 FAILED**.
+**Total Verification Result**: **235 PASSED, 0 FAILED**.

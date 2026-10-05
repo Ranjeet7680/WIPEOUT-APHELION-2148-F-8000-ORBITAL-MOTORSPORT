@@ -214,6 +214,7 @@ export class GarageLobbyScene {
     // 2d. Small Floating Holographic Technical Information Chips Around Vehicle
     this.techChipsGroup = new THREE.Group();
     this.buildTechChips();
+    this.techChipsGroup.visible = false; // Kept hidden to give an unobstructed, pristine 360 showroom view of vehicle
     this.group.add(this.techChipsGroup);
 
     this.group.add(this.turntable);
@@ -440,6 +441,7 @@ export class GarageLobbyScene {
   }
 
   setupEventListeners() {
+    if (typeof window === 'undefined') return;
     window.addEventListener('mousedown', (e) => {
       // Only drag if not clicking UI buttons
       if (e.target && (e.target.tagName === 'BUTTON' || e.target.closest('button') || e.target.closest('.ui-screen'))) {
